@@ -68,3 +68,10 @@
 - **Files:** `Docs/IMPLEMENTATION_PLAN.md`, `Docs/PRD.md` (this entry)
 - **Commit:** `c2bcbec Lock stack: local Postgres + Better Auth + R2, no Supabase/Vercel, self-host`
 - **Status:** Done, pushed to `main`.
+
+### 008 — 2026-09-27 — Show design system visually
+- **Instruction:** "I want to see what the design system looks like"
+- **Change:** Built `Docs/DESIGN_SYSTEM_PREVIEW.html` from locked tokens (§0.2): brand green #0E5A3C + gold #C9A227, Sora/Inter scale, buttons, trust badges (Official/Verified/Edition/Urgent/Points), Course/Material/Announcement/Q&A cards, protected R2 reader mock with watermark, spacing/radius/motion. Opened in default browser via Start-Process.
+- **Files:** `Docs/DESIGN_SYSTEM_PREVIEW.html`, `Docs/PRD.md` (this entry)
+- **Commit:** (to be filled on push)
+- **Status:** In progress.

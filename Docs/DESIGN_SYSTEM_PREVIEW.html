@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>EDUFARM — Design System Preview (v0)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --brand-primary:#0E5A3C; --brand-primary-dark:#0A4230; --brand-accent:#C9A227;
+  --ink-900:#101828; --ink-700:#344054; --ink-500:#667085; --ink-300:#D0D5DD; --ink-100:#F2F4F7;
+  --paper:#FFFFFF; --paper-alt:#F9FAFB;
+  --official:#0E5A3C; --urgent:#D92D20; --warning:#DC6803; --success:#027A48; --info:#475467;
+  --radius-sm:6px; --radius-md:12px; --radius-lg:20px;
+}
+*{box-sizing:border-box} body{margin:0;font-family:Inter,system-ui,sans-serif;color:var(--ink-900);background:var(--paper-alt)}
+header.hero{background:linear-gradient(135deg,var(--brand-primary),var(--brand-primary-dark));color:#fff;padding:40px 24px}
+header.hero h1{font-family:Sora,sans-serif;margin:0 0 8px;font-size:32px}
+header.hero p{margin:4px 0;opacity:.9}
+.wrap{max-width:1080px;margin:0 auto;padding:24px}
+section.card{background:var(--paper);border:1px solid var(--ink-300);border-radius:var(--radius-lg);padding:24px;margin:20px 0;box-shadow:0 1px 3px rgba(16,24,40,.06)}
+h2{font-family:Sora,sans-serif;font-size:22px;margin:0 0 4px}
+.sub{color:var(--ink-500);font-size:14px;margin:0 0 16px}
+.swatches{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px}
+.swatch{border-radius:var(--radius-md);overflow:hidden;border:1px solid var(--ink-300)}
+.swatch .c{height:64px} .swatch .t{padding:8px 10px;font-size:12px}
+.btn{display:inline-block;padding:10px 18px;border-radius:12px;font-weight:600;border:1px solid transparent;cursor:pointer;font-size:14px;margin:4px 6px 4px 0}
+.btn-primary{background:var(--brand-primary);color:#fff} .btn-accent{background:var(--brand-accent);color:#101828}
+.btn-outline{background:#fff;border-color:var(--brand-primary);color:var(--brand-primary)} .btn-danger{background:var(--urgent);color:#fff}
+.badge{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:600;padding:4px 10px;border-radius:999px;margin:3px 6px 3px 0;border:1px solid transparent}
+.b-official{background:#E6F4EC;color:var(--official);border-color:#A6D6B8}
+.b-verified{background:#EFF8FF;color:#175CD3;border-color:#B2DDFF}
+.b-urgent{background:#FEF3F2;color:var(--urgent);border-color:#FECDCA}
+.b-edition{background:var(--ink-100);color:var(--ink-700);border-color:var(--ink-300)}
+.b-points{background:#FEFBE8;color:#93370D;border-color:#FEDF89}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px} @media(max-width:760px){.grid2{grid-template-columns:1fr}}
+.course,.material,.ann,.qa{border:1px solid var(--ink-300);border-radius:var(--radius-md);padding:16px;background:#fff}
+.progress{height:8px;background:var(--ink-100);border-radius:99px;overflow:hidden;margin-top:10px}
+.progress>div{height:100%;background:var(--brand-primary)}
+.price{font-weight:800;font-size:18px} .terms{font-size:12px;color:var(--ink-500)}
+.reader{background:#1D2939;color:#fff;border-radius:var(--radius-md);padding:16px;position:relative;overflow:hidden}
+.watermark{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;opacity:.12;font-size:13px;transform:rotate(-18deg);pointer-events:none;text-align:center}
+.type-scale div{border-bottom:1px dashed var(--ink-300);padding:8px 0}
+code{background:var(--ink-100);padding:2px 6px;border-radius:6px;font-size:12px}
+footer{color:var(--ink-500);font-size:12px;padding:24px;text-align:center}
+</style>
+</head>
+<body>
+<header class="hero">
+  <div class="wrap" style="padding:0">
+    <h1>EDUFARM Design System — v0 Preview</h1>
+    <p>Trusted-by-design · Mobile-first 360px · Locked stack: local Postgres + Better Auth + R2</p>
+    <p style="font-size:13px">Tokens → Components → Academic patterns → Reader. Full spec: <code>Docs/IMPLEMENTATION_PLAN.md §0.2</code></p>
+  </div>
+</header>
+<div class="wrap">
+
+<section class="card">
+<h2>1 · Color Tokens</h2><p class="sub">AA ≥ 4.5:1 body text · Light + dark reader variants planned</p>
+<div class="swatches">
+<div class="swatch"><div class="c" style="background:#0E5A3C"></div><div class="t"><b>brand.primary</b><br>#0E5A3C trust/growth</div></div>
+<div class="swatch"><div class="c" style="background:#C9A227"></div><div class="t"><b>brand.accent</b><br>#C9A227 achievement/Word</div></div>
+<div class="swatch"><div class="c" style="background:#0A4230"></div><div class="t"><b>primary.dark</b><br>#0A4230 headers</div></div>
+<div class="swatch"><div class="c" style="background:#101828"></div><div class="t"><b>ink.900</b><br>#101828 body</div></div>
+<div class="swatch"><div class="c" style="background:#667085"></div><div class="t"><b>ink.500</b><br>#667085 muted</div></div>
+<div class="swatch"><div class="c" style="background:#F2F4F7"></div><div class="t"><b>ink.100</b><br>#F2F4F7 surfaces</div></div>
+<div class="swatch"><div class="c" style="background:#D92D20"></div><div class="t"><b>urgent</b><br>#D92D20 deadlines</div></div>
+<div class="swatch"><div class="c" style="background:#DC6803"></div><div class="t"><b>warning</b><br>#DC6803 cautions</div></div>
+</div>
+</section>
+
+<section class="card">
+<h2>2 · Typography</h2><p class="sub">Display: Sora · UI: Inter · Reader 1.5 line-height, 72ch max</p>
+<div class="type-scale">
+<div style="font-family:Sora;font-size:32px;font-weight:800">Display 32 — Today's Word</div>
+<div style="font-family:Sora;font-size:24px;font-weight:700">Heading 24 — My Courses</div>
+<div style="font-size:20px;font-weight:700">Heading 20 — Material title</div>
+<div style="font-size:16px">Body 16 — Lecturer announcement text with diacritics: Ọnwụka, Adéyẹmí, Ngozi.</div>
+<div style="font-size:14px;color:var(--ink-500)">Meta 14 — Official · v2.1 · ₦500 · 90 days access</div>
+<div style="font-size:12px;color:var(--ink-500)">Caption 12 — Watermark: Noble O. · STU-042 · 27 Sep 2026 12:01</div>
+</div>
+</section>
+
+<section class="card">
+<h2>3 · Buttons & Trust Badges</h2><p class="sub">Price + access duration always adjacent to CTA (transparent-pricing rule)</p>
+<div>
+<button class="btn btn-primary">Enroll in Course</button>
+<button class="btn btn-accent">Continue Studying</button>
+<button class="btn btn-outline">Ask Question</button>
+<button class="btn btn-danger">Urgent Update</button>
+</div>
+<div style="margin-top:10px">
+<span class="badge b-official">✔ Official Material</span>
+<span class="badge b-verified">✔ Verified Lecturer</span>
+<span class="badge b-verified">✔ Verified Institution</span>
+<span class="badge b-edition">Edition v2.1</span>
+<span class="badge b-urgent">● Urgent · Test Tomorrow</span>
+<span class="badge b-points">★ 1,250 Academic Points</span>
+</div>
+</section>
+
+<section class="card">
+<h2>4 · Academic Components</h2><p class="sub">Student home order: Word → priorities → continue → courses → updates → Q&A → points → AI</p>
+<div class="grid2">
+<div class="course"><b>BIO 201 — Cell Biology</b> <span class="badge b-official">Official Course</span><div class="progress"><div style="width:64%"></div></div><p class="terms">64% complete · Dr. A. Bello · 120 students</p></div>
+<div class="material"><b>Detailed Lecture Notes — Mitosis</b><br><span class="badge b-official">Officially Published</span> <span class="badge b-edition">v2.1</span><p><span class="price">₦500</span> <span class="terms">· 90 days access · PDF · 42 pages</span></p><button class="btn btn-primary">Buy & Read</button></div>
+<div class="ann"><span class="badge b-urgent">Urgent update</span><p><b>Test moved to Friday 10am</b><br>Hall B · Bring ID · Syllabus Ch. 3–5.</p><p class="terms">Dr. Bello · 2h ago · BIO 201</p></div>
+<div class="qa"><span class="badge b-edition">Q&A · Answered</span><p><b>Why does crossing over matter?</b><br><span style="background:#E6F4EC;padding:2px 8px;border-radius:6px;font-size:12px">Lecturer ✓</span> It creates variation by exchanging segments… <a href="#">View thread</a></p></div>
+</div>
+</section>
+
+<section class="card">
+<h2>5 · Protected Reader (R2 page-streaming)</h2><p class="sub">No download · per-page 60s presigned URLs · watermark + progress events</p>
+<div class="reader">
+<div class="watermark">Noble O. · STU-042 · 27 Sep 2026 12:01 · BIO 201 · Do not redistribute</div>
+<p style="margin:0;font-size:13px">BIO 201 · Mitosis Notes v2.1 · Page 7/42 · 🔒 Protected</p>
+<h3 style="font-family:Sora">Prophase — chromatin condenses…</h3>
+<p style="color:#D0D5DD;font-size:14px;line-height:1.7">Rendered page image (WebP 1200px) streams from R2 <code>pages/</code> bucket. Right-click / save / print disabled. Resume position + dwell time feed Study Journey. <button class="btn btn-accent" style="padding:6px 12px">Ask This Material</button></p>
+<div class="progress" style="background:#344054"><div style="width:17%;background:var(--brand-accent)"></div></div>
+</div>
+</section>
+
+<section class="card">
+<h2>6 · Spacing / Radius / Motion</h2><p class="sub">4pt grid · radius 6/12/20 · 150–250ms ease · honors prefers-reduced-motion</p>
+<div style="display:flex;gap:12px;align-items:end">
+<div style="width:80px;height:80px;background:var(--brand-primary);border-radius:6px"></div>
+<div style="width:80px;height:80px;background:var(--brand-primary);border-radius:12px"></div>
+<div style="width:80px;height:80px;background:var(--brand-primary);border-radius:20px"></div>
+<div style="width:80px;height:80px;background:var(--brand-accent);border-radius:20px"></div>
+</div>
+<p class="terms" style="margin-top:12px">Touch targets ≥44px · skeletons for lists · paginated feeds · data-saver defaults to low-res pages.</p>
+</section>
+
+</div>
+<footer>EDUFARM · Design System v0 preview · Generated 27 Sep 2026 · Source: IMPLEMENTATION_PLAN.md §0.2 · Next: Storybook + Figma + <code>packages/tokens/tokens.json</code></footer>
+</body>
+</html>
