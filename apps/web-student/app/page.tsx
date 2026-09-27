@@ -9,6 +9,7 @@ export default function Home() {
   const [cont, setCont] = useState<{ materialId: string | null; page?: number; material?: { title: string } } | null>(null);
   const [enroll, setEnroll] = useState<{ courseId: string; course: { code: string; title: string }; status: string }[]>([]);
   const [progress, setProgress] = useState<{ courseId: string; code: string; percent: number }[]>([]);
+  const [points, setPoints] = useState<{ balance: number } | null>(null);
 
   useEffect(() => {
     setUser(getUser());
@@ -17,6 +18,7 @@ export default function Home() {
     api("/progress/continue").then(setCont).catch(() => {});
     api("/enrollments/me").then(setEnroll).catch(() => {});
     api("/progress/me").then(setProgress).catch(() => {});
+    api("/points/me").then(setPoints).catch(() => {});
   }, []);
 
   if (!user) {
@@ -70,7 +72,8 @@ export default function Home() {
       </div>
       <div className="card">
         <h3>Academic points & AI</h3>
-        <p className="muted">Points, Q&A digest, and AI Study Assistant arrive with course grounding in Phase 2–3. Library: <a href="/library">open</a>.</p>
+        <p>★ Balance: <strong>{points?.balance ?? "…"}</strong> points <span className="muted">(earn: pass assessments, lecturer recognition · redeem ≥5000 for purchases)</span></p>
+        <p className="muted">AI Study Assistant arrives with course grounding in Phase 3. Library: <a href="/library">open</a>.</p>
       </div>
     </div>
   );

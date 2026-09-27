@@ -45,6 +45,12 @@ export default function ManageCourse({ params }: { params: { id: string } }) {
             <span>{e.student.user.name} ({e.student.user.email}) — <strong>{e.status}</strong></span>
             <button className="sec" onClick={() => decide(e.id, "approve")}>Approve</button>
             <button className="sec" onClick={() => decide(e.id, "reject")}>Reject</button>
+            <button className="sec" onClick={async () => {
+              try {
+                await api("/points/recognize", { method: "POST", body: JSON.stringify({ studentId: (e.student as unknown as { id: string }).id, reason: "participation" }) });
+                setMsg("Recognition +5 points awarded.");
+              } catch (err) { setMsg((err as Error).message); }
+            }}>Recognize +5</button>
           </div>
         ))}
         {!enrs.length && <p className="muted">No enrollments (or not logged in as lecturer).</p>}

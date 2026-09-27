@@ -16,6 +16,10 @@ import { materialRoutes } from "./routes/materials.js";
 import { purchaseRoutes } from "./routes/purchases.js";
 import { progressRoutes } from "./routes/progress.js";
 import { assessmentRoutes } from "./routes/assessments.js";
+import { pointsRoutes } from "./routes/points.js";
+import { settlementRoutes } from "./routes/settlement.js";
+import { reviewRoutes } from "./routes/reviews.js";
+import { emailRoutes } from "./routes/email.js";
 
 const app = Fastify({ logger: true });
 await app.register(cors, { origin: [/^http:\/\/localhost:300\d$/], credentials: true });
@@ -55,6 +59,10 @@ await app.register(materialRoutes, { prefix: "/api/v1" });
 await app.register(purchaseRoutes, { prefix: "/api/v1" });
 await app.register(progressRoutes, { prefix: "/api/v1" });
 await app.register(assessmentRoutes, { prefix: "/api/v1" });
+await app.register(pointsRoutes, { prefix: "/api/v1" });
+await app.register(settlementRoutes, { prefix: "/api/v1" });
+await app.register(reviewRoutes, { prefix: "/api/v1" });
+await app.register(emailRoutes, { prefix: "/api/v1" });
 
 const port = Number(process.env.API_PORT ?? 4000);
 await app.listen({ port, host: "0.0.0.0" });

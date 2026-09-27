@@ -321,13 +321,34 @@ model PointLedger {
 }
 
 model Review {
-  id         String   @id @default(cuid())
+  id         String       @id @default(cuid())
   materialId String
   studentId  String
   rating     Int
   body       String?
-  status     String   @default("visible")
-  createdAt  DateTime @default(now())
+  status     String       @default("visible")
+  createdAt  DateTime     @default(now())
+  replies    ReviewReply[]
+}
+
+model ReviewReply {
+  id        String   @id @default(cuid())
+  reviewId  String
+  review    Review   @relation(fields: [reviewId], references: [id], onDelete: Cascade)
+  authorId  String
+  isLecturer Boolean @default(false)
+  body      String
+  createdAt DateTime @default(now())
+}
+
+// Phase 2b — email outbox (dev: logged + console; prod: Resend/Postmark worker drains pending)
+model EmailLog {
+  id        String   @id @default(cuid())
+  toUserId  String
+  subject   String
+  body      String
+  status    String   @default("logged") // logged | sent | failed
+  createdAt DateTime @default(now())
 }
 
 model Dispute {

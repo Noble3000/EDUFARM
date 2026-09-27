@@ -5,6 +5,8 @@
 import type { FastifyInstance } from "fastify";
 import { prisma } from "../db.js";
 import { currentUser } from "../auth-dev.js";
+import { balanceOf, KOBO_PER_POINT, MIN_REDEEM_POINTS } from "./points.js";
+import { logEmail } from "./email.js";
 
 const PLATFORM_FEE_BPS = Number(process.env.PLATFORM_FEE_BPS ?? 3000);
 const HOLD_NOTE = "pending";
@@ -22,6 +24,20 @@ export async function purchaseRoutes(app: FastifyInstance) {
       where: { studentId: user.studentProfile.id, materialId: id, status: "completed" },
     });
     if (existing) return existing;
+    // points redemption (optional): {pointsToUse} → kobo discount, capped at 50% of price
+    const body = (req.body ?? {}) as { pointsToUse?: number };
+    let pointsToUse = Math.floor(Number(body.pointsToUse ?? 0));
+    if (pointsToUse > 0) {
+      const balance = await balanceOf(user.studentProfile.id);
+      if (pointsToUse > balance) return reply.code(400).send({ error: `Insufficient points (balance ${balance}).` });
+      if (pointsToUse < MIN_REDEEM_POINTS)
+        return reply.code(400).send({ error: `Minimum redemption is ${MIN_REDEEM_POINTS} points.` });
+      const maxDiscount = Math.floor(mat.priceKobo / 2);
+      const discount = Math.min(pointsToUse * KOBO_PER_POINT, maxDiscount);
+      pointsToUse = Math.floor(discount / KOBO_PER_POINT);
+      if (pointsToUse <= 0) return reply.code(400).send({ error: "Points discount too small for this price." });
+    }
+    const discountKobo = pointsToUse * KOBO_PER_POINT;
     const result = await prisma.$transaction(async (tx) => {
       const accessExpiresAt = mat.accessDurationDays
         ? new Date(Date.now() + mat.accessDurationDays * 86400_000)
@@ -29,9 +45,17 @@ export async function purchaseRoutes(app: FastifyInstance) {
       const purchase = await tx.purchase.create({
         data: {
           studentId: user.studentProfile!.id, materialId: id,
-          amountKobo: mat.priceKobo, status: "completed", accessExpiresAt,
+          amountKobo: mat.priceKobo - discountKobo, pointsUsed: discountKobo, status: "completed", accessExpiresAt,
         },
       });
+      if (pointsToUse > 0) {
+        await tx.pointLedger.create({
+          data: {
+            studentId: user.studentProfile!.id, amount: -pointsToUse,
+            reason: "redemption", capKey: `redeem:${purchase.id}`,
+          },
+        });
+      }
       const platformShare = Math.round((mat.priceKobo * PLATFORM_FEE_BPS) / 10000);
       await tx.eSpeesLedger.create({
         data: {
@@ -48,6 +72,10 @@ export async function purchaseRoutes(app: FastifyInstance) {
       });
       return purchase;
     });
+    await logEmail(
+      user.id, `Receipt: ${mat.title}`,
+      `You paid ₦${((mat.priceKobo - discountKobo) / 100).toFixed(2)}${discountKobo ? ` (${pointsToUse} points redeemed)` : ""}. Access: ${mat.accessDurationDays ?? "ongoing"}.`,
+    );
     return { ...result, paystack: "mock — wire keys + webhook in payments spike" };
   });
 

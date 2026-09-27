@@ -132,3 +132,17 @@
 - **Files:** `apps/api/src/routes/assessments.ts`, `apps/api/src/main.ts`, `apps/api/prisma/schema.prisma` (+ migration `20260927225750_assessments`), `apps/web-lecturer/app/courses/[id]/page.tsx`, `apps/web-student/app/courses/[id]/page.tsx` + `app/assessments/[id]/page.tsx`, `Docs/PRD.md` (this entry)
 - **Commit:** `39a1865 Phase 2a assessments live: builder, attempts, auto-grade + grading UI`
 - **Status:** Done, pushed to `main`.
+
+### 014 — 2026-09-28 — Phase 2b engagement & economy (points, settlement, reviews, email), live
+- **Instruction:** "CONTINUE BUILDING EVERYTHING THROUGH ALL THE STAGES TILL YOU ARE DONE" (Phase 2b slice)
+- **Change:**
+  - Schema: `ReviewReply`, `EmailLog` + migration `20260927234056_phase2b`. Fixed ownership fallout: migration ran as postgres superuser → new tables unreadable by edufarm role → granted privileges + default privileges for future.
+  - Points (`routes/points.ts`): pass +10 (≥50%, once per assessment), lecturer recognition +5 (20/week quota, 2/week same-student caps), balance/history, NEVER for opens/purchases. Checkout redeems at 10 kobo/pt, min 5000, max 50% price. Pass-points hooked into auto-grade submit + manual grade.
+  - Settlement (`routes/settlement.ts`): overview, run (pending→available after 7d hold), pay (available→settled + audit + lecturer notification).
+  - Reviews/disputes (`routes/reviews.ts`): eligible-only reviews (purchase or ≥3 dwells), lecturer replies, report→dispute, admin resolve + audit.
+  - Email (`routes/email.ts`): outbox log on purchase/grade; admin viewer (dev transport, Resend TODO).
+  - UI: student home points balance, reader points-redemption + reviews, lecturer Recognize +5 per enrollment, admin Settlement/Disputes/Email pages + nav.
+  - Verified live: recognition ×2 (+5 each), 3rd → 429 cap ✓, balance 10; pure-MCQ 100% → graded 2/2 → balance 20 ✓; min/balance redemption guards ✓; review 5★ + lecturer reply ✓; report→resolve ✓; receipt email logged ✓; backdated entry → released 1 → paid ₦350 → settled 35000 ✓. Redemption success path (>5000 pts) not E2E'd — unreachable in dev by design (slow economy).
+- **Files:** `schema.prisma` + migration, `routes/points|settlement|reviews|email.ts`, hooks in `purchases|assessments.ts`, `main.ts`, 6 UI files, `Docs/PRD.md` (this entry)
+- **Commit:** (to be filled on push)
+- **Status:** In progress.

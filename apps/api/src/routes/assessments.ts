@@ -9,6 +9,7 @@
 import type { FastifyInstance } from "fastify";
 import { prisma } from "../db.js";
 import { currentUser } from "../auth-dev.js";
+import { awardPassPoints } from "./points.js";
 
 const LECTURER_ROLES = ["lecturer", "deptAdmin", "institutionAdmin", "platformAdmin"];
 
@@ -200,6 +201,9 @@ export async function assessmentRoutes(app: FastifyInstance) {
         type: "assessment-submitted", durationSec: 0,
       },
     });
+    if (updated.status === "graded" && maxScore > 0 && score / maxScore >= 0.5) {
+      await awardPassPoints(user.studentProfile.id, attempt.assessmentId);
+    }
     return updated;
   });
 
@@ -258,6 +262,15 @@ export async function assessmentRoutes(app: FastifyInstance) {
         title: `Graded: ${attempt.assessment.title}`, body: `Score ${score}/${maxScore}`,
       },
     });
+    // Phase 2b: pass points (≥50%, once per assessment) + graded email
+    if (maxScore > 0 && score / maxScore >= 0.5) {
+      await awardPassPoints(attempt.studentId, attempt.assessmentId);
+    }
+    const { logEmail } = await import("./email.js");
+    await logEmail(
+      attemptWithStudent!.student.userId, `Graded: ${attempt.assessment.title}`,
+      `Score ${score}/${maxScore}.${maxScore > 0 && score / maxScore >= 0.5 ? " +10 Academic Points earned." : ""}`,
+    );
     return graded;
   });
 }
