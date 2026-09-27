@@ -66,5 +66,5 @@
 - **Instruction:** "for database, supabase has a subscription so let us use postgress on my local device. what can we use? 2. for auth use better auth. 3. use cloudfare r2 for storage. Do not use supabase. Do not use vercel. Let us host on local device"
 - **Change:** Locked stack in `Docs/IMPLEMENTATION_PLAN.md` §0.3/0.5/0.6: local PostgreSQL 16 (native EDB installer recommended on this 8GB Win11 device, or Docker Compose; `edufarm` DB + `vector` ext, pgAdmin/DBeaver, `pg_dump`→R2 backups) answering "what can we use"; Better Auth + Postgres adapter (session cookies, TOTP for staff, role+verificationStatus claims, no Supabase Auth); Cloudflare R2 private buckets (`materials`, `pages`, `backups`, `uploads-tmp`) with 60s presigned page URLs; self-host Next/Nest via Node+pnpm+PM2+Caddy+Tunnel (no Vercel). Updated monorepo infra note, analytics (self-hosted), expansion perf, test DB (`edufarm_test`), 2-week starter installs, next-ADR name. Checked device: Win11 Pro, 7.8GB RAM, 140GB free, no Docker/Node/Postgres yet — install list provided.
 - **Files:** `Docs/IMPLEMENTATION_PLAN.md`, `Docs/PRD.md` (this entry)
-- **Commit:** (to be filled on push)
-- **Status:** In progress.
+- **Commit:** `c2bcbec Lock stack: local Postgres + Better Auth + R2, no Supabase/Vercel, self-host`
+- **Status:** Done, pushed to `main`.
