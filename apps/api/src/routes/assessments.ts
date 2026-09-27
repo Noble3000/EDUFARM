@@ -101,6 +101,19 @@ export async function assessmentRoutes(app: FastifyInstance) {
     return prisma.assessment.update({ where: { id }, data: { status: "closed" } });
   });
 
+  // lecturer: list ALL assessments for a course (drafts included, keys visible)
+  app.get("/courses/:id/assessments/lecturer", async (req, reply) => {
+    const user = await currentUser(req);
+    if (!user || !LECTURER_ROLES.includes(user.role))
+      return reply.code(403).send({ error: "Lecturer/staff only." });
+    const { id } = req.params as { id: string };
+    return prisma.assessment.findMany({
+      where: { courseId: id },
+      include: { questions: { orderBy: { order: "asc" } }, _count: { select: { attempts: true } } },
+      orderBy: { createdAt: "desc" },
+    });
+  });
+
   // student: list published assessments for a course (keys stripped)
   app.get("/courses/:id/assessments", async (req, reply) => {
     const user = await currentUser(req);

@@ -16,7 +16,10 @@ export default function ManageCourse({ params }: { params: { id: string } }) {
   async function refresh() {
     setEnrs(await api(`/courses/${params.id}/enrollments`).catch(() => []));
   }
-  useEffect(() => { refresh(); }, [params.id]);
+  useEffect(() => {
+    refresh();
+    api(`/courses/${params.id}/assessments/lecturer`).then(setAsmts).catch(() => []);
+  }, [params.id]);
   async function decide(id: string, decision: string) {
     await api(`/enrollments/${id}/decide`, { method: "POST", body: JSON.stringify({ decision }) });
     refresh();
@@ -69,6 +72,60 @@ export default function ManageCourse({ params }: { params: { id: string } }) {
         <p>{msg}</p>
         <p className="muted">File bytes → R2 in reader spike; metadata + lifecycle live now. Answer Q&A from the student course page data via API.</p>
       </div>
+      <div className="card"><h3>Assessments</h3>
+        <input placeholder="New assessment title (quiz)" value={atitle} onChange={(e) => setAtitle(e.target.value)} />
+        <div className="row">
+          <button onClick={async () => {
+            const a = await api(`/courses/${params.id}/assessments`, { method: "POST", body: JSON.stringify({ title: atitle, type: "quiz" }) });
+            setAtitle(""); setGradeId(a.id); setMsg(`Created ${a.title} — add questions below, then publish.`);
+            setAsmts([...asmts, a]);
+          }}>Create draft</button>
+          <button className="sec" onClick={async () => {
+            setAsmts(await api(`/courses/${params.id}/assessments/lecturer`).catch(() => []));
+          }}>Refresh list</button>
+        </div>
+        {asmts.map((a) => (
+          <div className="row" key={a.id} style={{ marginTop: 8 }}>
+            <span><strong>{a.title}</strong> · {a.status}</span>
+            <button className="sec" onClick={() => setGradeId(a.id)}>Open</button>
+            <button onClick={async () => {
+              await api(`/assessments/${a.id}/publish`, { method: "POST", body: JSON.stringify({}) });
+              setMsg(`Published ${a.title} — students notified.`);
+            }}>Publish</button>
+          </div>
+        ))}
+        {gradeId && <div style={{ marginTop: 12 }}>
+          <h4>Add MCQ question to {gradeId.slice(0, 8)}…</h4>
+          <QuestionForm assessmentId={gradeId} onDone={(m) => setMsg(m)} />
+          <h4>Attempts</h4>
+          <button className="sec" onClick={async () => {
+            setGrade(await api(`/assessments/${gradeId}/attempts`).catch(() => null));
+          }}>Load attempts</button>
+          {grade?.attempts.map((t) => (
+            <p key={t.id}>· {t.id.slice(0, 8)} — {t.status}{t.score != null ? ` ${t.score}` : ""}</p>
+          ))}
+        </div>}
+      </div>
+    </div>
+  );
+}
+
+function QuestionForm({ assessmentId, onDone }: { assessmentId: string; onDone: (m: string) => void }) {
+  const [text, setText] = useState("");
+  const [options, setOptions] = useState("A,B,C,D");
+  const [correctIndex, setCorrectIndex] = useState(0);
+  return (
+    <div>
+      <input placeholder="Question text" value={text} onChange={(e) => setText(e.target.value)} />
+      <input placeholder="Options comma-separated" value={options} onChange={(e) => setOptions(e.target.value)} />
+      <input type="number" min={0} value={correctIndex} onChange={(e) => setCorrectIndex(Number(e.target.value))} />
+      <button onClick={async () => {
+        await api(`/assessments/${assessmentId}/questions`, {
+          method: "POST",
+          body: JSON.stringify({ text, kind: "mcq", options: options.split(",").map((s) => s.trim()), correctIndex }),
+        });
+        setText(""); onDone("Question added.");
+      }}>Add question</button>
     </div>
   );
 }

@@ -121,3 +121,14 @@
 - **Files:** 4× `app/**/[id]/page.tsx`, `Docs/PRD.md` (this entry)
 - **Commit:** `697e4db Fix [id] page imports (../../ to ../../../lib/api) + PRD entry 012`
 - **Status:** Done, pushed to `main`. (Commit also carries unfinished Phase 2a files — migration + route + page — not yet live pending API restart.)
+
+### 013 — 2026-09-28 — Finish Phase 2a assessments (lecturer build → student attempt → grading), live
+- **Instruction:** "CONTINUE BUILDING"
+- **Change:**
+  - Lecturer UI (`web-lecturer` manage course): assessment draft creation, Refresh list (new `GET /courses/:id/assessments/lecturer` with keys), Publish, MCQ QuestionForm, attempts viewer.
+  - API: added lecturer list endpoint; `tsc` clean. Restarted all servers (killed node, regenerated Prisma client — earlier EPERM was the running API locking the engine DLL).
+  - Verified live E2E: created + published "Mitosis Quiz" (2 MCQ + 1 theory); student list shows 0 leaked answer keys; start → submit (Q1 right, Q2 wrong, theory text) → `submitted`; lecturer graded theory 2/3 → `graded 4/6` ✓ (2+0+2 / 2+1+3). Grade notification sent; StudyEvent logged.
+  - Pages 200: student attempt, lecturer manage, student course (assessments section).
+- **Files:** `apps/api/src/routes/assessments.ts`, `apps/api/src/main.ts`, `apps/api/prisma/schema.prisma` (+ migration `20260927225750_assessments`), `apps/web-lecturer/app/courses/[id]/page.tsx`, `apps/web-student/app/courses/[id]/page.tsx` + `app/assessments/[id]/page.tsx`, `Docs/PRD.md` (this entry)
+- **Commit:** (to be filled on push)
+- **Status:** In progress.
