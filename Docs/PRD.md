@@ -111,5 +111,13 @@
   - Created root `PRD.md` (product requirements §§1–5 + §6 grader refinement note + build log) and root `index.html` (landing: links, run map, demo accounts).
   - Repo root now mirrors example form: `PRD.md` + `design.html` + `index.html` (+ full app under `apps/`).
 - **Files:** `design.html`, `PRD.md`, `index.html` (root), `Docs/PRD.md` (this entry)
+- **Commit:** `93ddffb Align to example form: root PRD.md + design.html (v2 refined) + index.html` (verified live on github.com/Noble3000/EDUFARM root: PRD.md + design.html + index.html listed, 17 commits)
+- **Status:** Done, pushed to `main`.
+
+### 012 — 2026-09-28 — Fix dynamic [id] page import crash (user-reported build error)
+- **Instruction:** "IT KEEPS SHOWING THIS ERROR DURING EXECUTION, CORRECT THIS" + screenshot (`app/materials/[id]/page.tsx: Module not found: Can't resolve '../../lib/api'`).
+- **Root cause:** `[id]` pages sit 3 levels under app root (`app/materials/[id]/`), so `../../lib/api` resolved to non-existent `app/lib/api`. Needed `../../../lib/api` (same bug in 4 files; single-nested pages were already correct).
+- **Change:** Fixed imports in `web-student/app/materials/[id]`, `web-student/app/courses/[id]`, `web-student/app/assessments/[id]`, `web-lecturer/app/courses/[id]` (`../../` → `../../../`). Verified live: course detail, reader, and lecturer-manage dynamic routes all HTTP 200.
+- **Files:** 4× `app/**/[id]/page.tsx`, `Docs/PRD.md` (this entry)
 - **Commit:** (to be filled on push)
-- **Status:** In progress (alignment committing now; Phase 2a assessments next in same task).
+- **Status:** In progress.

@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
-import { api } from "../../lib/api";
+import { api } from "../../../lib/api";
 
 type Enr = { id: string; status: string; student: { user: { name: string; email: string } } };
 
@@ -9,6 +9,10 @@ export default function ManageCourse({ params }: { params: { id: string } }) {
   const [ann, setAnn] = useState({ category: "course-notice", title: "", body: "", isUrgent: false });
   const [mat, setMat] = useState({ title: "", type: "lecture-notes", isFree: true, priceKobo: 50000, accessDurationDays: 90 });
   const [msg, setMsg] = useState("");
+  const [asmts, setAsmts] = useState<{ id: string; title: string; status: string }[]>([]);
+  const [atitle, setAtitle] = useState("");
+  const [grade, setGrade] = useState<{ attempts: { id: string; status: string; score: number | null }[] } | null>(null);
+  const [gradeId, setGradeId] = useState("");
   async function refresh() {
     setEnrs(await api(`/courses/${params.id}/enrollments`).catch(() => []));
   }

@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
-import { api } from "../../lib/api";
+import { api } from "../../../lib/api";
 
 type Course = {
   id: string; code: string; title: string;
@@ -12,7 +12,11 @@ type Course = {
 export default function CourseDetail({ params }: { params: { id: string } }) {
   const [c, setC] = useState<Course | null>(null);
   const [q, setQ] = useState({ title: "", body: "" });
-  useEffect(() => { api(`/courses/${params.id}`).then(setC).catch(() => {}); }, [params.id]);
+  const [asmts, setAsmts] = useState<{ id: string; title: string; type: string; dueAt: string | null; attempts: { status: string; score: number | null; maxScore: number | null }[] }[]>([]);
+  useEffect(() => {
+    api(`/courses/${params.id}`).then(setC).catch(() => {});
+    api(`/courses/${params.id}/assessments`).then(setAsmts).catch(() => []);
+  }, [params.id]);
   async function ask() {
     await api(`/courses/${params.id}/questions`, { method: "POST", body: JSON.stringify(q) });
     setQ({ title: "", body: "" });
@@ -38,6 +42,17 @@ export default function CourseDetail({ params }: { params: { id: string } }) {
           <p key={a.id}>{a.isUrgent && <span className="badge b-urg">Urgent</span>}<strong>{a.title}</strong> <span className="muted">[{a.category}]</span><br />{a.body}</p>
         ))}
         {!c.announcements.length && <p className="muted">None yet.</p>}
+      </div>
+      <div className="card">
+        <h3>Assessments</h3>
+        {asmts.map((a) => (
+          <p key={a.id}>
+            <a href={`/assessments/${a.id}`}>{a.title}</a> <span className="badge b-ed">{a.type}</span>{" "}
+            {a.attempts[0] && <span className="badge b-off">{a.attempts[0].status}{a.attempts[0].score != null ? ` ${a.attempts[0].score}/${a.attempts[0].maxScore}` : ""}</span>}
+            {a.dueAt && <span className="muted"> due {new Date(a.dueAt).toLocaleDateString()}</span>}
+          </p>
+        ))}
+        {!asmts.length && <p className="muted">No published assessments yet.</p>}
       </div>
       <div className="card">
         <h3>Course Q&A</h3>

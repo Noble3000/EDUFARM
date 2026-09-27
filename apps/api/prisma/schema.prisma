@@ -150,24 +150,26 @@ model Course {
   materials     Material[]
   announcements Announcement[]
   questions     Question[]
+  assessments   Assessment[]
 
   @@unique([departmentId, code])
 }
 
 model StudentProfile {
-  id                 String             @id @default(cuid())
-  userId             String             @unique
-  user               User               @relation(fields: [userId], references: [id])
+  id                 String              @id @default(cuid())
+  userId             String              @unique
+  user               User                @relation(fields: [userId], references: [id])
   universityId       String
-  university         University         @relation(fields: [universityId], references: [id])
+  university         University          @relation(fields: [universityId], references: [id])
   facultyId          String
   departmentId       String
   levelId            String
   matricNo           String
-  verificationStatus VerificationStatus @default(unverified)
+  verificationStatus VerificationStatus  @default(unverified)
   verifiedAt         DateTime?
   enrollments        Enrollment[]
   purchases          Purchase[]
+  attempts           AssessmentAttempt[]
 }
 
 model LecturerProfile {
@@ -366,4 +368,66 @@ model AuditLog {
   targetId   String
   meta       String?
   createdAt  DateTime @default(now())
+}
+
+// Phase 2a — Assessments (§10.1): lecturer-built quizzes/tests/assignments.
+// Objective (mcq) auto-graded; theory lecturer-graded. Attempts feed study journey + points eligibility.
+model Assessment {
+  id           String               @id @default(cuid())
+  courseId     String
+  course       Course               @relation(fields: [courseId], references: [id])
+  title        String
+  type         String               @default("quiz") // quiz | test | assignment
+  instructions String?
+  timeLimitMin Int?
+  maxAttempts  Int                  @default(1)
+  status       String               @default("draft") // draft | published | closed
+  dueAt        DateTime?
+  createdAt    DateTime             @default(now())
+  questions    AssessmentQuestion[]
+  attempts     AssessmentAttempt[]
+}
+
+model AssessmentQuestion {
+  id           String             @id @default(cuid())
+  assessmentId String
+  assessment   Assessment         @relation(fields: [assessmentId], references: [id], onDelete: Cascade)
+  text         String
+  kind         String             @default("mcq") // mcq | theory
+  options      String[] // mcq options; empty for theory
+  correctIndex Int? // mcq answer key (never sent to students)
+  marks        Int                @default(1)
+  order        Int                @default(0)
+  answers      AssessmentAnswer[]
+}
+
+model AssessmentAttempt {
+  id           String             @id @default(cuid())
+  assessmentId String
+  assessment   Assessment         @relation(fields: [assessmentId], references: [id], onDelete: Cascade)
+  studentId    String
+  student      StudentProfile     @relation(fields: [studentId], references: [id])
+  attemptNo    Int                @default(1)
+  status       String             @default("in-progress") // in-progress | submitted | graded
+  score        Int?
+  maxScore     Int?
+  startedAt    DateTime           @default(now())
+  submittedAt  DateTime?
+  answers      AssessmentAnswer[]
+
+  @@unique([assessmentId, studentId, attemptNo])
+}
+
+model AssessmentAnswer {
+  id            String             @id @default(cuid())
+  attemptId     String
+  attempt       AssessmentAttempt  @relation(fields: [attemptId], references: [id], onDelete: Cascade)
+  questionId    String
+  question      AssessmentQuestion @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  selectedIndex Int?
+  body          String?
+  isCorrect     Boolean?
+  marksAwarded  Int                @default(0)
+
+  @@unique([attemptId, questionId])
 }
