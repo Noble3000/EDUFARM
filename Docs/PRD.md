@@ -100,5 +100,5 @@
   - Verified live: /health OK; 4 users; BIO 201 chain (2 mats/1 ann/1 Q); E2E ada: library → ₦500 checkout (completed) → page 3 URL granted → library 1 purchase → bello earnings pending 35000 kobo (₦350 = 70%) ✓; progress 5%; all 3 web apps HTTP 200 with EDUFARM markup. Browsers opened to :3001/:3002/:3003 login pages.
   - Known gaps: dev-header auth (Better Auth session wiring next), R2 presigned URLs mocked, Paystack mocked, reader renders shell not PDF bytes, ownership scoping TODO.
 - **Files:** `apps/api/src/**`, `apps/api/prisma/seed.ts`, `apps/web-*/**`, `infra/run-*.ps1`, `apps/api/.env` (local-only, NOT committed), `Docs/PRD.md` (this entry)
-- **Commit:** `cae1b88 Phase 1: trusted academic foundation live (API + 3 web apps, local Postgres)`
-- **Status:** Done, pushed to `main`.
+- **Commit:** `cae1b88 Phase 1: trusted academic foundation live (API + 3 web apps, local Postgres)` + fix `ccc2bf4 Fix nested page lib/api import paths`
+- **Status:** Done, pushed to `main`. All 11 pages HTTP 200 verified.
