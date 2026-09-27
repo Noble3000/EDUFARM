@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>EDUFARM — design.html (Design System Preview)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+/* EDUFARM tokens v2 — refinement applied (see PRD.md § Refinement Note 2026-09-28):
+   - Base font 16px / line-height 1.6 for clearer reading
+   - Muted text darkened to #344054 (7:1 on white) for stronger contrast
+   - Buttons: 12px 20px padding, weight 700, 3px gold focus ring
+   - Inputs: real <label>s, 44px min-height, 2px brand focus border + ring */
+:root{
+  --brand:#0E5A3C; --brand-dark:#0A4230; --accent:#C9A227;
+  --ink:#101828; --muted:#344054; --line:#D0D5DD; --bg:#F9FAFB; --card:#FFFFFF;
+  --official-bg:#E6F4EC; --official-fg:#0E5A3C;
+  --radius:12px;
+}
+*{box-sizing:border-box}
+body{margin:0;font-family:Inter,system-ui,sans-serif;font-size:16px;line-height:1.6;color:var(--ink);background:var(--bg)}
+.wrap{max-width:1020px;margin:0 auto;padding:24px 16px 64px}
+.hero{background:linear-gradient(135deg,var(--brand),var(--brand-dark));color:#fff;border-radius:16px;padding:32px 24px;margin-top:16px}
+.hero h1{font-family:Sora,sans-serif;font-size:30px;margin:0 0 8px}
+.hero p{margin:6px 0;opacity:.95}
+.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:24px;margin:20px 0}
+.card h2{font-family:Sora,sans-serif;font-size:22px;margin:0 0 4px}
+.sub{color:var(--muted);font-size:15px;margin:0 0 16px}
+.swatches{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px}
+.swatch{border:1px solid var(--line);border-radius:var(--radius);overflow:hidden}
+.swatch .c{height:60px}.swatch .t{padding:8px 10px;font-size:14px}
+/* Styled buttons (refined) */
+.btn{display:inline-block;padding:12px 20px;border-radius:12px;font-weight:700;font-size:16px;border:2px solid transparent;cursor:pointer;margin:4px 8px 4px 0;min-height:44px}
+.btn:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.btn-primary{background:var(--brand);color:#fff}
+.btn-primary:hover{background:var(--brand-dark)}
+.btn-accent{background:var(--accent);color:#101828}
+.btn-outline{background:#fff;border-color:var(--brand);color:var(--brand)}
+/* Sample inputs (refined: labels + focus ring) */
+label.flabel{display:block;font-weight:600;font-size:15px;margin:12px 0 4px}
+input.fin,input.fsel,textarea.fin{width:100%;min-height:44px;padding:10px 12px;font-size:16px;font-family:inherit;color:var(--ink);border:1px solid var(--line);border-radius:10px;background:#fff}
+input.fin:focus,textarea.fin:focus,.fsel:focus{outline:3px solid var(--accent);outline-offset:1px;border:2px solid var(--brand)}
+.hint{font-size:14px;color:var(--muted)}
+.badge{display:inline-block;font-size:13px;font-weight:700;padding:4px 12px;border-radius:999px;margin:2px 6px 2px 0;border:1px solid}
+.b-off{background:var(--official-bg);color:var(--official-fg);border-color:#A6D6B8}
+.note{background:#FFFAEB;border:1px solid var(--accent);border-radius:12px;padding:12px 16px;font-size:15px}
+code{background:#F2F4F7;padding:2px 6px;border-radius:6px;font-size:14px}
+footer{color:var(--muted);font-size:14px;text-align:center;padding:24px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="hero">
+    <h1>EDUFARM — Design System Preview</h1>
+    <p>Trusted-by-design tokens for a verified lecturer–student learning ecosystem.</p>
+    <p>File: <code>design.html</code> · Tokens source: <code>packages/tokens/tokens.json</code> · Spec: <code>Docs/IMPLEMENTATION_PLAN.md §0.2</code></p>
+  </div>
+
+  <div class="note" style="margin-top:20px">
+    <strong>Refinement v2 (2026-09-28, logged in PRD.md):</strong> clearer reading font (16px / 1.6),
+    stronger text contrast (muted #344054, 7:1), larger bolder buttons with gold focus ring,
+    labeled 44px inputs with brand focus border. Press <kbd>Tab</kbd> to see focus rings.
+  </div>
+
+  <section class="card">
+    <h2>1 · Colors</h2>
+    <p class="sub">Academic green = trust · Gold = Word/achievement · All body text ≥ 7:1 contrast on white.</p>
+    <div class="swatches">
+      <div class="swatch"><div class="c" style="background:#0E5A3C"></div><div class="t"><strong>brand.primary</strong><br>#0E5A3C</div></div>
+      <div class="swatch"><div class="c" style="background:#0A4230"></div><div class="t"><strong>brand.dark</strong><br>#0A4230</div></div>
+      <div class="swatch"><div class="c" style="background:#C9A227"></div><div class="t"><strong>brand.accent</strong><br>#C9A227</div></div>
+      <div class="swatch"><div class="c" style="background:#101828"></div><div class="t"><strong>ink</strong><br>#101828</div></div>
+      <div class="swatch"><div class="c" style="background:#344054"></div><div class="t"><strong>muted (refined)</strong><br>#344054 · 7:1</div></div>
+      <div class="swatch"><div class="c" style="background:#D92D20"></div><div class="t"><strong>urgent</strong><br>#D92D20</div></div>
+    </div>
+  </section>
+
+  <section class="card">
+    <h2>2 · Typography</h2>
+    <p class="sub">Display: Sora · UI: Inter · Base 16px / 1.6 (refined for clarity).</p>
+    <div style="font-family:Sora;font-size:30px;font-weight:800">Display — Today&apos;s Word</div>
+    <div style="font-family:Sora;font-size:22px;font-weight:700;margin-top:8px">Heading — My Courses</div>
+    <p style="margin:8px 0">Body 16px/1.6 — Lecturer announcement text with diacritics: Ọnwụka, Adéyẹmí, Ngozi. Official · v2.1 · ₦500 · 90 days access.</p>
+    <p class="sub">Meta — BIO 201 · Dr. A. Bello · 120 students · Verified Lecturer ✔</p>
+  </section>
+
+  <section class="card">
+    <h2>3 · Styled Buttons</h2>
+    <p class="sub">12px × 20px padding, weight 700, 44px targets, gold focus-visible ring.</p>
+    <button class="btn btn-primary">Enroll in Course</button>
+    <button class="btn btn-accent">Continue Studying</button>
+    <button class="btn btn-outline">Ask Question</button>
+    <p><span class="badge b-off">✔ Official Material</span> <span class="badge b-off">✔ Verified Lecturer</span></p>
+  </section>
+
+  <section class="card">
+    <h2>4 · Sample Inputs</h2>
+    <p class="sub">Every input has a label, 44px height, and a visible focus state.</p>
+    <label class="flabel" for="in-matric">Matric No</label>
+    <input class="fin" id="in-matric" placeholder="STU-042">
+    <label class="flabel" for="in-course">Course</label>
+    <select class="fsel fsel fin" id="in-course"><option>BIO 201 — Cell Biology</option><option>CHM 201 — Organic Chemistry</option></select>
+    <label class="flabel" for="in-q">Ask a question</label>
+    <textarea class="fin" id="in-q" rows="3" placeholder="Why does crossing over matter?"></textarea>
+    <p class="hint">Focus any field to see the 2px brand border + gold ring (keyboard accessible).</p>
+    <button class="btn btn-primary">Submit</button>
+  </section>
+</div>
+<footer>EDUFARM · design.html v2 · 2026-09-28 · Refinement note in <code>PRD.md</code></footer>
+</body>
+</html>

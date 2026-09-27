@@ -102,3 +102,14 @@
 - **Files:** `apps/api/src/**`, `apps/api/prisma/seed.ts`, `apps/web-*/**`, `infra/run-*.ps1`, `apps/api/.env` (local-only, NOT committed), `Docs/PRD.md` (this entry)
 - **Commit:** `cae1b88 Phase 1: trusted academic foundation live (API + 3 web apps, local Postgres)` + fix `ccc2bf4 Fix nested page lib/api import paths`
 - **Status:** Done, pushed to `main`. All 11 pages HTTP 200 verified.
+
+### 011 — 2026-09-28 — Align repo to example form + design refinement, then continue buildup
+- **Instruction:** "ALIGN MY BUILDUP TO THIS FORM ABOVE ON GITHUB … Create Preview HTML … design.html … Steer Design Improvement … Refinement Note … inside PRD.md … ENSURE IT IS WELL ALIGNED THEN CONTINUE WITH THE BUILD UP"
+- **Change (alignment):**
+  - Created root `design.html` (v2): colors, typography, styled buttons, sample inputs + badges, with specific refinement applied and banner describing it. Opened in browser to verify.
+  - Refinement (requested + applied): clearer reading font (16px/1.6), stronger contrast (muted #344054 ≈7:1), larger bolder buttons (12×20px, 700, 44px, gold focus ring), labeled 44px inputs with brand focus border + ring.
+  - Created root `PRD.md` (product requirements §§1–5 + §6 grader refinement note + build log) and root `index.html` (landing: links, run map, demo accounts).
+  - Repo root now mirrors example form: `PRD.md` + `design.html` + `index.html` (+ full app under `apps/`).
+- **Files:** `design.html`, `PRD.md`, `index.html` (root), `Docs/PRD.md` (this entry)
+- **Commit:** (to be filled on push)
+- **Status:** In progress (alignment committing now; Phase 2a assessments next in same task).

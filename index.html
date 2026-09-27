@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>EDUFARM — Verified Lecturer–Student Learning Ecosystem</title>
+<style>
+:root{--brand:#0E5A3C;--brand-dark:#0A4230;--accent:#C9A227;--ink:#101828;--muted:#344054;--line:#D0D5DD;--bg:#F9FAFB}
+*{box-sizing:border-box}body{margin:0;font-family:Inter,system-ui,sans-serif;font-size:16px;line-height:1.6;color:var(--ink);background:var(--bg)}
+.wrap{max-width:960px;margin:0 auto;padding:24px 16px 64px}
+.hero{background:linear-gradient(135deg,var(--brand),var(--brand-dark));color:#fff;border-radius:16px;padding:36px 28px}
+.hero h1{font-family:Sora,Inter,sans-serif;font-size:30px;margin:0 0 8px}
+.btn{display:inline-block;padding:12px 20px;border-radius:12px;font-weight:700;font-size:16px;text-decoration:none;margin:6px 8px 0 0}
+.btn:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.btn-gold{background:var(--accent);color:#101828}.btn-ghost{background:transparent;color:#fff;border:2px solid #fff}
+.card{background:#fff;border:1px solid var(--line);border-radius:14px;padding:20px;margin:16px 0}
+.badge{display:inline-block;font-size:13px;font-weight:700;padding:4px 12px;border-radius:999px;border:1px solid;margin-right:6px}
+.b-ok{background:#E6F4EC;color:#0E5A3C;border-color:#A6D6B8}.b-info{background:#EFF8FF;color:#175CD3;border-color:#B2DDFF}
+code{background:#F2F4F7;padding:2px 6px;border-radius:6px;font-size:14px}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}@media(max-width:700px){.grid{grid-template-columns:1fr}}
+footer{color:var(--muted);font-size:14px;text-align:center;padding:24px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="hero">
+    <h1>EDUFARM</h1>
+    <p>A trusted academic ecosystem — not a PDF marketplace. Verified universities, lecturers, students, and official materials.</p>
+    <a class="btn btn-gold" href="design.html">View design.html</a>
+    <a class="btn btn-ghost" href="https://github.com/Noble3000/EDUFARM/blob/main/PRD.md">Read PRD.md</a>
+  </div>
+  <div class="card">
+    <span class="badge b-ok">Phase 1 live locally</span>
+    <span class="badge b-info">Local Postgres · Better Auth · R2</span>
+    <h2>Run it on your device</h2>
+    <div class="grid">
+      <div><strong>Student app</strong><br><code>http://localhost:3001</code><br><span style="color:var(--muted)">Login: ada@student.demo-university.edu</span></div>
+      <div><strong>Lecturer console</strong><br><code>http://localhost:3002</code><br><span style="color:var(--muted)">Login: bello@demo-university.edu</span></div>
+      <div><strong>Admin</strong><br><code>http://localhost:3003</code><br><span style="color:var(--muted)">Login: admin@edufarm.ng</span></div>
+      <div><strong>API</strong><br><code>http://localhost:4000/health</code><br><span style="color:var(--muted)">Start: infra/run-api.ps1</span></div>
+    </div>
+  </div>
+  <div class="card">
+    <h2>Repository map</h2>
+    <p><code>PRD.md</code> — requirements + grader refinement notes · <code>design.html</code> — design preview (v2 refined) · <code>index.html</code> — this page · <code>apps/</code> — student, lecturer, admin, api · <code>packages/</code> — tokens, ui, types, reader · <code>Docs/</code> — full PRD, plan, changelog, v1 preview.</p>
+  </div>
+</div>
+<footer>EDUFARM · index.html · Phase 1 live · Phase 2 in progress</footer>
+</body>
+</html>
