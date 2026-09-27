@@ -144,5 +144,5 @@
   - UI: student home points balance, reader points-redemption + reviews, lecturer Recognize +5 per enrollment, admin Settlement/Disputes/Email pages + nav.
   - Verified live: recognition ×2 (+5 each), 3rd → 429 cap ✓, balance 10; pure-MCQ 100% → graded 2/2 → balance 20 ✓; min/balance redemption guards ✓; review 5★ + lecturer reply ✓; report→resolve ✓; receipt email logged ✓; backdated entry → released 1 → paid ₦350 → settled 35000 ✓. Redemption success path (>5000 pts) not E2E'd — unreachable in dev by design (slow economy).
 - **Files:** `schema.prisma` + migration, `routes/points|settlement|reviews|email.ts`, hooks in `purchases|assessments.ts`, `main.ts`, 6 UI files, `Docs/PRD.md` (this entry)
-- **Commit:** (to be filled on push)
-- **Status:** In progress.
+- **Commit:** `5a95f02 Phase 2b economy live: points, settlement, reviews, disputes, email`
+- **Status:** Done, pushed to `main`.
