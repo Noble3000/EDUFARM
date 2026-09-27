@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
-import { api } from "../lib/api";
+import { api } from "../../lib/api";
 
 export default function Reviews() {
   const [rows, setRows] = useState<{ id: string; title: string; type: string; status: string; course: { code: string } }[]>([]);

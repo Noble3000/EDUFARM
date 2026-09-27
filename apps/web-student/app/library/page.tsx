@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
-import { api } from "../lib/api";
+import { api } from "../../lib/api";
 
 export default function Library() {
   const [lib, setLib] = useState<{ purchases: { id: string; materialId: string; amountKobo: number }[]; freeMaterials: { id: string; title: string }[] } | null>(null);
