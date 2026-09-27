@@ -1,0 +1,25 @@
+# EDUFARM local reverse proxy — Caddy (no Vercel).
+# Install: winget install CaddyServer.Caddy, then: caddy run --config infra/Caddyfile
+# Public demo: cloudflared tunnel --url http://localhost:80
+
+{
+  auto_https off
+}
+
+:80 {
+  handle /api/* {
+    reverse_proxy localhost:4000
+  }
+  handle /lecturer/* {
+    reverse_proxy localhost:3002
+  }
+  handle /admin/* {
+    reverse_proxy localhost:3003
+  }
+  handle {
+    reverse_proxy localhost:3001
+  }
+  log {
+    output file logs/caddy.log
+  }
+}

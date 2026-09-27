@@ -1,0 +1,369 @@
+// Prisma schema v1 — local PostgreSQL 16 (NOT Supabase).
+// DB: edufarm (dev) / edufarm_test (CI). Extension: vector (Phase 3 RAG).
+// Run: pnpm db:generate && pnpm db:migrate (after Postgres 16 installed locally).
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  student
+  lecturer
+  deptAdmin
+  institutionAdmin
+  platformAdmin
+}
+
+enum VerificationStatus {
+  unverified
+  pending
+  verified
+  rejected
+}
+
+enum EnrollmentStatus {
+  requested
+  approved
+  rejected
+  removed
+}
+
+enum MaterialStatus {
+  draft
+  pendingLecturer
+  pendingReview
+  published
+  archived
+}
+
+enum QuestionStatus {
+  unanswered
+  answered
+  resolved
+}
+
+enum PurchaseStatus {
+  pending
+  completed
+  failed
+  refunded
+}
+
+enum LedgerStatus {
+  pending
+  available
+  settled
+}
+
+// Better Auth core tables (managed by better-auth Prisma adapter)
+model User {
+  id              String           @id @default(cuid())
+  email           String           @unique
+  emailVerified   Boolean          @default(false)
+  phone           String?
+  name            String?
+  role            Role             @default(student)
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  sessions        Session[]
+  accounts        Account[]
+  studentProfile  StudentProfile?
+  lecturerProfile LecturerProfile?
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  token     String   @unique
+  createdAt DateTime @default(now())
+}
+
+model Account {
+  id                String @id @default(cuid())
+  userId            String
+  user              User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  provider          String
+  providerAccountId String
+
+  @@unique([provider, providerAccountId])
+}
+
+model Verification {
+  id         String   @id @default(cuid())
+  identifier String
+  value      String
+  expiresAt  DateTime
+}
+
+// Academic hierarchy
+model University {
+  id        String           @id @default(cuid())
+  name      String
+  slug      String           @unique
+  verified  Boolean          @default(false)
+  logoKey   String?
+  faculties Faculty[]
+  students  StudentProfile[]
+}
+
+model Faculty {
+  id           String       @id @default(cuid())
+  universityId String
+  university   University   @relation(fields: [universityId], references: [id])
+  name         String
+  departments  Department[]
+}
+
+model Department {
+  id        String            @id @default(cuid())
+  facultyId String
+  faculty   Faculty           @relation(fields: [facultyId], references: [id])
+  name      String
+  levels    Level[]
+  courses   Course[]
+  lecturers LecturerProfile[]
+}
+
+model Level {
+  id           String     @id @default(cuid())
+  departmentId String
+  department   Department @relation(fields: [departmentId], references: [id])
+  name         String // 100, 200...
+}
+
+model Course {
+  id            String         @id @default(cuid())
+  departmentId  String
+  department    Department     @relation(fields: [departmentId], references: [id])
+  levelId       String
+  code          String
+  title         String
+  isOfficial    Boolean        @default(false)
+  enrollments   Enrollment[]
+  materials     Material[]
+  announcements Announcement[]
+  questions     Question[]
+
+  @@unique([departmentId, code])
+}
+
+model StudentProfile {
+  id                 String             @id @default(cuid())
+  userId             String             @unique
+  user               User               @relation(fields: [userId], references: [id])
+  universityId       String
+  university         University         @relation(fields: [universityId], references: [id])
+  facultyId          String
+  departmentId       String
+  levelId            String
+  matricNo           String
+  verificationStatus VerificationStatus @default(unverified)
+  verifiedAt         DateTime?
+  enrollments        Enrollment[]
+  purchases          Purchase[]
+}
+
+model LecturerProfile {
+  id                 String             @id @default(cuid())
+  userId             String             @unique
+  user               User               @relation(fields: [userId], references: [id])
+  departmentId       String
+  department         Department         @relation(fields: [departmentId], references: [id])
+  staffId            String
+  bio                String?
+  verificationStatus VerificationStatus @default(unverified)
+  verifiedAt         DateTime?
+  materials          Material[]
+}
+
+model Enrollment {
+  id        String           @id @default(cuid())
+  courseId  String
+  course    Course           @relation(fields: [courseId], references: [id])
+  studentId String
+  student   StudentProfile   @relation(fields: [studentId], references: [id])
+  status    EnrollmentStatus @default(requested)
+  createdAt DateTime         @default(now())
+
+  @@unique([courseId, studentId])
+}
+
+model Material {
+  id                 String            @id @default(cuid())
+  courseId           String
+  course             Course            @relation(fields: [courseId], references: [id])
+  lecturerId         String
+  lecturer           LecturerProfile   @relation(fields: [lecturerId], references: [id])
+  title              String
+  type               String
+  description        String?
+  priceKobo          Int               @default(0)
+  isFree             Boolean           @default(true)
+  accessDurationDays Int?
+  version            Int               @default(1)
+  status             MaterialStatus    @default(draft)
+  versions           MaterialVersion[]
+  createdAt          DateTime          @default(now())
+  updatedAt          DateTime          @updatedAt
+}
+
+model MaterialVersion {
+  id         String   @id @default(cuid())
+  materialId String
+  material   Material @relation(fields: [materialId], references: [id])
+  version    Int
+  fileKey    String // R2 materials/ key (original, private)
+  checksum   String
+  pageCount  Int      @default(0)
+  createdAt  DateTime @default(now())
+}
+
+model Bundle {
+  id         String       @id @default(cuid())
+  lecturerId String
+  title      String
+  priceKobo  Int
+  items      BundleItem[]
+}
+
+model BundleItem {
+  id         String @id @default(cuid())
+  bundleId   String
+  bundle     Bundle @relation(fields: [bundleId], references: [id])
+  materialId String
+}
+
+model Purchase {
+  id              String         @id @default(cuid())
+  studentId       String
+  student         StudentProfile @relation(fields: [studentId], references: [id])
+  materialId      String?
+  bundleId        String?
+  amountKobo      Int
+  pointsUsed      Int            @default(0)
+  status          PurchaseStatus @default(pending)
+  accessExpiresAt DateTime?
+  createdAt       DateTime       @default(now())
+}
+
+model Announcement {
+  id         String   @id @default(cuid())
+  courseId   String
+  course     Course   @relation(fields: [courseId], references: [id])
+  lecturerId String
+  category   String
+  title      String
+  body       String
+  isUrgent   Boolean  @default(false)
+  createdAt  DateTime @default(now())
+}
+
+model Question {
+  id        String         @id @default(cuid())
+  courseId  String
+  course    Course         @relation(fields: [courseId], references: [id])
+  authorId  String
+  title     String
+  body      String
+  status    QuestionStatus @default(unanswered)
+  answers   Answer[]
+  createdAt DateTime       @default(now())
+}
+
+model Answer {
+  id         String   @id @default(cuid())
+  questionId String
+  question   Question @relation(fields: [questionId], references: [id])
+  authorId   String
+  isLecturer Boolean  @default(false)
+  body       String
+  createdAt  DateTime @default(now())
+}
+
+model StudyEvent {
+  id          String   @id @default(cuid())
+  studentId   String
+  courseId    String
+  materialId  String?
+  type        String
+  page        Int?
+  durationSec Int      @default(0)
+  createdAt   DateTime @default(now())
+}
+
+model ESpeesLedger {
+  id                String       @id @default(cuid())
+  lecturerId        String
+  purchaseId        String       @unique
+  grossKobo         Int
+  lecturerShareKobo Int
+  platformShareKobo Int
+  status            LedgerStatus @default(pending)
+  createdAt         DateTime     @default(now())
+}
+
+model PointLedger {
+  id        String   @id @default(cuid())
+  studentId String
+  amount    Int
+  reason    String
+  capKey    String?
+  createdAt DateTime @default(now())
+}
+
+model Review {
+  id         String   @id @default(cuid())
+  materialId String
+  studentId  String
+  rating     Int
+  body       String?
+  status     String   @default("visible")
+  createdAt  DateTime @default(now())
+}
+
+model Dispute {
+  id         String   @id @default(cuid())
+  reporterId String
+  targetType String
+  targetId   String
+  reason     String
+  status     String   @default("open")
+  resolution String?
+  createdAt  DateTime @default(now())
+}
+
+model Notification {
+  id        String    @id @default(cuid())
+  userId    String
+  type      String
+  title     String
+  body      String
+  readAt    DateTime?
+  createdAt DateTime  @default(now())
+}
+
+model Devotional {
+  id        String   @id @default(cuid())
+  date      DateTime @unique
+  title     String
+  verse     String
+  body      String
+  sourceRef String?
+}
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  actorId    String
+  action     String
+  targetType String
+  targetId   String
+  meta       String?
+  createdAt  DateTime @default(now())
+}

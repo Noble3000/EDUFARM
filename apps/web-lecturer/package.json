@@ -1,0 +1,21 @@
+{
+  "name": "@edufarm/web-lecturer",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev -p 3002",
+    "build": "next build",
+    "start": "next start -p 3002",
+    "lint": "next lint",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@edufarm/tokens": "workspace:*",
+    "@edufarm/types": "workspace:*",
+    "@edufarm/ui": "workspace:*",
+    "better-auth": "^1.0.0",
+    "next": "^14.2.0",
+    "react": "^18.3.0",
+    "react-dom": "^18.3.0"
+  }
+}

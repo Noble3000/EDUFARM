@@ -75,3 +75,17 @@
 - **Files:** `Docs/DESIGN_SYSTEM_PREVIEW.html`, `Docs/PRD.md` (this entry)
 - **Commit:** `0f25144 Add visual design system preview + PRD entry 008`
 - **Status:** Done, pushed to `main`.
+
+### 009 — 2026-09-27 — Execute implementation plan Phase 0 (foundation)
+- **Instruction:** "proceed with the implementation plan. Execute one phase at a time"
+- **Change (Phase 0, local-first):**
+  - Scaffolded monorepo: `package.json` (pnpm+turbo), `pnpm-workspace.yaml`, `turbo.json`, `tsconfig.base.json`, `.gitignore`, `.env.example`; `apps/web-student|web-lecturer|web-admin` (Next 14, ports 3001/3002/3003), `apps/api` (Fastify+Prisma+Better Auth, :4000); `packages/tokens|ui|types|reader|config`; `services/ai-worker|notifications`; `infra/Caddyfile|ecosystem.config.js|backup.ps1`; `Docs/ADRs/001-local-stack.md|002-better-auth-rbac.md`.
+  - Design tokens locked in `packages/tokens/tokens.json` (brand green/gold, ink scale, Sora/Inter, radius, badges) + `tokens.d.ts` CSS-var helper; `@edufarm/ui` badge/button contract, `@edufarm/types` role/status unions, `@edufarm/reader` presigned-page + watermark contract.
+  - Data model: `apps/api/prisma/schema.prisma` (24 models: hierarchy, Better Auth User/Session/Account/Verification, profiles, enrollment, materials+versions, bundles, purchases, announcements, Q&A, StudyEvent, ESpees/Point ledgers, reviews, disputes, notifications, devotional, audit log) + `seed.ts` (demo university → BIO 201).
+  - Better Auth: `apps/api/src/auth.ts` (Prisma adapter, email+password, 2FA plugin, role+phone fields, trustedOrigins 3001–3003).
+  - Runtimes installed: Node 24 LTS + pnpm 9.15.9 (`pnpm install` 106 pkgs OK); Postgres Pro 17.7 via winget (EDB 403 blocked) — role `edufarm`, DBs `edufarm`+`edufarm_test` verified live with seeded BIO 201.
+  - Verified: `prisma validate` + `format` clean, `tsc` clean (packages + api), `migrate dev init` applied, seed OK. Fixed along the way: `@types/node`, api tsconfig (`declaration:false`, no rootDir), auth.ts annotation reverted.
+  - Known gaps: `pgvector` ext missing in Postgres Pro build (Phase 3 — install separately later); Node 24 installed vs 20 LTS planned (works; pin 20 later if needed); `IMPLEMENTATION_PLAN.docx` left untracked (owner file).
+- **Files:** monorepo scaffold (see above), `pnpm-lock.yaml`, `Docs/PRD.md` (this entry)
+- **Commit:** (to be filled on push)
+- **Status:** In progress.
