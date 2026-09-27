@@ -119,5 +119,5 @@
 - **Root cause:** `[id]` pages sit 3 levels under app root (`app/materials/[id]/`), so `../../lib/api` resolved to non-existent `app/lib/api`. Needed `../../../lib/api` (same bug in 4 files; single-nested pages were already correct).
 - **Change:** Fixed imports in `web-student/app/materials/[id]`, `web-student/app/courses/[id]`, `web-student/app/assessments/[id]`, `web-lecturer/app/courses/[id]` (`../../` → `../../../`). Verified live: course detail, reader, and lecturer-manage dynamic routes all HTTP 200.
 - **Files:** 4× `app/**/[id]/page.tsx`, `Docs/PRD.md` (this entry)
-- **Commit:** (to be filled on push)
-- **Status:** In progress.
+- **Commit:** `697e4db Fix [id] page imports (../../ to ../../../lib/api) + PRD entry 012`
+- **Status:** Done, pushed to `main`. (Commit also carries unfinished Phase 2a files — migration + route + page — not yet live pending API restart.)
