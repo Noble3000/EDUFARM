@@ -27,5 +27,6 @@ prisma/migrations/migration_lock.toml
 # uploads / local data
 uploads/
 pgdata/
+logs/
 *.dump
 *.sql.gz

@@ -89,3 +89,16 @@
 - **Files:** monorepo scaffold (see above), `pnpm-lock.yaml`, `Docs/PRD.md` (this entry)
 - **Commit:** `b9934a4 Phase 0 foundation: monorepo scaffold, tokens, Prisma model, Better Auth, local Postgres live`
 - **Status:** Done, pushed to `main`.
+
+### 010 — 2026-09-27 — Execute Phase 1 (trusted academic foundation), live in browser
+- **Instruction:** "Go onto the next phase write all this also and push them to my github get it working i want to be seeing the progress on my browser"
+- **Change (Phase 1, all running on this device):**
+  - API (`apps/api`, :4000): `src/db.ts`, `src/auth-dev.ts` (x-user-id dev auth, Better Auth cookies next), routes `hierarchy|verification|enrollments|announcements|qa|materials|purchases|progress` — CRUD, verification request/decide + queues + audit, enrollment request/decide, announcements with fan-out notifications, Q&A ask/answer/resolve + search, material lifecycle draft→pendingReview→published→archived with price bounds + review queue + entitlement-checked page URLs + study-event logging, mock checkout (70/30 eSpees split) + bundles + library + earnings, dwell pings + course progress + continue + inbox. `main.ts` registers all + CORS + demo/login + demo/users. Added `@fastify/cors`, `"type":"module"` (fixes tsx TLA), api tsconfig ES2022 modules.
+  - Seed: 4 demo users (bello lecturer verified, ada student verified+approved, pending student, platform admin) + free outline + ₦500 mitosis notes (published) + announcement + answered Q&A.
+  - Web: student :3001 (home per §6.1 order, login, verify, courses, course detail, protected reader shell with watermark+dwell+mock buy, library); lecturer :3002 (dashboard+earnings, course manage: enrollments, announcement composer, upload+submit); admin :3003 (home, verification queues, material review queue). Each with next.config+tsconfig+layout+lib/api. Fixed empty-POST 415 by sending `{}` bodies.
+  - Infra: `run-api.ps1` + `run-web.ps1` detached runners (bash sessions don't persist; Start-Process Hidden). Local-only `apps/api/.env` (untracked).
+  - Verified live: /health OK; 4 users; BIO 201 chain (2 mats/1 ann/1 Q); E2E ada: library → ₦500 checkout (completed) → page 3 URL granted → library 1 purchase → bello earnings pending 35000 kobo (₦350 = 70%) ✓; progress 5%; all 3 web apps HTTP 200 with EDUFARM markup. Browsers opened to :3001/:3002/:3003 login pages.
+  - Known gaps: dev-header auth (Better Auth session wiring next), R2 presigned URLs mocked, Paystack mocked, reader renders shell not PDF bytes, ownership scoping TODO.
+- **Files:** `apps/api/src/**`, `apps/api/prisma/seed.ts`, `apps/web-*/**`, `infra/run-*.ps1`, `apps/api/.env` (local-only, NOT committed), `Docs/PRD.md` (this entry)
+- **Commit:** (to be filled on push)
+- **Status:** In progress.
