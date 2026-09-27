@@ -130,5 +130,5 @@
   - Verified live E2E: created + published "Mitosis Quiz" (2 MCQ + 1 theory); student list shows 0 leaked answer keys; start → submit (Q1 right, Q2 wrong, theory text) → `submitted`; lecturer graded theory 2/3 → `graded 4/6` ✓ (2+0+2 / 2+1+3). Grade notification sent; StudyEvent logged.
   - Pages 200: student attempt, lecturer manage, student course (assessments section).
 - **Files:** `apps/api/src/routes/assessments.ts`, `apps/api/src/main.ts`, `apps/api/prisma/schema.prisma` (+ migration `20260927225750_assessments`), `apps/web-lecturer/app/courses/[id]/page.tsx`, `apps/web-student/app/courses/[id]/page.tsx` + `app/assessments/[id]/page.tsx`, `Docs/PRD.md` (this entry)
-- **Commit:** (to be filled on push)
-- **Status:** In progress.
+- **Commit:** `39a1865 Phase 2a assessments live: builder, attempts, auto-grade + grading UI`
+- **Status:** Done, pushed to `main`.
