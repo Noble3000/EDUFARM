@@ -87,5 +87,5 @@
   - Verified: `prisma validate` + `format` clean, `tsc` clean (packages + api), `migrate dev init` applied, seed OK. Fixed along the way: `@types/node`, api tsconfig (`declaration:false`, no rootDir), auth.ts annotation reverted.
   - Known gaps: `pgvector` ext missing in Postgres Pro build (Phase 3 — install separately later); Node 24 installed vs 20 LTS planned (works; pin 20 later if needed); `IMPLEMENTATION_PLAN.docx` left untracked (owner file).
 - **Files:** monorepo scaffold (see above), `pnpm-lock.yaml`, `Docs/PRD.md` (this entry)
-- **Commit:** (to be filled on push)
-- **Status:** In progress.
+- **Commit:** `b9934a4 Phase 0 foundation: monorepo scaffold, tokens, Prisma model, Better Auth, local Postgres live`
+- **Status:** Done, pushed to `main`.
