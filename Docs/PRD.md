@@ -59,5 +59,5 @@
 - **Instruction:** "take not[e] All steering instructions and changes you told your agent to make must be written as notes in your PRD.md"
 - **Change:** Created this file `Docs/PRD.md` as living agent changelog; backfilled entries 001–006. Future changes must append here before commit/push. Noted existing `IMPLEMENTATION_PLAN.docx` in Docs/ left untouched.
 - **Files:** `Docs/PRD.md` (this file)
-- **Commit:** (to be filled on push)
-- **Status:** In progress.
+- **Commit:** `cd66366 Add Docs/PRD.md agent steering notes log (entries 001-006)`
+- **Status:** Done, pushed to `main`.
