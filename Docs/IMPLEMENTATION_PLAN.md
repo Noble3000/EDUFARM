@@ -77,7 +77,7 @@ These are non-negotiable and shape every technical choice:
   │   ├── PRD EDUFARM.md
   │   ├── IMPLEMENTATION_PLAN.md (this file)
   │   └── ADRs/              # 001-stack.md, 002-auth.md, etc.
-  └── infra/                 # Docker, Terraform, CI workflows
+  └── infra/                 # Caddyfile, pm2 ecosystem, backup scripts, tunnel config (no Terraform/Vercel)
   ```
 - **Branching:** `main` protected, `develop` integration, `feat/*`, `fix/*`. PRs require 1 review + CI green. Conventional commits (`feat:`, `fix:`, `docs:`).
 - **Tooling:** pnpm workspaces + Turborepo, TypeScript strict, ESLint + Prettier, Husky pre-commit, Changesets for versioning.
@@ -118,25 +118,29 @@ These are non-negotiable and shape every technical choice:
 
 ### 0.3 Architectural Decisions (ADRs)
 
-**Recommended stack (justify in ADRs, alternatives noted):**
+> **Owner steering 2026-09-27 (locked):** Local Postgres on owner device (Supabase has subscription cost — do NOT use Supabase). Better Auth for auth. Cloudflare R2 for storage. No Vercel. Host on local device. These override any earlier suggestions below.
 
-| Concern | Decision | Why | Alternative considered |
+**Locked stack (justify in ADRs):**
+
+| Concern | Decision | Why / How on local device | Rejected |
 | :--- | :--- | :--- | :--- |
-| Web apps | Next.js 14 (App Router) + Tailwind + tRPC or REST | SEO for landing, PWA for students, fast iteration, shared TS | Flutter for mobile-first — defer to Phase 4; start PWA to validate |
-| Mobile | PWA first, wrap with Capacitor if store presence needed | Low-data, no install friction, one codebase | React Native / Flutter — revisit when retention proven |
-| API | NestJS + TypeScript, PostgreSQL + Prisma | Structured modules for verification/materials/payments, strong typing, RBAC | Supabase/Firebase — faster but weaker for complex settlement + audit |
-| DB | PostgreSQL (Neon/Supabase Postgres or RDS) + Redis (queue/cache) | Relational hierarchy + transactional money; Redis for notifications/AI jobs | Mongo — rejected: money + hierarchy need ACID + joins |
-| File storage | S3-compatible (Cloudflare R2 / AWS S3) private buckets + signed URLs + CDN (CloudFront) for page renders | Private by default, page-level streaming, watermark on render | Public bucket — rejected (violates protected ecosystem) |
-| Protected viewing | PDF → page images (server render via `pdf2image`/`pdf.js` server) + canvas viewer, per-page signed URLs, watermark, event logging | Enforces no-download, enables progress tracking | Direct PDF URL — rejected (trivially downloadable) |
-| Search | Postgres full-text first, Meilisearch when Q&A scales | Zero extra infra for MVP | Algolia/Elastic — overkill early |
-| Payments (Naira) | Paystack (primary) + Flutterwave (fallback), webhooks + idempotency keys | Nigerian coverage, bank transfer/USSD/cards, mature webhooks | Stripe — poor Naira coverage |
-| Email | Resend or Postmark + queued templates | Transactional reliability, audit trail | Raw SMTP — rejected |
-| Push/in-app | Web Push + in-app inbox table | Primary surface is in-app per PRD §17 | FCM native — defer to native app |
-| AI | Python FastAPI worker + pgvector + LLM API (e.g., OpenAI/Anthropic) with strict RAG | Isolation of heavy ingestion, vector search scoped by entitlements | In-process Node embeddings — rejected (scaling + cost) |
-| Analytics | PostHog (product) + OpenTelemetry traces | Study-journey funnels, engagement signals for lecturer insights | GA-only — insufficient for event-level |
-| Auth | Auth.js/Clerk alternative: custom JWT + refresh rotation + RBAC; 2FA for staff | Full control over verification states | Firebase Auth — weaker custom verification workflows |
+| Web apps | Next.js 14 (App Router) + Tailwind, self-hosted with `next start` on local device | One TS codebase, PWA for students, no Vercel needed; run `web-student :3001`, `web-lecturer :3002`, `web-admin :3003` via PM2 | Vercel — rejected per owner |
+| Mobile | PWA first, test on phone via LAN/Tailscale or Cloudflare Tunnel URL | No install friction, works on low-end Android | React Native / Flutter — defer |
+| API | NestJS + TypeScript + Prisma ORM, self-hosted on local device (`:4000`) | Structured modules for verification/materials/payments, RBAC, audit | Supabase/Firebase — rejected per owner |
+| DB | **PostgreSQL 16 on local device** + Prisma Migrate + `pgvector` extension (for Phase 3) | No subscription, full ACID for money + hierarchy. Install options (pick one): **A) Native EDB installer** (lightest on 8GB RAM) + pgAdmin 4 + `CREATE EXTENSION vector`; **B) Docker Desktop + Compose** (Postgres + Redis + Mailhog in one file, needs WSL2 + ~2GB RAM). Connection: `postgresql://edufarm:***@localhost:5432/edufarm`. Backups: nightly `pg_dump` → Cloudflare R2 `backups/` bucket. GUI: pgAdmin 4 or DBeaver. | Supabase Postgres / Neon / RDS — rejected per owner (subscription). Mongo — rejected (money needs joins) |
+| Queue/cache | Redis optional; start with Postgres-based queue (`pg-boss`) to avoid extra service on 8GB machine, add Redis (Memurai/WSL) only when notifications/AI jobs need it | Fewer moving parts locally | Managed Redis — rejected |
+| File storage | **Cloudflare R2 (S3-compatible) private buckets only** — `edufarm-materials` (originals, no public access), `edufarm-pages` (rendered page images/WebP), `edufarm-backups`, `edufarm-uploads-tmp` | S3 API with R2 access keys, presigned URLs (60s) for page streaming, lifecycle rules to purge tmp/, versioning on materials bucket. R2 is remote (not local) but is the only cloud exception per owner | Supabase Storage — rejected per owner; public buckets — rejected |
+| Protected viewing | PDF → page images (server render) + canvas viewer, per-page R2 presigned URLs, watermark (user ID + time), event logging | Enforces no-download, enables progress tracking | Direct PDF URL — rejected |
+| Search | Postgres full-text first, Meilisearch self-hosted binary later when Q&A scales | Zero extra infra for MVP | Algolia/Elastic — overkill early |
+| Payments (Naira) | Paystack (primary) + Flutterwave (fallback), webhooks + idempotency keys | Nigerian coverage, bank transfer/USSD/cards | Stripe — poor Naira coverage |
+| Email | Resend or Postmark + queued templates (or local Mailhog for dev, SMTP for prod) | Transactional reliability, audit trail | Raw SMTP only — rejected for prod |
+| Push/in-app | Web Push + in-app `Notification` inbox table | Primary surface is in-app per PRD §17 | FCM native — defer |
+| AI | Python FastAPI worker (local `:8001`) + pgvector (same local Postgres) + LLM API with strict RAG | Isolation of heavy ingestion, entitlement-scoped vectors | In-process Node embeddings — rejected |
+| Analytics | PostHog self-hosted (Docker) or local event tables + Metabase; no GA dependency | Event-level funnels for study journey | GA-only — insufficient |
+| Auth | **Better Auth + Postgres adapter (Prisma/Drizzle)** — email+password + phone optional, session cookies, 2FA/TOTP plugin for staff, organization plugin for institution scoping | Single auth library across student/lecturer/admin portals with `role` + `verificationStatus` claims in session; distinct login routes (`/student/login`, `/lecturer/login`, `/admin/login`) share Better Auth backend but enforce role at middleware; audit every verification transition | Auth.js/Clerk/custom JWT/Firebase/Supabase Auth — rejected per owner (use Better Auth) |
+| Hosting | **Local device (Windows 11): Node 20 LTS + pnpm + PM2 + Caddy reverse proxy** (`edufarm.test` → localhost ports), public demo via **Cloudflare Tunnel** (`trycloudflare` URL, no port-forward), phone testing via LAN IP or Tailscale | No Vercel/Render/Fly. CI still on GitHub Actions (lint/test/build); CD = `git pull` on this machine + `prisma migrate deploy` + `pm2 restart`. Uptime target is best-effort (device must stay on + Postgres service auto-start) | Vercel / Render / Fly / Supabase — rejected per owner |
 
-**Key ADRs to write in Phase 0:** `001-monorepo-stack`, `002-auth-and-RBAC`, `003-protected-reader`, `004-payments-settlement`, `005-AI-RAG-boundaries`, `006-notifications`, `007-multi-tenancy-institution`.
+**Key ADRs to write in Phase 0:** `001-local-stack` (Next self-host + local Postgres + R2 + Better Auth), `002-better-auth-RBAC`, `003-protected-reader-R2`, `004-payments-settlement`, `005-AI-RAG-pgvector-local`, `006-notifications-local`, `007-institution-scoping`.
 
 - **Multi-tenancy:** single DB, `institutionId` scoping on every query (row-level security via middleware, not Postgres RLS initially for simplicity, add RLS in Phase 2). Every table with academic scope carries `institutionId`.
 - **RBAC matrix:** `student | lecturer | deptAdmin | institutionAdmin | platformAdmin`. Lecturer ≠ student: separate user pools with `lecturerProfiles` and `studentProfiles` linked to `users`; prevent role-switching via distinct login routes + middleware.
@@ -180,18 +184,21 @@ Devotional { id, date, title, verse, body, sourceRef } // Phase 4 but table now
 ### 0.5 API & Auth Conventions
 
 - REST `/api/v1/...` with OpenAPI; idempotency header `Idempotency-Key` on purchases/webhooks.
-- Auth: access JWT (15m) + rotating refresh (30d), HttpOnly cookies for web. Rate-limit auth + AI routes.
+- Auth: **Better Auth (Postgres adapter)** — session cookies (HttpOnly, `__Secure-` in prod via Tunnel HTTPS), TOTP 2FA plugin for dept/institution/platform admins, rate-limit auth + AI routes. Session carries `role` + `verificationStatus`; middleware enforces `verified` + `enrolled` before material APIs.
+- Better Auth tables (via adapter): `user`, `session`, `account`, `verification` + app tables `StudentProfile`/`LecturerProfile` linked by `userId`. Never use Supabase Auth.
 - Verification endpoints: `POST /verifications/student/request`, `POST /verifications/lecturer/request`, admin approve/reject with reason + audit.
-- Material upload: `POST /materials (draft)` → `POST /materials/:id/submit` → platform queue → `approve/reject` → `publish`. All transitions validated by state machine (Zod + server guard).
+- Material upload: `POST /materials (draft)` → presigned PUT to R2 `uploads-tmp/` → server validates + copies to `materials/` → `POST /materials/:id/submit` → platform queue → `approve/reject` → `publish` (renders pages to `pages/`). All transitions validated by state machine (Zod + server guard).
 - Purchases: create pending → verify Paystack webhook → grant entitlement + ledger entries atomically (DB transaction).
-- Reader: `GET /materials/:id/pages/:n/url` returns 60s signed URL + logs `StudyEvent`. Watermark user ID server-side.
+- Reader: `GET /materials/:id/pages/:n/url` returns 60s R2 presigned URL + logs `StudyEvent`. Watermark user ID server-side.
 
-### 0.6 Environments & DevOps Baseline
+### 0.6 Environments & DevOps Baseline (local-first, no Vercel/Supabase)
 
-- `local` (Docker Compose: Postgres, Redis, R2 mock/MinIO, Mailhog), `staging`, `prod`.
-- CI (GitHub Actions): lint + typecheck + unit + e2e (Playwright smoke: login → course → reader → purchase mock) + Storybook build + Docker build.
-- CD: preview per PR (Vercel for web, Render/Fly for API), auto-deploy `develop` → staging, manual promote → prod.
-- Secrets in GitHub Secrets / Vault; no secrets in repo. Backups: daily DB snapshots, versioned file buckets.
+- `local` = this Windows 11 device: native **Postgres 16 service (auto-start)** + Node 20 + pnpm + PM2 (api, web-student, web-lecturer, web-admin, ai-worker) + Caddy (`:80/:443` → localhost ports). Dev mail via Mailhog (`:8025`); prod mail via Resend/Postmark SMTP. R2 is the only cloud service (buckets + presigned URLs).
+- What to install (in order): 1) Node 20 LTS + pnpm, 2) PostgreSQL 16 EDB installer + pgAdmin 4, 3) `CREATE DATABASE edufarm; CREATE EXTENSION vector;`, 4) Cloudflare R2 account + API tokens + 4 buckets, 5) Caddy + Cloudflare Tunnel (`cloudflared`) for public demo URLs, 6) PM2 (`npm i -g pm2`, `pm2 startup`).
+- Backups: nightly `pg_dump edufarm` → R2 `backups/` (7-day retention) + weekly full; test restore monthly. Postgres data dir on C: (140GB free confirmed 2026-09-27).
+- CI (GitHub Actions): lint + typecheck + unit + e2e (Playwright smoke against local Postgres service container) + Storybook build. No Vercel previews — PR previews run as extra local PM2 ports or ephemeral Tunnel URLs.
+- CD (local): `git pull origin main` on this device → `pnpm i` → `prisma migrate deploy` → `pnpm build` → `pm2 restart all`. Tag releases in git; keep `.env` only on device + backup USB (never in repo).
+- Secrets: local `.env` files + Windows Credential Manager for R2/Paystack keys; no secrets in repo. R2 keys rotatable from Cloudflare dashboard.
 
 ---
 
@@ -330,7 +337,7 @@ Devotional { id, date, title, verse, body, sourceRef } // Phase 4 but table now
 
 - Institution onboarding wizard (self-serve request → platform approval → seed faculties/departments).
 - Bulk import (CSV) for students/courses, verification SLAs dashboard.
-- Performance: read replicas, CDN page cache, search scaling (Meilisearch), rate-limit tuning.
+- Performance: local Postgres tuning + R2/CDN page cache, search scaling (self-hosted Meilisearch binary), rate-limit tuning. No read replicas (single local DB; add standby only if device upgraded).
 - Localization prep (English → future French/Arabic for northern institutions), accessibility audit, data-retention policies.
 
 **Phase 4 exit:** Word live with license proof, multi-institution pilot (≥3 universities), p95 reader page load <1.5s on 3G, uptime 99.5%.
@@ -353,7 +360,7 @@ Devotional { id, date, title, verse, body, sourceRef } // Phase 4 but table now
 | Level | What | Tools | Gate |
 | :--- | :--- | :--- | :--- |
 | Unit | pricing, points caps, settlement math, state machines | Vitest/Jest | ≥80% on money/points modules |
-| Integration | verification flow, purchase webhook idempotency, entitlement filter | Supertest + test DB | CI required |
+| Integration | verification flow, purchase webhook idempotency, entitlement filter | Supertest + local Postgres test DB (`edufarm_test`) | CI required |
 | E2E | student signup→verify→enroll→buy→read→progress; lecturer upload→review→publish; dispute loop | Playwright | Smoke on every PR, full nightly |
 | Security | authz matrix (unverified/unenrolled cannot read), signed-URL expiry, no raw bucket access | Custom scripts + OWASP ZAP | Pre-release |
 | AI eval | faithfulness, citation precision, refusal correctness | RAG eval harness | ≥thresholds to ship |
@@ -373,7 +380,7 @@ Map PRD §19 to events:
 - Affordability: `purchase.rate`, `avgPrice`, `bundle.attach`, `points.redeemed`.
 - AI: `ai.session`, `ai.groundedRatio`, `practice.completed`.
 - Health: retention D7/D30, abuse rate, settlement on-time %.
-- Dashboards: PostHog + Metabase for institution reports.
+- Dashboards: self-hosted PostHog or local event tables + Metabase for institution reports (no cloud analytics dependency).
 
 ---
 
@@ -413,9 +420,10 @@ Every feature must meet: typed + linted + tested + documented (Storybook/OpenAPI
 
 ## 13. Immediate Next Actions (2-week starter)
 
-1. [ ] Approve stack + monorepo layout (ADR 001). Create `apps/`, `packages/`, `infra/` scaffolds.
-2. [ ] Designer: tokens + 10 primitives + `VerifiedBadge` + `MaterialCard` in Storybook.
-3. [ ] Backend: auth + RBAC + University→Course CRUD + seed script.
+1. [ ] Approve locked stack (local Postgres + Better Auth + R2, no Supabase/Vercel) + monorepo layout. Create `apps/`, `packages/`, `infra/` scaffolds.
+2. [ ] Install on this device: Node 20 + pnpm, Postgres 16 + pgAdmin, R2 buckets/keys, Caddy + Tunnel, PM2.
+3. [ ] Designer: tokens + 10 primitives + `VerifiedBadge` + `MaterialCard` in Storybook.
+4. [ ] Backend: Better Auth + Postgres adapter + RBAC + University→Course CRUD + seed script.
 4. [ ] Backend: verification request/approve endpoints + admin queue UI skeleton.
 5. [ ] Spike: PDF → page images → signed URL viewer with watermark (prove protected model).
 6. [ ] Spike: Paystack test checkout → webhook → idempotent grant.
@@ -424,4 +432,4 @@ Every feature must meet: typed + linted + tested + documented (Storybook/OpenAPI
 
 ---
 
-**Next doc to create:** `Docs/ADRs/001-stack.md` → then Figma links + `packages/tokens/tokens.json`.
+**Next doc to create:** `Docs/ADRs/001-local-stack.md` (local Postgres + Better Auth + R2 + self-host) → then Figma links + `packages/tokens/tokens.json`.
