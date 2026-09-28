@@ -174,5 +174,5 @@
   - Verified in production: 17/17 pages HTTP 200, devotional/AI/points endpoints live (AI grounded cites=1, points=20).
   - Known: `npm install -g` kills the shell on this box (use local pnpm installs); dev runners remain in `infra/run-*.ps1` for HMR work.
 - **Files:** `routes/devotional.ts`, `seed.ts`, `main.ts`, student home, admin onboarding page+nav, 18 alias-migrated pages, `ecosystem.config.js`, root `package.json`+lock (pm2 devDep), `Docs/PRD.md` (this entry). NOT committed: `dist/`, `.next/` (gitignored), `apps/api/.env` (secrets).
-- **Commit:** (to be filled on push)
-- **Status:** In progress.
+- **Commit:** `0231373 Phase 4 Word+onboarding live; production PM2; @/lib alias; all builds green`
+- **Status:** Done, pushed to `main`.

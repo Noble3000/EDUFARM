@@ -334,12 +334,25 @@ Manageable stages, protecting core value — not launching everything at once.
 
 ```text
 EDUFARM/
+├── PRD.md                 # Requirements + grader refinement notes (root)
+├── design.html            # Design system preview (v2 refined)
+├── index.html             # Landing page
 ├── README.md              # This file — product overview
+├── apps/
+│   ├── web-student/       # Next.js student PWA (:3001)
+│   ├── web-lecturer/      # Lecturer console (:3002)
+│   ├── web-admin/         # Platform admin (:3003)
+│   └── api/               # Fastify API + Prisma + Better Auth (:4000)
+├── packages/              # tokens, ui, types, reader
+├── services/              # ai-worker, notifications (placeholders)
+├── infra/                 # Caddyfile, PM2 ecosystem, runners, backups
 └── Docs/
-    └── PRD EDUFARM.md     # Full Product Requirements Document (source of truth)
+    ├── PRD EDUFARM.md     # Full Product Requirements Document (source of truth)
+    ├── PRD.md             # Agent changelog (every change logged)
+    └── IMPLEMENTATION_PLAN.md
 ```
 
-No application code yet — repo is currently PRD + documentation stage.
+All phases live locally via PM2 production mode (`node node_modules/pm2/bin/pm2 ls`).
 
 ---
 
@@ -352,10 +365,11 @@ This is a product-definition stage repo. To work with it:
    git clone https://github.com/Noble3000/EDUFARM.git
    cd EDUFARM
    ```
-2. Read the PRD: `Docs/PRD EDUFARM.md`
-3. Propose changes via issues / pull requests (lecturer-led, verified-trust principles apply to contributions too).
-
-Future code (app, API, AI services) will be added under Phase 1 scoping.
+2. Read the PRD: `PRD.md` (root) or `Docs/PRD EDUFARM.md` (full spec)
+3. Install: Node 20+ · pnpm · PostgreSQL 16/17 → `pnpm install` → set `apps/api/.env` from `.env.example` → `pnpm db:deploy` + `pnpm db:seed`
+4. Run production: `node node_modules/pm2/bin/pm2 start infra/ecosystem.config.js`
+   - Student http://localhost:3001 · Lecturer http://localhost:3002 · Admin http://localhost:3003 · API http://localhost:4000/health
+   - Demo logins: `ada@student.demo-university.edu` · `bello@demo-university.edu` · `admin@edufarm.ng`
 
 ---
 

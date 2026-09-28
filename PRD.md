@@ -75,10 +75,13 @@ fair disputes.
 
 ## 4. Release Phasing
 - **Phase 0 (done):** monorepo, design tokens, local Postgres + Better Auth + R2 decisions, data model, seed.
-- **Phase 1 (done, live locally):** verification, course spaces, announcements/Q&A, material lifecycle + protected
+- **Phase 1 (done, live):** verification, course spaces, announcements/Q&A, material lifecycle + protected
   reader shell, mock Naira checkout, library, study progress.
-- **Phase 2 (in progress):** assessments, points engine, eSpees settlement, reviews/disputes, email.
-- **Phase 3:** course-grounded AI + lecturer insights. **Phase 4:** daily Word experience + multi-institution scale.
+- **Phase 2 (done, live):** assessments (builder/attempts/auto-grade/manual grade), points engine + redemption,
+  eSpees settlement run/pay, reviews + replies, disputes, email outbox.
+- **Phase 3 (done, live):** entitlement-scoped AI ask with citations + refusal policy, lecturer insights.
+- **Phase 4 (done, live):** daily Word (Lagos boundary) + archive + reflection card, institution onboarding.
+- **Running:** PM2 production on local device — student :3001, lecturer :3002, admin :3003, api :4000.
 
 ## 5. Locked Technical Decisions
 Local PostgreSQL (no Supabase) · Better Auth (Postgres adapter) · Cloudflare R2 private buckets (presigned page URLs) ·
@@ -115,3 +118,10 @@ Next.js PWA + Fastify API self-hosted on local device (no Vercel) · Paystack/Fl
   fixed nested import paths; 11/11 pages HTTP 200.
 - 011 (2026-09-28): Aligned repo to example form — root `PRD.md` (this file), `design.html` (v2 refined preview),
   `index.html` (landing); refinement note written here; then continued buildup (Phase 2a assessments).
+- 012: Fixed dynamic `[id]` page import crash (`../../../lib/api`).
+- 013: Finished Phase 2a — assessment builder, attempts, auto-grade + lecturer grading, live.
+- 014: Phase 2b economy — points (pass/recognition/caps/redemption), eSpees settlement run/pay, reviews + replies,
+  disputes, email outbox; all verified live.
+- 015: Phase 3 AI — entitlement-scoped ask with citations + refusal policy, auto-index on publish, lecturer insights.
+- 016: Phase 4 Word (daily Lagos-boundary devotional + archive + reflection card) + institution onboarding;
+  production stability — PM2 (all services ~60MB), `@/lib/api` alias, all builds green, 17/17 pages HTTP 200.
