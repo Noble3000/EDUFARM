@@ -112,6 +112,35 @@ export default function ManageCourse({ params }: { params: { id: string } }) {
           ))}
         </div>}
       </div>
+      <Insights courseId={params.id} />
+    </div>
+  );
+}
+
+function Insights({ courseId }: { courseId: string }) {
+  const [ins, setIns] = useState<{
+    assessmentStats: { id: string; title: string; attempts: number; avgScore: number | null; maxScore: number }[];
+    unanswered: { id: string; title: string }[];
+    weakCompletion: { materialId: string; title: string; readers: number }[];
+    enrolled: number; suggestions: string[];
+  } | null>(null);
+  return (
+    <div className="card">
+      <h3>AI insights</h3>
+      <button className="sec" onClick={async () => {
+        setIns(await api(`/courses/${courseId}/insights`).catch(() => null));
+      }}>Generate insights</button>
+      {ins && (
+        <div>
+          <p className="muted">Enrolled: {ins.enrolled}</p>
+          {ins.assessmentStats.map((a) => (
+            <p key={a.id}>· {a.title}: {a.attempts} attempts{a.avgScore != null ? `, avg ${a.avgScore}/${a.maxScore}` : ""}</p>
+          ))}
+          {!!ins.unanswered.length && <p>Unanswered ({ins.unanswered.length}): {ins.unanswered.map((u) => u.title).join("; ")}</p>}
+          {!!ins.weakCompletion.length && <p>Weak completion: {ins.weakCompletion.map((w) => `${w.title} (${w.readers} readers)`).join("; ")}</p>}
+          {ins.suggestions.map((s, i) => <p key={i}>💡 {s}</p>)}
+        </div>
+      )}
     </div>
   );
 }

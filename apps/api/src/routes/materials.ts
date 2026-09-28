@@ -96,6 +96,8 @@ export async function materialRoutes(app: FastifyInstance) {
     });
     // notify approved enrollments of new official material
     if (b.decision === "approve") {
+      const { indexMaterial } = await import("./ai.js");
+      await indexMaterial(id);
       const enrollments = await prisma.enrollment.findMany({
         where: { courseId: updated.courseId, status: "approved" },
         select: { student: { select: { userId: true } } },

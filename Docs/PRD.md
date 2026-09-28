@@ -146,3 +146,15 @@
 - **Files:** `schema.prisma` + migration, `routes/points|settlement|reviews|email.ts`, hooks in `purchases|assessments.ts`, `main.ts`, 6 UI files, `Docs/PRD.md` (this entry)
 - **Commit:** `5a95f02 Phase 2b economy live: points, settlement, reviews, disputes, email`
 - **Status:** Done, pushed to `main`.
+
+### 015 — 2026-09-28 — Phase 3 AI assistant + lecturer insights (RAG-lite), live
+- **Instruction:** "CONTINUE BUILDING EVERYTHING THROUGH ALL THE STAGES TILL YOU ARE DONE" (Phase 3 slice)
+- **Change:**
+  - Schema: `MaterialChunk` (materialId/version/chunkNo/text) + migration `20260927235817_phase3_chunks`.
+  - API (`routes/ai.ts`): `indexMaterial` chunker (title+description sentences); auto-index on material publish approve; `POST /ai/backfill`; `POST /ai/ask` (enrollment + entitlement filter incl. Ask-This-Material scope; FTS rank; citations `[Title vN]`; refusal + labeled general fallback when uncovered; logs ai-session StudyEvent); `GET /courses/:id/insights` (avg scores, unanswered top-5, weak completion <30%, suggestions).
+  - UI: student course page Ask AI box (grounded badge, citations, fallback labels); lecturer manage page Insights card.
+  - Verified live: backfill 3 mats → 3 chunks; "What is mitosis?" → grounded with 1 citation ✓; unrelated query → refusal ✓; insights: enrolled 1, 2 assessments, 2 weak + suggestion ✓. Pages 200.
+  - Honest limits: extractive FTS (no LLM generation, no pgvector — extension missing in Postgres Pro build); PDF text extraction awaits R2 reader spike (chunks from metadata for now).
+- **Files:** `schema.prisma` + migration, `routes/ai.ts`, hooks in `materials.ts`+`main.ts`, 2 UI files, `Docs/PRD.md` (this entry)
+- **Commit:** (to be filled on push)
+- **Status:** In progress.

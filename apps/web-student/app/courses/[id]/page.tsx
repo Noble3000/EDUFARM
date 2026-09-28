@@ -67,6 +67,38 @@ export default function CourseDetail({ params }: { params: { id: string } }) {
         <textarea placeholder="Details" value={q.body} onChange={(e) => setQ({ ...q, body: e.target.value })} />
         <button onClick={ask}>Post question</button>
       </div>
+      <AskAI courseId={params.id} />
+    </div>
+  );
+}
+
+function AskAI({ courseId }: { courseId: string }) {
+  const [question, setQuestion] = useState("");
+  const [res, setRes] = useState<{ grounded: boolean; answer: string; citations: { title: string; version: number }[]; additionalContext: string | null } | null>(null);
+  const [msg, setMsg] = useState("");
+  async function askAI() {
+    setMsg("…"); setRes(null);
+    try {
+      setRes(await api("/ai/ask", { method: "POST", body: JSON.stringify({ courseId, question }) }));
+      setMsg("");
+    } catch (e) { setMsg((e as Error).message); }
+  }
+  return (
+    <div className="card">
+      <h3>AI Study Assistant <span className="badge b-ed">grounded</span></h3>
+      <input placeholder="Ask about your authorized materials…" value={question} onChange={(e) => setQuestion(e.target.value)} />
+      <button onClick={askAI}>Ask</button>
+      <p>{msg}</p>
+      {res && (
+        <div>
+          <p>{res.answer}</p>
+          {!!res.citations.length && (
+            <p className="muted">Sources: {res.citations.map((c, i) => <span key={i}>[{c.title} v{c.version}] </span>)}</p>
+          )}
+          {res.additionalContext && <p className="muted">Additional context (not lecturer material): {res.additionalContext}</p>}
+          {!res.grounded && <p className="muted">Grounded: no — answer refused from general knowledge per policy.</p>}
+        </div>
+      )}
     </div>
   );
 }

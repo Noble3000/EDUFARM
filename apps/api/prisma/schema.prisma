@@ -212,6 +212,7 @@ model Material {
   version            Int               @default(1)
   status             MaterialStatus    @default(draft)
   versions           MaterialVersion[]
+  chunks             MaterialChunk[]
   createdAt          DateTime          @default(now())
   updatedAt          DateTime          @updatedAt
 }
@@ -451,4 +452,19 @@ model AssessmentAnswer {
   marksAwarded  Int                @default(0)
 
   @@unique([attemptId, questionId])
+}
+
+// Phase 3 — RAG-lite: chunked authorized text per material version for
+// entitlement-scoped full-text retrieval (pgvector upgrade path kept open;
+// Postgres Pro build here lacks the vector extension).
+model MaterialChunk {
+  id         String   @id @default(cuid())
+  materialId String
+  material   Material @relation(fields: [materialId], references: [id], onDelete: Cascade)
+  version    Int
+  chunkNo    Int
+  text       String
+  createdAt  DateTime @default(now())
+
+  @@unique([materialId, version, chunkNo])
 }
