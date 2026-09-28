@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
-import { api, getUser } from "../lib/api";
+import { api, getUser } from "@/lib/api";
 
 // Student home (§6.1 order): Word → priorities → continue → courses → updates → Q&A → points → AI stub.
 export default function Home() {
@@ -11,8 +11,11 @@ export default function Home() {
   const [progress, setProgress] = useState<{ courseId: string; code: string; percent: number }[]>([]);
   const [points, setPoints] = useState<{ balance: number } | null>(null);
 
+  const [word, setWord] = useState<{ title: string; verse: string; body: string } | null>(null);
+
   useEffect(() => {
     setUser(getUser());
+    api("/devotional/today").then(setWord).catch(() => {});
     if (!getUser()) return;
     api("/notifications/me").then(setNotes).catch(() => {});
     api("/progress/continue").then(setCont).catch(() => {});
@@ -36,8 +39,12 @@ export default function Home() {
     <div>
       <div className="card" style={{ borderLeft: "6px solid #C9A227" }}>
         <span className="badge b-ed">Today&apos;s Word · same for every student</span>
-        <h2>“Discipline is the bridge between goals and accomplishment.”</h2>
-        <p className="muted">Daily devotional (authorized source) lands in Phase 4 — placeholder reflection for now.</p>
+        <h2>{word ? `“${word.title}” — ${word.verse}` : "Loading today's Word…"}</h2>
+        {word && <p>{word.body}</p>}
+      </div>
+      <div className="card">
+        <span className="badge b-ed">Academic reflection (not devotional)</span>
+        <p className="muted">Study theme: consistency — small daily progress beats cramming. Track yours in My Courses below.</p>
       </div>
       {!!urgent.length && (
         <div className="card" style={{ borderColor: "#D92D20" }}>

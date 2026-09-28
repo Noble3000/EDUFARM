@@ -21,6 +21,7 @@ import { settlementRoutes } from "./routes/settlement.js";
 import { reviewRoutes } from "./routes/reviews.js";
 import { emailRoutes } from "./routes/email.js";
 import { aiRoutes } from "./routes/ai.js";
+import { devotionalRoutes } from "./routes/devotional.js";
 
 const app = Fastify({ logger: true });
 await app.register(cors, { origin: [/^http:\/\/localhost:300\d$/], credentials: true });
@@ -65,6 +66,7 @@ await app.register(settlementRoutes, { prefix: "/api/v1" });
 await app.register(reviewRoutes, { prefix: "/api/v1" });
 await app.register(emailRoutes, { prefix: "/api/v1" });
 await app.register(aiRoutes, { prefix: "/api/v1" });
+await app.register(devotionalRoutes, { prefix: "/api/v1" });
 
 const port = Number(process.env.API_PORT ?? 4000);
 await app.listen({ port, host: "0.0.0.0" });

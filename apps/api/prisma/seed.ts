@@ -120,6 +120,31 @@ async function main() {
     });
   }
 
+  // devotionals: 7-day window around today (placeholder text; licensed source pending per PRD §21)
+  const themes = [
+    ["Diligence", "Proverbs 12:24", "Diligent hands will rule. Steady study today compounds into mastery."],
+    ["Excellence", "Daniel 6:3", "An excellent spirit sets you apart. Do today's work as unto God."],
+    ["Integrity", "Proverbs 10:9", "Whoever walks in integrity walks securely — in exams as in life."],
+    ["Consistency", "Galatians 6:9", "Do not grow weary in well-doing; in due season you will reap."],
+    ["Wisdom", "James 1:5", "If any lacks wisdom, let him ask of God — then open your books."],
+    ["Discipline", "1 Corinthians 9:27", "Discipline your body and mind; keep to your study schedule."],
+    ["Focus", "Philippians 3:14", "Press toward the goal — one chapter, one problem at a time."],
+  ];
+  for (let i = -3; i <= 3; i++) {
+    const d = new Date();
+    d.setDate(d.getDate() + i);
+    const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+    const t = themes[((i % themes.length) + themes.length) % themes.length];
+    await prisma.devotional.upsert({
+      where: { date: new Date(`${key}T00:00:00.000+01:00`) },
+      update: {},
+      create: {
+        date: new Date(`${key}T00:00:00.000+01:00`),
+        title: t[0], verse: t[1], body: t[2], sourceRef: "seed-placeholder (license pending)",
+      },
+    });
+  }
+
   console.log("Seeded:", uni.slug, course.code, "| users: bello, ada, pending, admin");
 }
 

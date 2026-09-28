@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
-import { api, getUser } from "../lib/api";
+import { api, getUser } from "@/lib/api";
 
 export default function Dashboard() {
   const [courses, setCourses] = useState<{ id: string; code: string; title: string }[]>([]);

@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
-import { api, getUser } from "../../../lib/api";
+import { api, getUser } from "@/lib/api";
 
 // Protected reader shell: page navigation + watermark + dwell pings + mock checkout on 402.
 export default function Reader({ params }: { params: { id: string } }) {

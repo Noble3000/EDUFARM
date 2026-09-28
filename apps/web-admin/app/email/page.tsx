@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
-import { api } from "../lib/api";
+import { api } from "@/lib/api";
 
 export default function EmailOutbox() {
   const [rows, setRows] = useState<{ id: string; toUserId: string; subject: string; body: string; status: string }[]>([]);

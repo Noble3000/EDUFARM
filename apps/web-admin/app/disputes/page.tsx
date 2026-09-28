@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
-import { api } from "../lib/api";
+import { api } from "@/lib/api";
 
 export default function Disputes() {
   const [rows, setRows] = useState<{ id: string; targetType: string; targetId: string; reason: string; status: string; resolution: string | null }[]>([]);

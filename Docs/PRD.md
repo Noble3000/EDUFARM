@@ -156,5 +156,23 @@
   - Verified live: backfill 3 mats → 3 chunks; "What is mitosis?" → grounded with 1 citation ✓; unrelated query → refusal ✓; insights: enrolled 1, 2 assessments, 2 weak + suggestion ✓. Pages 200.
   - Honest limits: extractive FTS (no LLM generation, no pgvector — extension missing in Postgres Pro build); PDF text extraction awaits R2 reader spike (chunks from metadata for now).
 - **Files:** `schema.prisma` + migration, `routes/ai.ts`, hooks in `materials.ts`+`main.ts`, 2 UI files, `Docs/PRD.md` (this entry)
+- **Commit:** `2e84020 Phase 3 AI live: entitlement-scoped ask + citations + lecturer insights`
+- **Status:** Done, pushed to `main`.
+
+### 016 — 2026-09-28 — Phase 4 devotional + onboarding + production stability (PM2), all stages done
+- **Instruction:** "CONTINUE BUILDING EVERYTHING THROUGH ALL THE STAGES TILL YOU ARE DONE"
+- **Change (Phase 4):**
+  - API (`routes/devotional.ts`): `GET /devotional/today` (Lagos UTC+1 day boundary, identical for all students), `/archive`, admin `POST /devotionals` (upsert by date); onboarding `POST /onboarding/institution` (public → unverified + audit), `GET /onboarding/pending`, `POST /onboarding/:id/approve`.
+  - Seed: 7-day devotional window (placeholder text, `sourceRef` marks license pending per PRD §21).
+  - UI: student home shows real daily Word + separate academic-reflection card; admin Onboarding page + nav.
+  - Verified live: today=[Diligence] Proverbs 12:24, archive=7, request→pending→approved ✓ (test uni cleaned up after).
+- **Change (stability — device has 8GB, ~1GB free with user apps running):**
+  - Root-caused admin :3003 death: Next dev servers use ~700MB each; machine thrashed, shells got OOM-killed.
+  - Migrated all 18 web imports to `@/lib/api` alias (kills the `../` depth bug class; tsconfig paths already supported it).
+  - Production builds: api `tsc` emit + all 3 Next builds green (build caught 4 untested admin imports — fixed).
+  - PM2 (local install, daemon persists): `infra/ecosystem.config.js` runs API (`dist/src/main.js` — fixed wrong `dist/main.js` path) + 3× `next start` at ~60MB each. `pm2 save` done. PM2 notes: `restart` uses cached config — use delete+start after editing ecosystem file.
+  - Verified in production: 17/17 pages HTTP 200, devotional/AI/points endpoints live (AI grounded cites=1, points=20).
+  - Known: `npm install -g` kills the shell on this box (use local pnpm installs); dev runners remain in `infra/run-*.ps1` for HMR work.
+- **Files:** `routes/devotional.ts`, `seed.ts`, `main.ts`, student home, admin onboarding page+nav, 18 alias-migrated pages, `ecosystem.config.js`, root `package.json`+lock (pm2 devDep), `Docs/PRD.md` (this entry). NOT committed: `dist/`, `.next/` (gitignored), `apps/api/.env` (secrets).
 - **Commit:** (to be filled on push)
 - **Status:** In progress.

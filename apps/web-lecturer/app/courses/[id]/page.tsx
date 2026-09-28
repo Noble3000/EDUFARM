@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
-import { api } from "../../../lib/api";
+import { api } from "@/lib/api";
 
 type Enr = { id: string; status: string; student: { user: { name: string; email: string } } };
 

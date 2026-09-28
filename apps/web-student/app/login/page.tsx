@@ -1,6 +1,6 @@
 "use client";
 import { useState } from "react";
-import { API } from "../../lib/api";
+import { API } from "@/lib/api";
 
 export default function Login() {
   const [email, setEmail] = useState("ada@student.demo-university.edu");

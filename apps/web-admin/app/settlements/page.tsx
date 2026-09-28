@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
-import { api } from "../lib/api";
+import { api } from "@/lib/api";
 
 export default function Settlements() {
   const [ov, setOv] = useState<{ pendingKobo: number; availableKobo: number; settledKobo: number; holdDays: number } | null>(null);

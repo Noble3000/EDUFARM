@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
-import { api } from "../../lib/api";
+import { api } from "@/lib/api";
 
 export default function Courses() {
   const [courses, setCourses] = useState<{ id: string; code: string; title: string; isOfficial: boolean }[]>([]);
