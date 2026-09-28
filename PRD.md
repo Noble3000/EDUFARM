@@ -125,3 +125,6 @@ Next.js PWA + Fastify API self-hosted on local device (no Vercel) · Paystack/Fl
 - 015: Phase 3 AI — entitlement-scoped ask with citations + refusal policy, auto-index on publish, lecturer insights.
 - 016: Phase 4 Word (daily Lagos-boundary devotional + archive + reflection card) + institution onboarding;
   production stability — PM2 (all services ~60MB), `@/lib/api` alias, all builds green, 17/17 pages HTTP 200.
+- 017: Localhost outage — Windows OOM-killed services at 96% RAM; resurrected via PM2; prevention noted.
+- 018: Unified EduPortal-style `index.html` — sidebar + topbar + role-switcher (student/lecturer/admin),
+  live API panels, deep links to all apps; search-admin fix included.

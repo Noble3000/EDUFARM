@@ -192,5 +192,5 @@
 - **Role views:** student (progress, pending assessments, points, classes, announcements, grades chart); lecturer (courses, approval queue, Q&A load, eSpees earnings); admin (verification counts, review queue, open disputes, settlement totals, onboarding).
 - **Verified:** opened in browser; file is static (zero RAM cost) reading localhost:4000.
 - **Files:** `index.html`, `Docs/PRD.md` (this entry)
-- **Commit:** (to be filled on push)
-- **Status:** In progress.
+- **Commit:** `63dbd44 Unified EduPortal-style landing (student+lecturer+admin) + PRD entry 018`
+- **Status:** Done, pushed to `main`.
