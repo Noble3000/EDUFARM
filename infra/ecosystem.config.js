@@ -42,5 +42,22 @@ module.exports = {
       script: NODE,
       args: `${ROOT}\\node_modules\\.pnpm\\next@14.2.35_react-dom@18.3.1_react@18.3.1__react@18.3.1\\node_modules\\next\\dist\\bin\\next start -p 3003`,
     },
+    {
+      name: "portal-static",
+      cwd: `${ROOT}`,
+      script: NODE,
+      args: "infra\\static-server.js",
+      env: { PORTAL_PORT: 8080 },
+    },
   ],
 };
+
+// Phone/mobile access: expose local ports with Cloudflare quick tunnels
+// (URLs change on every restart — read them from logs/tunnel-<port>.err.log):
+//   cloudflared tunnel --url http://localhost:8080  (portal index.html + design.html)
+//   cloudflared tunnel --url http://localhost:3001  (student app)
+//   cloudflared tunnel --url http://localhost:3002  (lecturer console)
+//   cloudflared tunnel --url http://localhost:3003  (admin)
+//   cloudflared tunnel --url http://localhost:4000  (api)
+// Remote clients set the API URL via ?api=https://<api-tunnel>/api/v1,
+// the ⚙️ button on index.html, or the API URL field on each login page.

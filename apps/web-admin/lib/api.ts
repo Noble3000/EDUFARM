@@ -1,4 +1,14 @@
-export const API = "http://localhost:4000/api/v1";
+const DEFAULT_API = "http://localhost:4000/api/v1";
+function baseApi(): string {
+  if (typeof window === "undefined") return DEFAULT_API;
+  try {
+    const q = new URLSearchParams(window.location.search).get("api");
+    if (q) { try { window.localStorage.setItem("edufarm_api", q.replace(/\/$/, "")); } catch { /* ignore */ } }
+    return (window.localStorage.getItem("edufarm_api") || DEFAULT_API).replace(/\/$/, "");
+  } catch { return DEFAULT_API; }
+}
+export const API = DEFAULT_API;
+export function apiUrl(): string { return baseApi(); }
 
 export function getUser(): { id: string; email: string; name: string; role: string } | null {
   if (typeof window === "undefined") return null;
@@ -11,7 +21,7 @@ export function getUser(): { id: string; email: string; name: string; role: stri
 
 export async function api(path: string, opts: RequestInit = {}) {
   const user = getUser();
-  const res = await fetch(`${API}${path}`, {
+  const res = await fetch(`${apiUrl()}${path}`, {
     ...opts,
     headers: {
       "Content-Type": "application/json",

@@ -194,3 +194,14 @@
 - **Files:** `index.html`, `Docs/PRD.md` (this entry)
 - **Commit:** `63dbd44 Unified EduPortal-style landing (student+lecturer+admin) + PRD entry 018`
 - **Status:** Done, pushed to `main`.
+
+### 019 — 2026-09-28 — Phone access via Cloudflare tunnels + configurable API URL
+- **Instruction:** "give me a link for view on my mobile phone"
+- **Change:**
+  - Installed `cloudflared` (winget) and opened 5 quick tunnels (portal :8080, student :3001, lecturer :3002, admin :3003, api :4000). Verified portal + API + student login through the public URLs.
+  - New `infra/static-server.js` (zero-dep node static server for `index.html`/`design.html`) running under PM2 as `portal-static`; tunnel recipe documented in `infra/ecosystem.config.js`.
+  - Remote API support: `index.html` accepts `?api=` + ⚙️ button (localStorage); all 3 `lib/api.ts` clients read the override; all 3 login pages gained an API URL field. Rebuilt all 3 apps (builds green) and restarted PM2.
+  - Note: quick-tunnel URLs are temporary — they change whenever tunnels restart (device reboot / network drop). Re-read them from `logs/tunnel-<port>.err.log`.
+- **Files:** `infra/static-server.js`, `infra/ecosystem.config.js`, `index.html`, 3× `lib/api.ts`, 3× login pages, `Docs/PRD.md` (this entry)
+- **Commit:** (to be filled on push)
+- **Status:** In progress.

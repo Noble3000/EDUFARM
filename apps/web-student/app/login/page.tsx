@@ -1,13 +1,15 @@
 "use client";
 import { useState } from "react";
-import { API } from "@/lib/api";
+import { apiUrl } from "@/lib/api";
 
 export default function Login() {
   const [email, setEmail] = useState("ada@student.demo-university.edu");
+  const [api, setApi] = useState("");
   const [msg, setMsg] = useState("");
   async function login() {
+    if (api.trim()) localStorage.setItem("edufarm_api", api.trim().replace(/\/$/, ""));
     setMsg("…");
-    const res = await fetch(`${API}/demo/login`, {
+    const res = await fetch(`${apiUrl()}/demo/login`, {
       method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email }),
     });
     const data = await res.json();
@@ -24,6 +26,7 @@ export default function Login() {
       <h2>Demo login</h2>
       <p className="muted">No password in Phase 1 dev — pick a seeded email. Better Auth cookies land next.</p>
       <input value={email} onChange={(e) => setEmail(e.target.value)} />
+      <input placeholder="API URL (only for phone/remote — leave empty on this device)" value={api} onChange={(e) => setApi(e.target.value)} />
       <div className="row">
         <button onClick={login}>Log in</button>
         <button className="sec" onClick={logout}>Log out</button>

@@ -1,11 +1,13 @@
 "use client";
 import { useState } from "react";
-import { API } from "@/lib/api";
+import { apiUrl } from "@/lib/api";
 export default function Login() {
   const [email, setEmail] = useState("bello@demo-university.edu");
+  const [api, setApi] = useState("");
   const [msg, setMsg] = useState("");
   async function login() {
-    const res = await fetch(`${API}/demo/login`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email }) });
+    if (api.trim()) localStorage.setItem("edufarm_api", api.trim().replace(/\/$/, ""));
+    const res = await fetch(`${apiUrl()}/demo/login`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email }) });
     const data = await res.json();
     if (!res.ok) return setMsg(data.error ?? "Login failed");
     localStorage.setItem("edufarm_user", JSON.stringify(data));
@@ -14,6 +16,7 @@ export default function Login() {
   return (
     <div className="card"><h2>Lecturer demo login</h2>
       <input value={email} onChange={(e) => setEmail(e.target.value)} />
+      <input placeholder="API URL (only for phone/remote)" value={api} onChange={(e) => setApi(e.target.value)} />
       <button onClick={login}>Log in</button><p>{msg}</p>
       <p className="muted">Seeded: bello@demo-university.edu (verified lecturer)</p>
     </div>

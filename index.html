@@ -88,6 +88,7 @@ button{font-family:inherit}
   <div class="main">
     <div class="top">
       <div class="search">🔍 <input id="q" placeholder="Search classes, materials, questions…" oninput="renderTables()"></div>
+      <div class="bell" title="API settings" onclick="const u=prompt('API base URL (e.g. https://xxx.trycloudflare.com/api/v1):', localStorage.getItem('edufarm_api')||''); if(u){localStorage.setItem('edufarm_api',u.replace(/\/$/,'')); location.reload();}" style="cursor:pointer">⚙️</div>
       <div class="bell" title="Notifications">🔔 <span class="dot" id="bellN">0</span></div>
       <div class="profile"><span class="avatar" id="av">A</span>
         <select id="role" onchange="switchRole(this.value)">
@@ -118,7 +119,14 @@ button{font-family:inherit}
   </div>
 </div>
 <script>
-const API = "http://localhost:4000/api/v1";
+const DEFAULT_API = "http://localhost:4000/api/v1";
+function apiBase() {
+  const q = new URLSearchParams(location.search).get("api");
+  if (q) { try { localStorage.setItem("edufarm_api", q.replace(/\/$/, "")); } catch (e) {} }
+  try { return (localStorage.getItem("edufarm_api") || DEFAULT_API).replace(/\/$/, ""); }
+  catch (e) { return DEFAULT_API; }
+}
+const API = apiBase();
 const USERS = {
   student: { email: "ada@student.demo-university.edu", name: "Ada Student" },
   lecturer: { email: "bello@demo-university.edu", name: "Dr. A. Bello" },
