@@ -3,48 +3,280 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>EDUFARM — Verified Lecturer–Student Learning Ecosystem</title>
+<title>EDUFARM Portal — Student · Lecturer · Admin</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@600;700;800&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
-:root{--brand:#0E5A3C;--brand-dark:#0A4230;--accent:#C9A227;--ink:#101828;--muted:#344054;--line:#D0D5DD;--bg:#F9FAFB}
-*{box-sizing:border-box}body{margin:0;font-family:Inter,system-ui,sans-serif;font-size:16px;line-height:1.6;color:var(--ink);background:var(--bg)}
-.wrap{max-width:960px;margin:0 auto;padding:24px 16px 64px}
-.hero{background:linear-gradient(135deg,var(--brand),var(--brand-dark));color:#fff;border-radius:16px;padding:36px 28px}
-.hero h1{font-family:Sora,Inter,sans-serif;font-size:30px;margin:0 0 8px}
-.btn{display:inline-block;padding:12px 20px;border-radius:12px;font-weight:700;font-size:16px;text-decoration:none;margin:6px 8px 0 0}
-.btn:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
-.btn-gold{background:var(--accent);color:#101828}.btn-ghost{background:transparent;color:#fff;border:2px solid #fff}
-.card{background:#fff;border:1px solid var(--line);border-radius:14px;padding:20px;margin:16px 0}
-.badge{display:inline-block;font-size:13px;font-weight:700;padding:4px 12px;border-radius:999px;border:1px solid;margin-right:6px}
-.b-ok{background:#E6F4EC;color:#0E5A3C;border-color:#A6D6B8}.b-info{background:#EFF8FF;color:#175CD3;border-color:#B2DDFF}
-code{background:#F2F4F7;padding:2px 6px;border-radius:6px;font-size:14px}
-.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}@media(max-width:700px){.grid{grid-template-columns:1fr}}
-footer{color:var(--muted);font-size:14px;text-align:center;padding:24px}
+:root{
+  --brand:#0E5A3C; --brand-dark:#0A4230; --accent:#C9A227;
+  --navy:#101828; --navy2:#1D2939;
+  --ink:#101828; --muted:#344054; --line:#E5E7EB; --bg:#F4F6FA; --card:#FFFFFF;
+  --pink:#EC4899; --green:#027A48; --greenbg:#E6F4EC; --blue:#175CD3; --bluebg:#EFF8FF;
+  --amber:#DC6803; --amberbg:#FEF6E7; --red:#D92D20; --redbg:#FEF3F2;
+  --radius:16px;
+}
+*{box-sizing:border-box}
+body{margin:0;font-family:Inter,system-ui,sans-serif;font-size:15px;line-height:1.55;color:var(--ink);background:var(--bg)}
+.app{display:flex;min-height:100vh}
+/* Sidebar */
+.side{width:228px;background:var(--navy);color:#D0D5DD;padding:20px 14px;position:sticky;top:0;height:100vh;flex-shrink:0}
+.logo{display:flex;align-items:center;gap:10px;color:#fff;font-family:Sora;font-weight:800;font-size:18px;padding:4px 10px 18px}
+.logo .mark{width:34px;height:34px;border-radius:10px;background:var(--brand);display:flex;align-items:center;justify-content:center;font-size:18px}
+.nav{display:flex;flex-direction:column;gap:4px}
+.nav a{display:flex;align-items:center;gap:12px;color:#D0D5DD;text-decoration:none;font-size:14px;font-weight:500;padding:10px 12px;border-radius:10px}
+.nav a:hover{background:var(--navy2);color:#fff}
+.nav a.on{background:var(--brand);color:#fff;font-weight:700}
+.nav a .ico{width:22px;text-align:center}
+.nav .sec{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:#98A2B3;padding:14px 12px 4px}
+/* Main */
+.main{flex:1;min-width:0;padding:20px 24px 60px}
+/* Topbar */
+.top{display:flex;align-items:center;gap:14px;margin-bottom:18px;flex-wrap:wrap}
+.search{flex:1;min-width:200px;display:flex;align-items:center;gap:8px;background:#fff;border:1px solid var(--line);border-radius:12px;padding:9px 14px}
+.search input{border:0;outline:0;font-size:14px;width:100%;font-family:inherit}
+.bell{position:relative;background:#fff;border:1px solid var(--line);border-radius:12px;padding:9px 12px;cursor:pointer;font-size:16px}
+.bell .dot{position:absolute;top:6px;right:8px;background:var(--red);color:#fff;font-size:10px;font-weight:700;border-radius:99px;padding:0 5px}
+.profile{display:flex;align-items:center;gap:10px;background:#fff;border:1px solid var(--line);border-radius:12px;padding:6px 12px 6px 6px}
+.avatar{width:34px;height:34px;border-radius:50%;background:var(--accent);color:#101828;font-weight:800;display:flex;align-items:center;justify-content:center;font-size:14px}
+.profile select{border:0;font-weight:700;font-size:13px;font-family:inherit;background:transparent;cursor:pointer}
+/* Greeting row */
+.greet{display:flex;gap:16px;align-items:stretch;flex-wrap:wrap;margin-bottom:16px}
+.greet .hello{flex:2;min-width:260px}
+.greet h1{font-family:Sora;font-size:26px;margin:0}
+.greet p{color:var(--muted);margin:4px 0 0}
+.sched{flex:1;min-width:220px;background:#fff;border:1px solid var(--line);border-radius:var(--radius);padding:14px 16px}
+.quote{flex:1;min-width:220px;background:#FFF7E5;border:1px solid #FEDF89;border-radius:var(--radius);padding:14px 16px;font-family:Sora;font-size:15px}
+/* Stat cards */
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px;margin-bottom:16px}
+.stat{background:#fff;border:1px solid var(--line);border-radius:var(--radius);padding:16px}
+.stat .t{font-size:13px;font-weight:600;color:var(--muted);display:flex;gap:8px;align-items:center}
+.stat .v{font-family:Sora;font-size:26px;font-weight:800;margin:4px 0}
+.stat .s{font-size:12px;color:var(--muted)}
+.bar{height:7px;background:#F2F4F7;border-radius:99px;overflow:hidden;margin-top:8px}
+.bar>div{height:100%;background:var(--green)}
+.badge{display:inline-block;font-size:11px;font-weight:700;padding:2px 10px;border-radius:99px;border:1px solid}
+.b-ok{background:var(--greenbg);color:var(--green);border-color:#A6D6B8}
+.b-info{background:var(--bluebg);color:var(--blue);border-color:#B2DDFF}
+.b-warn{background:var(--amberbg);color:var(--amber);border-color:#FEDF89}
+.b-bad{background:var(--redbg);color:var(--red);border-color:#FECDCA}
+/* Panels */
+.grid2{display:grid;grid-template-columns:1.4fr 1fr;gap:14px}
+@media(max-width:900px){.grid2{grid-template-columns:1fr}.side{display:none}}
+.card{background:#fff;border:1px solid var(--line);border-radius:var(--radius);padding:18px;margin-bottom:14px}
+.card h3{font-family:Sora;font-size:16px;margin:0 0 10px;display:flex;justify-content:space-between;align-items:center}
+.card h3 a{font-size:12px;font-family:Inter;font-weight:600}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{text-align:left;color:var(--muted);font-weight:600;padding:8px;border-bottom:1px solid var(--line)}
+td{padding:9px 8px;border-bottom:1px solid #F2F4F7}
+.qa{display:flex;gap:10px;flex-wrap:wrap}
+.qbtn{flex:1;min-width:140px;border-radius:12px;padding:14px;text-decoration:none;font-weight:700;font-size:13px;display:flex;justify-content:space-between;align-items:center}
+.q-pink{background:#FDF2F8;color:#BE185D}.q-blue{background:var(--bluebg);color:var(--blue)}.q-green{background:var(--greenbg);color:var(--green)}
+.ann{border-top:1px solid #F2F4F7;padding:8px 0;font-size:13px}
+.ann .d{color:var(--muted);font-size:12px}
+footer{color:var(--muted);font-size:12px;text-align:center;padding:20px}
+a{color:var(--brand)}
+button{font-family:inherit}
+.err{background:var(--redbg);border:1px solid #FECDCA;color:var(--red);border-radius:12px;padding:12px 16px;margin-bottom:14px;font-size:14px}
 </style>
 </head>
 <body>
-<div class="wrap">
-  <div class="hero">
-    <h1>EDUFARM</h1>
-    <p>A trusted academic ecosystem — not a PDF marketplace. Verified universities, lecturers, students, and official materials.</p>
-    <a class="btn btn-gold" href="design.html">View design.html</a>
-    <a class="btn btn-ghost" href="https://github.com/Noble3000/EDUFARM/blob/main/PRD.md">Read PRD.md</a>
-  </div>
-  <div class="card">
-    <span class="badge b-ok">Phase 1 live locally</span>
-    <span class="badge b-info">Local Postgres · Better Auth · R2</span>
-    <h2>Run it on your device</h2>
-    <div class="grid">
-      <div><strong>Student app</strong><br><code>http://localhost:3001</code><br><span style="color:var(--muted)">Login: ada@student.demo-university.edu</span></div>
-      <div><strong>Lecturer console</strong><br><code>http://localhost:3002</code><br><span style="color:var(--muted)">Login: bello@demo-university.edu</span></div>
-      <div><strong>Admin</strong><br><code>http://localhost:3003</code><br><span style="color:var(--muted)">Login: admin@edufarm.ng</span></div>
-      <div><strong>API</strong><br><code>http://localhost:4000/health</code><br><span style="color:var(--muted)">Start: infra/run-api.ps1</span></div>
+<div class="app">
+  <aside class="side">
+    <div class="logo"><span class="mark">🎓</span>EDUFARM</div>
+    <nav class="nav" id="nav"></nav>
+  </aside>
+  <div class="main">
+    <div class="top">
+      <div class="search">🔍 <input id="q" placeholder="Search classes, materials, questions…" oninput="renderTables()"></div>
+      <div class="bell" title="Notifications">🔔 <span class="dot" id="bellN">0</span></div>
+      <div class="profile"><span class="avatar" id="av">A</span>
+        <select id="role" onchange="switchRole(this.value)">
+          <option value="student">Ada · Student</option>
+          <option value="lecturer">Bello · Lecturer</option>
+          <option value="admin">Admin · Platform</option>
+        </select>
+      </div>
     </div>
-  </div>
-  <div class="card">
-    <h2>Repository map</h2>
-    <p><code>PRD.md</code> — requirements + grader refinement notes · <code>design.html</code> — design preview (v2 refined) · <code>index.html</code> — this page · <code>apps/</code> — student, lecturer, admin, api · <code>packages/</code> — tokens, ui, types, reader · <code>Docs/</code> — full PRD, plan, changelog, v1 preview.</p>
+    <div id="err"></div>
+    <div class="greet">
+      <div class="hello"><h1 id="hello">Good day, Scholar</h1><p id="sub">Here's your learning journey for today. Keep going!</p></div>
+      <div class="sched"><strong>📅 <span id="today"></span></strong><div id="sched" style="font-size:13px;margin-top:6px"></div></div>
+      <div class="quote">“<span id="word">Loading today's Word…</span>”<div style="font-size:12px;font-family:Inter;color:var(--muted)" id="verse"></div></div>
+    </div>
+    <div class="stats" id="stats"></div>
+    <div class="grid2">
+      <div>
+        <div class="card"><h3><span id="t1">📚 Today's Classes</span><a href="#" onclick="return false">View All</a></h3><div id="classes"></div></div>
+        <div class="card"><h3>📢 Announcements <a href="#" onclick="return false">View All</a></h3><div id="anns"></div></div>
+      </div>
+      <div>
+        <div class="card"><h3>📈 Performance Overview</h3><div id="chart"></div><div id="grades" style="font-size:13px;margin-top:8px"></div></div>
+        <div class="card"><h3>⚡ Quick Actions</h3><div class="qa" id="quick"></div></div>
+      </div>
+    </div>
+    <footer>EDUFARM Portal · live data from local API :4000 · Student :3001 · Lecturer :3002 · Admin :3003</footer>
   </div>
 </div>
-<footer>EDUFARM · index.html · Phase 1 live · Phase 2 in progress</footer>
+<script>
+const API = "http://localhost:4000/api/v1";
+const USERS = {
+  student: { email: "ada@student.demo-university.edu", name: "Ada Student" },
+  lecturer: { email: "bello@demo-university.edu", name: "Dr. A. Bello" },
+  admin: { email: "admin@edufarm.ng", name: "Platform Admin" },
+};
+let role = "student", ME = {}, CACHE = {};
+async function login(r) {
+  const res = await fetch(API + "/demo/login", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email: USERS[r].email }) });
+  if (!res.ok) throw new Error("API offline — start services: pm2 resurrect");
+  ME[r] = await res.json();
+}
+async function api(r, path, opts = {}) {
+  const res = await fetch(API + path, { ...opts, headers: { "Content-Type": "application/json", "x-user-id": ME[r].id, ...(opts.headers || {}) } });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.error || res.status);
+  return data;
+}
+const N = n => "₦" + (n / 100).toFixed(2);
+const hour = new Date().getHours(), daypart = hour < 12 ? "Good Morning" : hour < 17 ? "Good Afternoon" : "Good Evening";
+document.getElementById("today").textContent = new Date().toLocaleDateString("en-NG", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
+
+async function boot() {
+  try {
+    for (const r of ["student", "lecturer", "admin"]) await login(r);
+    const w = await (await fetch(API + "/devotional/today")).json();
+    if (!w.empty) { document.getElementById("word").textContent = w.title + " — " + w.body; document.getElementById("verse").textContent = w.verse; }
+    await renderAll();
+  } catch (e) { document.getElementById("err").innerHTML = "⚠ " + e.message; }
+}
+async function switchRole(r) { role = r; await renderAll(); }
+
+async function renderAll() {
+  document.getElementById("av").textContent = USERS[role].name[0];
+  document.getElementById("hello").textContent = daypart + ", " + USERS[role].name.split(" ")[0];
+  const nav = {
+    student: [["🏠", "Dashboard", 1], ["📖", "My Classes", 0], ["📝", "Assessments", 0], ["📚", "Library", 0], ["❓", "Q&A", 0], ["🤖", "AI Assistant", 0], ["—", "ACCOUNT", -1], ["✔", "Verify", 0]],
+    lecturer: [["🏠", "Dashboard", 1], ["📖", "My Courses", 0], ["📤", "Materials", 0], ["📝", "Assessments", 0], ["💰", "Earnings", 0], ["💡", "Insights", 0], ["—", "ACCOUNT", -1], ["✔", "Verify", 0]],
+    admin: [["🏠", "Dashboard", 1], ["✔", "Verifications", 0], ["📦", "Reviews", 0], ["💰", "Settlement", 0], ["⚖", "Disputes", 0], ["✉", "Email", 0], ["🏫", "Onboarding", 0]],
+  }[role];
+  document.getElementById("nav").innerHTML = nav.map(([i, t, on]) => on < 0 ? `<div class="sec">${t}</div>` : `<a href="#" class="${on ? "on" : ""}" onclick="return false"><span class="ico">${i}</span>${t}</a>`).join("");
+  CACHE.notes = await api(role, "/notifications/me").catch(() => []);
+  document.getElementById("bellN").textContent = CACHE.notes.length;
+  if (role === "student") await renderStudent();
+  if (role === "lecturer") await renderLecturer();
+  if (role === "admin") await renderAdmin();
+}
+
+async function renderStudent() {
+  const [unis] = [await api("student", "/universities")];
+  const facs = await api("student", `/universities/${unis[0].id}/faculties`);
+  const deps = await api("student", `/faculties/${facs[0].id}/departments`);
+  const courses = await api("student", `/departments/${deps[0].id}/courses`);
+  CACHE.courses = courses;
+  const enr = await api("student", "/enrollments/me");
+  const prog = await api("student", "/progress/me").catch(() => []);
+  const pts = await api("student", "/points/me").catch(() => ({ balance: 0 }));
+  const approved = enr.filter(e => e.status === "approved");
+  let asmts = [];
+  for (const e of approved) asmts = asmts.concat(await api("student", `/courses/${e.courseId}/assessments`).catch(() => []));
+  const pending = asmts.filter(a => !a.attempts.length).length;
+  const avgProg = prog.length ? Math.round(prog.reduce((s, p) => s + p.percent, 0) / prog.length) : 0;
+  document.getElementById("sub").textContent = "Here's your learning journey for today. Keep going!";
+  document.getElementById("sched").innerHTML = approved.slice(0, 3).map((e, i) => `<div>${["🟣", "🔵", "🟢"][i % 3]} ${["09:00", "10:15", "12:00"][i % 3]} &nbsp;${e.course.code}</div>`).join("") || "No classes yet";
+  document.getElementById("stats").innerHTML = `
+    <div class="stat"><div class="t">📊 Study Progress</div><div class="v">${avgProg}%</div><div class="s">${approved.length} active courses</div><div class="bar"><div style="width:${avgProg}%"></div></div></div>
+    <div class="stat"><div class="t">📝 Assessments</div><div class="v">${pending} <span style="font-size:14px;color:var(--muted)">pending</span></div><div class="s">${asmts.length} published total</div></div>
+    <div class="stat"><div class="t">🎓 Upcoming</div><div class="v">${asmts.length}</div><div class="s">Assessments scheduled</div></div>
+    <div class="stat"><div class="t">⭐ Points</div><div class="v">${pts.balance}</div><div class="s">Academic Points <span class="badge b-ok">non-cash</span></div></div>`;
+  renderTables();
+  const det = await api("student", `/courses/${approved[0]?.courseId || courses[0]?.id}`).catch(() => null);
+  document.getElementById("anns").innerHTML = (det?.announcements || []).slice(0, 3).map(a =>
+    `<div class="ann">${a.isUrgent ? "🔴" : "🟡"} <strong>${a.title}</strong><br>${a.body}<div class="d">${a.category}</div></div>`).join("") || "No announcements";
+  const scores = [];
+  for (const a of asmts) for (const t of (a.attempts || [])) if (t.score != null) scores.push(Math.round(100 * t.score / t.maxScore));
+  drawChart(scores.length ? scores : [avgProg]);
+  document.getElementById("grades").innerHTML = `<span class="badge b-ok">A ≥70</span> <span class="badge b-info">B 50–69</span> <span class="badge b-warn">C &lt;50</span>`;
+  document.getElementById("quick").innerHTML = `
+    <a class="qbtn q-pink" href="http://localhost:3001/library">📕 Library →</a>
+    <a class="qbtn q-blue" href="http://localhost:3001/courses">📖 Courses →</a>
+    <a class="qbtn q-green" href="http://localhost:3001/verify">✔ Verify →</a>`;
+}
+
+async function renderLecturer() {
+  const unis = await api("lecturer", "/universities");
+  const facs = await api("lecturer", `/universities/${unis[0].id}/faculties`);
+  const deps = await api("lecturer", `/faculties/${facs[0].id}/departments`);
+  const courses = await api("lecturer", `/departments/${deps[0].id}/courses`);
+  CACHE.courses = courses;
+  const earn = await api("lecturer", "/earnings/me").catch(() => ({ pendingKobo: 0, entries: [] }));
+  let pendingEnr = 0, pubMats = 0, unans = 0;
+  for (const c of courses) {
+    const e = await api("lecturer", `/courses/${c.id}/enrollments`).catch(() => []);
+    pendingEnr += e.filter(x => x.status === "requested").length;
+    const det = await api("lecturer", `/courses/${c.id}`).catch(() => null);
+    if (det) { pubMats += det.materials.length; unans += det.questions.filter(q => q.status === "unanswered").length; }
+  }
+  document.getElementById("sub").textContent = "Your teaching impact at a glance. Keep engaging!";
+  document.getElementById("sched").innerHTML = `<div>⏳ ${pendingEnr} enrollments awaiting approval</div><div>❓ ${unans} unanswered questions</div>`;
+  document.getElementById("stats").innerHTML = `
+    <div class="stat"><div class="t">📖 Courses</div><div class="v">${courses.length}</div><div class="s">${pubMats} published materials</div></div>
+    <div class="stat"><div class="t">⏳ Approvals</div><div class="v">${pendingEnr}</div><div class="s">Pending enrollments</div></div>
+    <div class="stat"><div class="t">❓ Q&A</div><div class="v">${unans}</div><div class="s">Unanswered</div></div>
+    <div class="stat"><div class="t">💰 Earnings</div><div class="v">${N(earn.pendingKobo || 0)}</div><div class="s">Pending eSpees <span class="badge b-ok">transparent</span></div></div>`;
+  renderTables(true);
+  document.getElementById("anns").innerHTML = `<div class="ann">💡 Open a course in the <a href="http://localhost:3002/">lecturer console</a> to post announcements, upload materials, build quizzes and view AI insights.</div>`;
+  drawChart([20, 35, 50, 65, 80]);
+  document.getElementById("grades").innerHTML = `<span class="muted">Class engagement trend (illustrative)</span>`;
+  document.getElementById("quick").innerHTML = `
+    <a class="qbtn q-pink" href="http://localhost:3002/">📤 Manage courses →</a>
+    <a class="qbtn q-blue" href="http://localhost:3003/reviews">📦 Review queue →</a>
+    <a class="qbtn q-green" href="http://localhost:3003/settlements">💰 Settlement →</a>`;
+}
+
+async function renderAdmin() {
+  const vS = await api("admin", "/verifications/pending?type=student").catch(() => []);
+  const vL = await api("admin", "/verifications/pending?type=lecturer").catch(() => []);
+  const queue = await api("admin", "/reviews/queue").catch(() => []);
+  const settle = await api("admin", "/settlement/overview").catch(() => ({ pendingKobo: 0, availableKobo: 0, settledKobo: 0 }));
+  const disputes = await api("admin", "/disputes").catch(() => []);
+  const onboard = await api("admin", "/onboarding/pending").catch(() => []);
+  CACHE.courses = [];
+  document.getElementById("sub").textContent = "Ecosystem health and governance at a glance.";
+  document.getElementById("sched").innerHTML = `<div>✔ ${vS.length + vL.length} verifications pending</div><div>📦 ${queue.length} materials in review</div><div>⚖ ${disputes.filter(d => d.status === "open").length} open disputes</div>`;
+  document.getElementById("stats").innerHTML = `
+    <div class="stat"><div class="t">✔ Verifications</div><div class="v">${vS.length + vL.length}</div><div class="s">${vS.length} students · ${vL.length} lecturers</div></div>
+    <div class="stat"><div class="t">📦 Review queue</div><div class="v">${queue.length}</div><div class="s">Awaiting publish decision</div></div>
+    <div class="stat"><div class="t">⚖ Disputes</div><div class="v">${disputes.filter(d => d.status === "open").length}</div><div class="s">${disputes.length} total reports</div></div>
+    <div class="stat"><div class="t">💰 eSpees</div><div class="v">${N(settle.pendingKobo || 0)}</div><div class="s">Pending · ${N(settle.settledKobo || 0)} settled</div></div>`;
+  document.getElementById("t1").textContent = "🏫 Institutions";
+  document.getElementById("classes").innerHTML = `<table><tr><th>Item</th><th>Status</th><th>Action</th></tr>
+    ${onboard.map(u => `<tr><td>${u.name} (${u.slug})</td><td><span class="badge b-warn">pending</span></td><td><a href="http://localhost:3003/onboarding">Review</a></td></tr>`).join("") || '<tr><td colspan="3">No pending onboarding</td></tr>'}</table>`;
+  document.getElementById("anns").innerHTML = queue.slice(0, 3).map(m => `<div class="ann">📦 <strong>${m.title}</strong> · ${m.course?.code || ""}<div class="d">awaiting review</div></div>`).join("") || "Review queue clear ✅";
+  drawChart([vS.length + vL.length, queue.length, disputes.length, onboard.length]);
+  document.getElementById("grades").innerHTML = `<span class="muted">Governance load by queue</span>`;
+  document.getElementById("quick").innerHTML = `
+    <a class="qbtn q-pink" href="http://localhost:3003/verifications">✔ Verify users →</a>
+    <a class="qbtn q-blue" href="http://localhost:3003/settlements">💰 Settle →</a>
+    <a class="qbtn q-green" href="http://localhost:3003/disputes">⚖ Disputes →</a>`;
+}
+
+function renderTables(lect = false) {
+  if (role === "admin") return; // admin main table is institutions, not courses
+  const q = (document.getElementById("q").value || "").toLowerCase();
+  const rows = (CACHE.courses || []).filter(c => (c.code + " " + c.title).toLowerCase().includes(q));
+  document.getElementById("t1").textContent = lect ? "📖 My Courses" : "📚 Today's Classes";
+  document.getElementById("classes").innerHTML = `<table><tr><th>Code</th><th>Title</th><th>Status</th><th></th></tr>` +
+    rows.map(c => `<tr><td><strong>${c.code}</strong></td><td>${c.title}</td><td>${c.isOfficial ? '<span class="badge b-ok">Official</span>' : ""}</td><td><a href="http://localhost:${lect ? "3002" : "3001"}/courses/${c.id}">${lect ? "Manage" : "Open"} →</a></td></tr>`).join("") + `</table>`;
+}
+
+function drawChart(vals) {
+  const W = 320, H = 130, max = Math.max(...vals, 100);
+  const pts = vals.map((v, i) => `${(vals.length === 1 ? W / 2 : (i / (vals.length - 1)) * W).toFixed(0)},${(H - 12 - (v / max) * (H - 30)).toFixed(0)}`).join(" ");
+  document.getElementById("chart").innerHTML = `<svg viewBox="0 0 ${W} ${H}" style="width:100%">
+    <polyline points="${pts}" fill="none" stroke="#EC4899" stroke-width="2.5"/>
+    ${vals.map((v, i) => `<circle cx="${(vals.length === 1 ? W / 2 : (i / (vals.length - 1)) * W).toFixed(0)}" cy="${(H - 12 - (v / max) * (H - 30)).toFixed(0)}" r="3.5" fill="#EC4899"/>`).join("")}
+    <text x="${W - 4}" y="14" text-anchor="end" font-size="11" fill="#027A48" font-weight="700">${vals[vals.length - 1]}%</text></svg>`;
+}
+boot();
+</script>
 </body>
 </html>

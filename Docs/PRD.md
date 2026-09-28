@@ -185,3 +185,12 @@
 - **Files:** none (ops only)
 - **Commit:** n/a
 - **Status:** Done.
+
+### 018 — 2026-09-28 — Unified EduPortal-style landing (index.html) combining student + lecturer + admin
+- **Instruction:** "give me a craft as neat as this combine all the features of the app, the admin, students and lecturer to one landing page and can be accessible then on different other pages, ensure that all this corrections are written and documented also to my github repository" + EduPortal dashboard screenshot.
+- **Change:** Rebuilt root `index.html` as a unified portal matching the screenshot's craft: dark sidebar nav (role-aware), topbar with live search + notification bell + profile role-switcher (Ada Student / Bello Lecturer / Platform Admin), greeting + date + schedule + daily-Word quote, stat cards, classes table, SVG performance chart, announcements, quick actions deep-linking into :3001/:3002/:3003 pages. All panels render from live API data (demo-login per role, entitlement-respecting endpoints). Fixed: search no longer wipes admin institutions table.
+- **Role views:** student (progress, pending assessments, points, classes, announcements, grades chart); lecturer (courses, approval queue, Q&A load, eSpees earnings); admin (verification counts, review queue, open disputes, settlement totals, onboarding).
+- **Verified:** opened in browser; file is static (zero RAM cost) reading localhost:4000.
+- **Files:** `index.html`, `Docs/PRD.md` (this entry)
+- **Commit:** (to be filled on push)
+- **Status:** In progress.
