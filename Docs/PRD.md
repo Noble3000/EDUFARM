@@ -203,5 +203,5 @@
   - Remote API support: `index.html` accepts `?api=` + ⚙️ button (localStorage); all 3 `lib/api.ts` clients read the override; all 3 login pages gained an API URL field. Rebuilt all 3 apps (builds green) and restarted PM2.
   - Note: quick-tunnel URLs are temporary — they change whenever tunnels restart (device reboot / network drop). Re-read them from `logs/tunnel-<port>.err.log`.
 - **Files:** `infra/static-server.js`, `infra/ecosystem.config.js`, `index.html`, 3× `lib/api.ts`, 3× login pages, `Docs/PRD.md` (this entry)
-- **Commit:** (to be filled on push)
-- **Status:** In progress.
+- **Commit:** `ca5057a Phone access: tunnels recipe, static portal server, configurable API URL`
+- **Status:** Done, pushed to `main`.
