@@ -176,3 +176,12 @@
 - **Files:** `routes/devotional.ts`, `seed.ts`, `main.ts`, student home, admin onboarding page+nav, 18 alias-migrated pages, `ecosystem.config.js`, root `package.json`+lock (pm2 devDep), `Docs/PRD.md` (this entry). NOT committed: `dist/`, `.next/` (gitignored), `apps/api/.env` (secrets).
 - **Commit:** `0231373 Phase 4 Word+onboarding live; production PM2; @/lib alias; all builds green`
 - **Status:** Done, pushed to `main`.
+
+### 017 — 2026-09-28 — Localhost outage: Windows OOM-killed all services, resurrected via PM2
+- **Instruction:** "why is my local host showing error"
+- **Root cause:** Device RAM hit ~96% (Chrome + Spotify + Figma + TradingView + 8GB total). Windows killed all 4 node service processes; only the PM2 daemon survived. API :4000 + all web ports refused connections.
+- **Fix:** `pm2 resurrect` (from saved dump) — all 4 online at ~55MB each, RAM back to ~85%, all ports verified open, browsers reopened. No code changed.
+- **Prevention:** Keep heavy desktop apps closed while running EDUFARM; if it recurs, run `node node_modules/pm2/bin/pm2 resurrect` from repo root. Consider `pm2 startup` for auto-boot (not enabled yet).
+- **Files:** none (ops only)
+- **Commit:** n/a
+- **Status:** Done.
