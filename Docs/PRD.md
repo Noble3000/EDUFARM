@@ -217,3 +217,16 @@
 - **Files:** `index.html`, `routes/auth-local.ts`, `main.ts`, `schema.prisma` + migration, 3 signup + 3 login pages, 3 layouts, `Docs/PRD.md` (this entry)
 - **Commit:** `ed4c525 Step 1: marketing home + role signup/login (scrypt, verification queues)`
 - **Status:** Done, pushed to `main`.
+
+### 021 — 2026-09-29 — CGPA Calculator (Amendment A1), live + documented everywhere
+- **Instruction:** "add a cgpa calculator to my product also update this on my PRD and other documents including the readme file"
+- **Change:**
+  - Spec: `Docs/PRD EDUFARM.md` gained Amendment A1 (5-point scale, formula, class bands, privacy rule).
+  - API (`routes/grades.ts`): `GradeSemester`/`GradeCourse` models + migration `grades`; CRUD scoped to own student; server computes GPA/CGPA (rounded 2dp); grades A–F validated, units 1–12, unique code per semester.
+  - UI: student `/grades` page (CGPA hero + class badge, semester cards, add/delete flows) + nav CGPA link.
+  - Docs: README Study Journey section, root `PRD.md` §2.6b + build log, `IMPLEMENTATION_PLAN.md` §2.6.
+  - Fixes en route: TS computed-key overwrite in form helper; rebuilt student app; regenerated client; recompiled `dist/` + PM2 restarts.
+  - Verified live: BIO 201 A(3u) + CHM 201 B(3u) + PHY 201 C(2u) → GPA 4.13 = 33/8 ✓; `/grades` page 200; test data deleted.
+- **Files:** `schema.prisma` + migration, `routes/grades.ts`, `main.ts`, student grades page + nav, all 4 docs, `Docs/PRD.md` (this entry)
+- **Commit:** (to be filled on push)
+- **Status:** In progress.

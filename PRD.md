@@ -62,6 +62,12 @@ Naira (payments) + eSpees (internal lecturer settlement, pending → available �
 slow, capped, no withdrawal; high redemption thresholds). Purchase flow: view terms → pay → library grant →
 pending earnings → transparent split.
 
+### 2.6b CGPA Calculator (Amendment A1, 2026-09-29)
+Students record semesters (courses with code, credit units, grade A–F) and get per-semester GPA plus cumulative CGPA
+on the Nigerian 5-point scale (A=5 … F=0; GPA = Σ(point × units) ÷ Σunits) with degree-class indication
+(First ≥4.5, 2:1 ≥3.5, 2:2 ≥2.4, Third ≥1.5). Private to the student; part of the Study Journey; never visible
+to lecturers. Live at student app `/grades`.
+
 ### 2.9 Devotional, trust, governance, notifications
 Same daily Word for every student (authorized source) + separate academic reflection; reviews (eligible after
 meaningful access) + reporting without auto-takedown; trust badges (Verified Institution/Lecturer, Official
@@ -128,3 +134,6 @@ Next.js PWA + Fastify API self-hosted on local device (no Vercel) · Paystack/Fl
 - 017: Localhost outage — Windows OOM-killed services at 96% RAM; resurrected via PM2; prevention noted.
 - 018: Unified EduPortal-style `index.html` — sidebar + topbar + role-switcher (student/lecturer/admin),
   live API panels, deep links to all apps; search-admin fix included.
+- 019: Phone access — Cloudflare tunnels + `infra/static-server.js` + configurable API URL (`?api=`, ⚙️, login field).
+- 020: Step 1 hardening — marketing home, role-aware email/password signup/login (scrypt), verification queues.
+- 021: CGPA Calculator (Amendment A1) — semesters/courses, 5-point GPA + CGPA + degree class, private, live at `/grades`.

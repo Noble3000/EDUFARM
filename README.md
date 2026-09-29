@@ -202,6 +202,8 @@ Long-term academic record showing progression, not just document opens:
 
 **Assessments:** Lecturers create tests/quizzes/assignments. Objective parts auto-graded; subjective parts lecturer-reviewed. Completion feeds study journey + points.
 
+**CGPA Calculator:** Students record semesters with courses (code, units, grade A–F) and get per-semester GPA plus cumulative CGPA on the Nigerian 5-point scale, with degree-class indication. Records are private to the student and part of the Study Journey.
+
 ### AI Learning Experience
 
 Grounded first in the student's authorized environment.

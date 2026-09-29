@@ -286,6 +286,10 @@ Devotional { id, date, title, verse, body, sourceRef } // Phase 4 but table now
 
 - In-app inbox + preferences (urgent always on). Email templates: announcement, new material, payment/receipt, test/exam update, deadline reminder (24h + 1h), access change, revision notice, account notice. Queue with retry + unsubscribe for non-critical.
 
+### 2.6 CGPA Calculator (Amendment A1, 2026-09-29)
+
+- Student-private grade records (`GradeSemester` + `GradeCourse`): semesters with courses (code, 1–12 units, grade A–F); server-computed GPA/CGPA on the 5-point scale with degree-class bands; feeds Study Journey; never exposed to lecturers (enforced by student-scoped queries).
+
 **Phase 2 exit:** assessments live, points issuance with caps enforced, first settlement run completed, review→dispute loop tested, email delivery ≥98%.
 
 ---

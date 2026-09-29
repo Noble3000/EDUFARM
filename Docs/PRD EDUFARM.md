@@ -690,6 +690,10 @@ The core product vision is now sufficiently defined for structured design and pl
 
 The final product concept is a verified, lecturer-led academic ecosystem organized around departments and courses. Students receive a shared daily Word experience and a personalized academic journey. Lecturers gain a controlled publishing environment, meaningful engagement with students, academic analytics, and a transparent earning pathway. The ecosystem uses protected in-platform access, affordable paid resources, controlled Academic Points, eSpees settlement, course-grounded AI assistance, and structured announcements/Q\&A to create a coherent experience from learning to long-term academic reference.
 
+# **Amendment A1 — CGPA Calculator (2026-09-29)**
+
+Students can record semesters with courses (code, credit units, letter grade) and receive per-semester GPA plus cumulative CGPA on the Nigerian 5-point scale (A=5, B=4, C=3, D=2, E=1, F=0; GPA = Σ(point × units) ÷ Σunits), with degree-class indication (First Class ≥ 4.5, Second Class Upper ≥ 3.5, Second Class Lower ≥ 2.4, Third Class ≥ 1.5). Records are private to the student, form part of the Study Journey (§10), and never visible to lecturers. Scale configurability per institution is deferred to a later amendment.
+
 &nbsp;
 
 &nbsp;
