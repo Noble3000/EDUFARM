@@ -228,5 +228,5 @@
   - Fixes en route: TS computed-key overwrite in form helper; rebuilt student app; regenerated client; recompiled `dist/` + PM2 restarts.
   - Verified live: BIO 201 A(3u) + CHM 201 B(3u) + PHY 201 C(2u) → GPA 4.13 = 33/8 ✓; `/grades` page 200; test data deleted.
 - **Files:** `schema.prisma` + migration, `routes/grades.ts`, `main.ts`, student grades page + nav, all 4 docs, `Docs/PRD.md` (this entry)
-- **Commit:** (to be filled on push)
-- **Status:** In progress.
+- **Commit:** `8fb744e` (code) + `cd4abf5` (Amendment A1, README, PRDs, plan, migration)
+- **Status:** Done, pushed to `main`.
