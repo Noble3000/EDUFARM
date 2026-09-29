@@ -215,5 +215,5 @@
   - Fixes en route: missing `passwordHash` column caught by tsc; wrong `./auth-dev.js` import path; stale `dist/` (rebuilt via tsc emit + PM2 restart).
   - Verified live: signup → pending → admin approve → verified → password login ✓; wrong password 401 ✓; test user cleaned up; signup/login pages 200 on all apps.
 - **Files:** `index.html`, `routes/auth-local.ts`, `main.ts`, `schema.prisma` + migration, 3 signup + 3 login pages, 3 layouts, `Docs/PRD.md` (this entry)
-- **Commit:** (to be filled on push)
-- **Status:** In progress.
+- **Commit:** `ed4c525 Step 1: marketing home + role signup/login (scrypt, verification queues)`
+- **Status:** Done, pushed to `main`.
