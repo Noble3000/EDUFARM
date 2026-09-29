@@ -28,7 +28,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             <strong>EDUFARM · Student</strong>
             <a href="/">Home</a>
             <a href="/courses">Courses</a>
-            <a href="/library">Library</a>
+            <a href="/library">Library</a><a href="/grades">CGPA</a>
             <a href="/verify">Verify</a><a href="/signup">Signup</a>
             <a href="/login">Login</a>
           </nav>

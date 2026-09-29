@@ -23,6 +23,7 @@ import { emailRoutes } from "./routes/email.js";
 import { aiRoutes } from "./routes/ai.js";
 import { devotionalRoutes } from "./routes/devotional.js";
 import { authLocalRoutes } from "./routes/auth-local.js";
+import { gradesRoutes } from "./routes/grades.js";
 
 const app = Fastify({ logger: true });
 await app.register(cors, { origin: [/^http:\/\/localhost:300\d$/], credentials: true });
@@ -69,6 +70,7 @@ await app.register(emailRoutes, { prefix: "/api/v1" });
 await app.register(aiRoutes, { prefix: "/api/v1" });
 await app.register(devotionalRoutes, { prefix: "/api/v1" });
 await app.register(authLocalRoutes, { prefix: "/api/v1" });
+await app.register(gradesRoutes, { prefix: "/api/v1" });
 
 const port = Number(process.env.API_PORT ?? 4000);
 await app.listen({ port, host: "0.0.0.0" });

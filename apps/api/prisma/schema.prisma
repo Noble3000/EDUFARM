@@ -171,6 +171,7 @@ model StudentProfile {
   enrollments        Enrollment[]
   purchases          Purchase[]
   attempts           AssessmentAttempt[]
+  gradeSemesters     GradeSemester[]
 }
 
 model LecturerProfile {
@@ -468,4 +469,28 @@ model MaterialChunk {
   createdAt  DateTime @default(now())
 
   @@unique([materialId, version, chunkNo])
+}
+
+// CGPA Calculator (5-point Nigerian scale: A=5 B=4 C=3 D=2 E=1 F=0).
+// GPA = Σ(point × units)/Σunits per semester; CGPA across all semesters.
+// Records feed the Study Journey; scale configurable per institution later.
+model GradeSemester {
+  id        String       @id @default(cuid())
+  studentId String
+  student   StudentProfile @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  name      String       // e.g. "Year 2 · Semester 1"
+  createdAt DateTime     @default(now())
+  courses   GradeCourse[]
+}
+
+model GradeCourse {
+  id         String        @id @default(cuid())
+  semesterId String
+  semester   GradeSemester @relation(fields: [semesterId], references: [id], onDelete: Cascade)
+  code       String        // e.g. BIO 201
+  title      String?
+  units      Int
+  grade      String        // A | B | C | D | E | F
+
+  @@unique([semesterId, code])
 }
