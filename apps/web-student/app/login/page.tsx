@@ -4,13 +4,16 @@ import { apiUrl } from "@/lib/api";
 
 export default function Login() {
   const [email, setEmail] = useState("ada@student.demo-university.edu");
+  const [password, setPassword] = useState("");
   const [api, setApi] = useState("");
   const [msg, setMsg] = useState("");
-  async function login() {
+  async function login(useDemo = false) {
     if (api.trim()) localStorage.setItem("edufarm_api", api.trim().replace(/\/$/, ""));
     setMsg("…");
-    const res = await fetch(`${apiUrl()}/demo/login`, {
-      method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email }),
+    const url = useDemo ? `${apiUrl()}/demo/login` : `${apiUrl()}/auth/login`;
+    const res = await fetch(url, {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(useDemo ? { email } : { email, password }),
     });
     const data = await res.json();
     if (!res.ok) return setMsg(data.error ?? "Login failed");
@@ -23,16 +26,17 @@ export default function Login() {
   }
   return (
     <div className="card">
-      <h2>Demo login</h2>
-      <p className="muted">No password in Phase 1 dev — pick a seeded email. Better Auth cookies land next.</p>
-      <input value={email} onChange={(e) => setEmail(e.target.value)} />
+      <h2>Student sign in</h2>
+      <label>Email</label><input value={email} onChange={(e) => setEmail(e.target.value)} />
+      <label>Password</label><input type="password" value={password} onChange={(e) => setPassword(e.target.value)} />
       <input placeholder="API URL (only for phone/remote — leave empty on this device)" value={api} onChange={(e) => setApi(e.target.value)} />
       <div className="row">
-        <button onClick={login}>Log in</button>
+        <button onClick={() => login(false)}>Sign in</button>
+        <button className="sec" onClick={() => login(true)}>Demo login</button>
         <button className="sec" onClick={logout}>Log out</button>
       </div>
       <p>{msg}</p>
-      <p className="muted">Students: ada@… (verified) · pending@… (pending) · Lecturers use :3002 · Admin: admin@edufarm.ng on :3003</p>
+      <p className="muted">New here? <a href="/signup">Create a student account →</a> (institution verifies you after signup)</p>
     </div>
   );
 }

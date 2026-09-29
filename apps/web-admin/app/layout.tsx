@@ -11,7 +11,7 @@ button.sec{background:#fff;color:#0E5A3C;border:1px solid #0E5A3C}input{width:10
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en"><body><style>{CSS}</style>
-      <header className="top"><nav><strong>EDUFARM · Admin</strong><a href="/">Home</a><a href="/verifications">Verifications</a><a href="/reviews">Reviews</a><a href="/settlements">Settlement</a><a href="/disputes">Disputes</a><a href="/email">Email</a><a href="/onboarding">Onboarding</a><a href="/login">Login</a></nav></header>
+      <header className="top"><nav><strong>EDUFARM · Admin</strong><a href="/">Home</a><a href="/verifications">Verifications</a><a href="/reviews">Reviews</a><a href="/settlements">Settlement</a><a href="/disputes">Disputes</a><a href="/email">Email</a><a href="/onboarding">Onboarding</a><a href="/login">Login</a><a href="/signup">Signup</a></nav></header>
       <main>{children}</main>
     </body></html>
   );

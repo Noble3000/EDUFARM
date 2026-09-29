@@ -14,7 +14,7 @@ button.sec{background:#fff;color:#0E5A3C;border:1px solid #0E5A3C}input,textarea
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en"><body><style>{CSS}</style>
-      <header className="top"><nav><strong>EDUFARM · Lecturer</strong><a href="/">Dashboard</a><a href="/login">Login</a></nav></header>
+      <header className="top"><nav><strong>EDUFARM · Lecturer</strong><a href="/">Dashboard</a><a href="/signup">Signup</a><a href="/login">Login</a></nav></header>
       <main>{children}</main>
     </body></html>
   );

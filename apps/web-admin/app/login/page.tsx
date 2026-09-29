@@ -1,23 +1,36 @@
 "use client";
 import { useState } from "react";
 import { apiUrl } from "@/lib/api";
+
 export default function Login() {
   const [email, setEmail] = useState("admin@edufarm.ng");
+  const [password, setPassword] = useState("");
   const [api, setApi] = useState("");
   const [msg, setMsg] = useState("");
-  async function login() {
+  async function login(useDemo = false) {
     if (api.trim()) localStorage.setItem("edufarm_api", api.trim().replace(/\/$/, ""));
-    const res = await fetch(`${apiUrl()}/demo/login`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email }) });
+    setMsg("…");
+    const url = useDemo ? `${apiUrl()}/demo/login` : `${apiUrl()}/auth/login`;
+    const res = await fetch(url, {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(useDemo ? { email } : { email, password }),
+    });
     const data = await res.json();
     if (!res.ok) return setMsg(data.error ?? "Login failed");
     localStorage.setItem("edufarm_user", JSON.stringify(data));
     setMsg(`Logged in as ${data.name} (${data.role}).`);
   }
   return (
-    <div className="card"><h2>Admin demo login</h2>
-      <input value={email} onChange={(e) => setEmail(e.target.value)} />
+    <div className="card"><h2>Admin sign in</h2>
+      <label>Email</label><input value={email} onChange={(e) => setEmail(e.target.value)} />
+      <label>Password</label><input type="password" value={password} onChange={(e) => setPassword(e.target.value)} />
       <input placeholder="API URL (only for phone/remote)" value={api} onChange={(e) => setApi(e.target.value)} />
-      <button onClick={login}>Log in</button><p>{msg}</p>
+      <div className="row">
+        <button onClick={() => login(false)}>Sign in</button>
+        <button className="sec" onClick={() => login(true)}>Demo login</button>
+      </div>
+      <p>{msg}</p>
+      <p className="muted">No account? <a href="/signup">Request admin access →</a></p>
     </div>
   );
 }

@@ -29,7 +29,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             <a href="/">Home</a>
             <a href="/courses">Courses</a>
             <a href="/library">Library</a>
-            <a href="/verify">Verify</a>
+            <a href="/verify">Verify</a><a href="/signup">Signup</a>
             <a href="/login">Login</a>
           </nav>
         </header>

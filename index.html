@@ -76,11 +76,41 @@ td{padding:9px 8px;border-bottom:1px solid #F2F4F7}
 footer{color:var(--muted);font-size:12px;text-align:center;padding:20px}
 a{color:var(--brand)}
 button{font-family:inherit}
+/* Marketing hero */
+.mkt{background:linear-gradient(135deg,#0E5A3C,#0A4230);color:#fff}
+.mkt-inner{max-width:1080px;margin:0 auto;padding:44px 24px 36px}
+.mkt nav{display:flex;justify-content:space-between;align-items:center;margin-bottom:28px}
+.mkt .brand{font-family:Sora;font-weight:800;font-size:20px}
+.mkt h1{font-family:Sora;font-size:34px;margin:0 0 10px;max-width:640px}
+.mkt p.lead{font-size:16px;opacity:.92;max-width:620px}
+.btn{display:inline-block;padding:12px 22px;border-radius:12px;font-weight:700;font-size:15px;text-decoration:none;margin:14px 10px 0 0}
+.btn:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.btn-gold{background:var(--accent);color:#101828}
+.btn-ghost{background:transparent;color:#fff;border:2px solid #fff}
+.roles{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px;max-width:1080px;margin:22px auto 0;padding:0 24px 34px}
+.role{background:#fff;color:var(--ink);border-radius:var(--radius);padding:20px}
+.role h3{font-family:Sora;margin:0 0 6px;font-size:17px}
+.role p{font-size:14px;color:var(--muted);margin:0 0 10px}
+.role a{font-weight:700;font-size:14px;margin-right:14px}
 .err{background:var(--redbg);border:1px solid #FECDCA;color:var(--red);border-radius:12px;padding:12px 16px;margin-bottom:14px;font-size:14px}
 </style>
 </head>
 <body>
-<div class="app">
+<header class="mkt">
+  <div class="mkt-inner">
+    <nav><span class="brand">🎓 EDUFARM</span><span><a class="btn btn-ghost" style="margin:0 8px 0 0;padding:9px 16px" href="PRD.md">PRD</a><a class="btn btn-ghost" style="margin:0;padding:9px 16px" href="design.html">Design</a></span></nav>
+    <h1>A trusted academic ecosystem — not a PDF marketplace.</h1>
+    <p class="lead">EDUFARM connects verified universities, lecturers, and students around official course materials, structured Q&A, study tracking, course-grounded AI, fair rewards, and transparent lecturer earnings — with the daily Word at the center.</p>
+    <a class="btn btn-gold" href="#get-started">Get started →</a>
+    <a class="btn btn-ghost" href="#live">See it live ↓</a>
+  </div>
+  <div class="roles" id="get-started">
+    <div class="role"><h3>🎓 Students</h3><p>Verify once with your matric number, join lecturer-approved courses, read official materials, ask questions, earn Academic Points.</p><a href="http://localhost:3001/signup">Sign up →</a><a href="http://localhost:3001/login">Sign in →</a></div>
+    <div class="role"><h3>👩‍🏫 Lecturers</h3><p>Verify with staff ID, own your courses, publish official materials, answer Q&A, run quizzes, earn transparently.</p><a href="http://localhost:3002/signup">Sign up →</a><a href="http://localhost:3002/login">Sign in →</a></div>
+    <div class="role"><h3>🛡️ Admins</h3><p>Platform and institution staff: verify users, review materials, settle earnings, resolve disputes.</p><a href="http://localhost:3003/signup">Request access →</a><a href="http://localhost:3003/login">Sign in →</a></div>
+  </div>
+</header>
+<div class="app" id="live">
   <aside class="side">
     <div class="logo"><span class="mark">🎓</span>EDUFARM</div>
     <nav class="nav" id="nav"></nav>

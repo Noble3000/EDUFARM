@@ -205,3 +205,15 @@
 - **Files:** `infra/static-server.js`, `infra/ecosystem.config.js`, `index.html`, 3× `lib/api.ts`, 3× login pages, `Docs/PRD.md` (this entry)
 - **Commit:** `ca5057a Phone access: tunnels recipe, static portal server, configurable API URL`
 - **Status:** Done, pushed to `main`.
+
+### 020 — 2026-09-29 — Step 1: marketing home + role-aware email/password signup/login
+- **Instruction:** "I want you to completely build now… home page intro → sign in/up … indicate admin/student/lecturer … different homes … hardening track … step by step, ask questions" — Q&A decided: email+password (staff 2FA next), no API keys yet (mocks + walkthroughs later), open signup + verification queues.
+- **Change:**
+  - `index.html`: marketing hero (company intro, PRD/Design links) + 3 role cards → per-app /signup + /login; live portal dashboard kept below as preview.
+  - API (`routes/auth-local.ts`, scrypt hashing, zero new deps): `POST /auth/signup` (student: institution+matric → pending profile; lecturer: dept+staffId → pending), `POST /auth/login` (401 on bad password, never reveals which field failed), `POST /access-requests` (admin requests → disputes queue), `POST /admin/users` (platformAdmin creates staff). New `User.passwordHash` column + migration `password-hash`.
+  - UI: 3 signup pages (role-specific verification fields), 3 login pages rewritten (password + demo shortcut + API-URL field + signup links), nav Signup links.
+  - Fixes en route: missing `passwordHash` column caught by tsc; wrong `./auth-dev.js` import path; stale `dist/` (rebuilt via tsc emit + PM2 restart).
+  - Verified live: signup → pending → admin approve → verified → password login ✓; wrong password 401 ✓; test user cleaned up; signup/login pages 200 on all apps.
+- **Files:** `index.html`, `routes/auth-local.ts`, `main.ts`, `schema.prisma` + migration, 3 signup + 3 login pages, 3 layouts, `Docs/PRD.md` (this entry)
+- **Commit:** (to be filled on push)
+- **Status:** In progress.
