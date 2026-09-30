@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
+import { Icon } from "@edufarm/ui";
 
 type Course = { id: string; code: string; title: string | null; units: number; grade: string };
 type Sem = { id: string; name: string; courses: Course[]; gpa: number | null; units: number };
@@ -68,7 +69,7 @@ export default function Grades() {
                 <tr key={c.id} style={{ borderTop: "1px solid #eee" }}>
                   <td><strong>{c.code}</strong> {c.title && <span className="muted">{c.title}</span>}</td>
                   <td>{c.units}u</td><td>{c.grade}</td>
-                  <td><button className="sec" onClick={async () => { await api(`/grades/courses/${c.id}`, { method: "DELETE" }); load(); }}>✕</button></td>
+                  <td><button className="sec" onClick={async () => { await api(`/grades/courses/${c.id}`, { method: "DELETE" }); load(); }}><Icon name="x" size={13} /></button></td>
                 </tr>
               ))}
             </tbody>

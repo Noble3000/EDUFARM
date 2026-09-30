@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { api, getUser } from "@/lib/api";
+import { Icon } from "@edufarm/ui";
 
 // Student home (§6.1 order): Word → priorities → continue → courses → updates → Q&A → points → AI stub.
 export default function Home() {
@@ -79,7 +80,7 @@ export default function Home() {
       </div>
       <div className="card">
         <h3>Academic points & AI</h3>
-        <p>★ Balance: <strong>{points?.balance ?? "…"}</strong> points <span className="muted">(earn: pass assessments, lecturer recognition · redeem ≥5000 for purchases)</span></p>
+        <p><Icon name="star" size={15} /> Balance: <strong>{points?.balance ?? "…"}</strong> points <span className="muted">(earn: pass assessments, lecturer recognition · redeem ≥5000 for purchases)</span></p>
         <p className="muted">AI Study Assistant arrives with course grounding in Phase 3. Library: <a href="/library">open</a>.</p>
       </div>
     </div>

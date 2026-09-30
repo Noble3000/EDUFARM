@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Icon } from "@edufarm/ui";
 export const metadata: Metadata = { title: "EDUFARM — Admin" };
 const CSS = `*{box-sizing:border-box}body{margin:0;font-family:Inter,system-ui,sans-serif;color:#101828;background:#F9FAFB}
 a{color:#0E5A3C}header.top{background:#101828;color:#fff;padding:12px 16px;position:sticky;top:0}
@@ -11,7 +12,7 @@ button.sec{background:#fff;color:#0E5A3C;border:1px solid #0E5A3C}input{width:10
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en"><body><style>{CSS}</style>
-      <header className="top"><nav><strong>EDUFARM · Admin</strong><a href="/">Home</a><a href="/verifications">Verifications</a><a href="/reviews">Reviews</a><a href="/settlements">Settlement</a><a href="/disputes">Disputes</a><a href="/email">Email</a><a href="/onboarding">Onboarding</a><a href="/login">Login</a><a href="/signup">Signup</a></nav></header>
+      <header className="top"><nav><strong><Icon name="shield" size={16} /> EDUFARM · Admin</strong><a href="/"><Icon name="home" size={14} /> Home</a><a href="/verifications"><Icon name="verify" size={14} /> Verifications</a><a href="/reviews"><Icon name="file" size={14} /> Reviews</a><a href="/settlements"><Icon name="wallet" size={14} /> Settlement</a><a href="/disputes"><Icon name="dispute" size={14} /> Disputes</a><a href="/email"><Icon name="mail" size={14} /> Email</a><a href="/onboarding"><Icon name="school" size={14} /> Onboarding</a><a href="/login"><Icon name="user" size={14} /> Login</a><a href="/signup"><Icon name="plus" size={14} /> Signup</a></nav></header>
       <main>{children}</main>
     </body></html>
   );

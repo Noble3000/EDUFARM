@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Icon } from "@edufarm/ui";
 
 export const metadata: Metadata = { title: "EDUFARM — Student" };
 
@@ -25,12 +26,12 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <style>{CSS}</style>
         <header className="top">
           <nav>
-            <strong>EDUFARM · Student</strong>
-            <a href="/">Home</a>
-            <a href="/courses">Courses</a>
-            <a href="/library">Library</a><a href="/grades">CGPA</a>
-            <a href="/verify">Verify</a><a href="/signup">Signup</a>
-            <a href="/login">Login</a>
+            <strong><Icon name="grad" size={16} /> EDUFARM · Student</strong>
+            <a href="/"><Icon name="home" size={14} /> Home</a>
+            <a href="/courses"><Icon name="book" size={14} /> Courses</a>
+            <a href="/library"><Icon name="library" size={14} /> Library</a><a href="/grades"><Icon name="chart" size={14} /> CGPA</a>
+            <a href="/verify"><Icon name="verify" size={14} /> Verify</a><a href="/signup"><Icon name="plus" size={14} /> Signup</a>
+            <a href="/login"><Icon name="user" size={14} /> Login</a>
           </nav>
         </header>
         <main>{children}</main>

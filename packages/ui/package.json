@@ -4,5 +4,12 @@
   "private": true,
   "type": "module",
   "main": "./src/index.ts",
-  "peerDependencies": { "react": "^18" }
+  "peerDependencies": {
+    "react": "^18"
+  },
+  "devDependencies": {
+    "@types/react": "^18.3.31",
+    "react": "^18",
+    "typescript": "^5.5.0"
+  }
 }

@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { api, getUser } from "@/lib/api";
+import { Icon } from "@edufarm/ui";
 
 // Protected reader shell: page navigation + watermark + dwell pings + mock checkout on 402.
 export default function Reader({ params }: { params: { id: string } }) {
@@ -73,19 +74,19 @@ export default function Reader({ params }: { params: { id: string } }) {
         <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", opacity: 0.15, transform: "rotate(-18deg)", fontSize: 13, pointerEvents: "none", textAlign: "center" }}>
           {user?.name ?? "?"} · {user?.email ?? "?"} · {meta?.course?.code ?? ""} · Do not redistribute
         </div>
-        <p className="muted" style={{ color: "#D0D5DD" }}>Page {page} / 10 · 🔒 Protected (R2 page-streaming lands in reader spike)</p>
+        <p className="muted" style={{ color: "#D0D5DD" }}>Page {page} / 10 · <Icon name="lock" size={13} /> Protected (R2 page-streaming lands in reader spike)</p>
         <h3>Page {page} content shell</h3>
         <p style={{ color: "#D0D5DD", lineHeight: 1.7 }}>Styled placeholder for rendered PDF page image. Right-click disabled. Dwell pings feed Study Journey (≥8s counts).</p>
       </div>
       <div className="row">
-        <button className="sec" disabled={page <= 1} onClick={() => load(page - 1)}>← Prev</button>
-        <button className="sec" disabled={page >= 10} onClick={() => load(page + 1)}>Next →</button>
+        <button className="sec" disabled={page <= 1} onClick={() => load(page - 1)}><Icon name="chevL" size={14} /> Prev</button>
+        <button className="sec" disabled={page >= 10} onClick={() => load(page + 1)}>Next <Icon name="chevR" size={14} /></button>
       </div>
       <div className="card">
         <h3>Reviews</h3>
         {reviews.map((r) => (
           <div key={r.id} style={{ borderTop: "1px solid #eee", paddingTop: 8 }}>
-            <p>★ {r.rating}/5 — {r.body}</p>
+            <p><Icon name="star" size={14} /> {r.rating}/5 — {r.body}</p>
             {r.replies.map((rp, i) => <p key={i} style={{ marginLeft: 12 }}>{rp.isLecturer && <span className="badge b-off">Lecturer</span>}{rp.body}</p>)}
           </div>
         ))}

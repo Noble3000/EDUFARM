@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
+import { Icon } from "@edufarm/ui";
 
 type Enr = { id: string; status: string; student: { user: { name: string; email: string } } };
 
@@ -138,7 +139,7 @@ function Insights({ courseId }: { courseId: string }) {
           ))}
           {!!ins.unanswered.length && <p>Unanswered ({ins.unanswered.length}): {ins.unanswered.map((u) => u.title).join("; ")}</p>}
           {!!ins.weakCompletion.length && <p>Weak completion: {ins.weakCompletion.map((w) => `${w.title} (${w.readers} readers)`).join("; ")}</p>}
-          {ins.suggestions.map((s, i) => <p key={i}>💡 {s}</p>)}
+          {ins.suggestions.map((s, i) => <p key={i}><Icon name="bulb" size={14} /> {s}</p>)}
         </div>
       )}
     </div>

@@ -17,3 +17,6 @@ export function badgeClass(kind: BadgeKind): string {
 export function buttonClass(kind: ButtonKind): string {
   return `edubtn edubtn-${kind}`;
 }
+
+export { Icon, Dot } from "./icons";
+export type { IconName } from "./icons";

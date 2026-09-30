@@ -93,33 +93,35 @@ button{font-family:inherit}
 .role p{font-size:14px;color:var(--muted);margin:0 0 10px}
 .role a{font-weight:700;font-size:14px;margin-right:14px}
 .err{background:var(--redbg);border:1px solid #FECDCA;color:var(--red);border-radius:12px;padding:12px 16px;margin-bottom:14px;font-size:14px}
+.ic{display:inline-block;vertical-align:-3px}
+.sdot{width:9px;height:9px;border-radius:99px;display:inline-block;margin-right:6px}
 </style>
 </head>
 <body>
 <header class="mkt">
   <div class="mkt-inner">
-    <nav><span class="brand">🎓 EDUFARM</span><span><a class="btn btn-ghost" style="margin:0 8px 0 0;padding:9px 16px" href="PRD.md">PRD</a><a class="btn btn-ghost" style="margin:0;padding:9px 16px" href="design.html">Design</a></span></nav>
+    <nav><span class="brand"><svg class="ic" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 9l10-5 10 5-10 5L2 9z"/><path d="M6 11.5V16c0 1.7 2.7 3 6 3s6-1.3 6-3v-4.5"/></svg> EDUFARM</span><span><a class="btn btn-ghost" style="margin:0 8px 0 0;padding:9px 16px" href="PRD.md">PRD</a><a class="btn btn-ghost" style="margin:0;padding:9px 16px" href="design.html">Design</a></span></nav>
     <h1>A trusted academic ecosystem — not a PDF marketplace.</h1>
     <p class="lead">EDUFARM connects verified universities, lecturers, and students around official course materials, structured Q&A, study tracking, course-grounded AI, fair rewards, and transparent lecturer earnings — with the daily Word at the center.</p>
     <a class="btn btn-gold" href="#get-started">Get started →</a>
     <a class="btn btn-ghost" href="#live">See it live ↓</a>
   </div>
   <div class="roles" id="get-started">
-    <div class="role"><h3>🎓 Students</h3><p>Verify once with your matric number, join lecturer-approved courses, read official materials, ask questions, earn Academic Points.</p><a href="http://localhost:3001/signup">Sign up →</a><a href="http://localhost:3001/login">Sign in →</a></div>
-    <div class="role"><h3>👩‍🏫 Lecturers</h3><p>Verify with staff ID, own your courses, publish official materials, answer Q&A, run quizzes, earn transparently.</p><a href="http://localhost:3002/signup">Sign up →</a><a href="http://localhost:3002/login">Sign in →</a></div>
-    <div class="role"><h3>🛡️ Admins</h3><p>Platform and institution staff: verify users, review materials, settle earnings, resolve disputes.</p><a href="http://localhost:3003/signup">Request access →</a><a href="http://localhost:3003/login">Sign in →</a></div>
+    <div class="role"><h3><svg class="ic" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 9l10-5 10 5-10 5L2 9z"/><path d="M6 11.5V16c0 1.7 2.7 3 6 3s6-1.3 6-3v-4.5"/></svg> Students</h3><p>Verify once with your matric number, join lecturer-approved courses, read official materials, ask questions, earn Academic Points.</p><a href="http://localhost:3001/signup">Sign up →</a><a href="http://localhost:3001/login">Sign in →</a></div>
+    <div class="role"><h3><svg class="ic" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.6-6 8-6s8 2 8 6"/></svg> Lecturers</h3><p>Verify with staff ID, own your courses, publish official materials, answer Q&A, run quizzes, earn transparently.</p><a href="http://localhost:3002/signup">Sign up →</a><a href="http://localhost:3002/login">Sign in →</a></div>
+    <div class="role"><h3><svg class="ic" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-3.5 8-10V5l-8-3-8 3v7c0 6.5 8 10 8 10z"/></svg> Admins</h3><p>Platform and institution staff: verify users, review materials, settle earnings, resolve disputes.</p><a href="http://localhost:3003/signup">Request access →</a><a href="http://localhost:3003/login">Sign in →</a></div>
   </div>
 </header>
 <div class="app" id="live">
   <aside class="side">
-    <div class="logo"><span class="mark">🎓</span>EDUFARM</div>
+    <div class="logo"><span class="mark"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 9l10-5 10 5-10 5L2 9z"/><path d="M6 11.5V16c0 1.7 2.7 3 6 3s6-1.3 6-3v-4.5"/></svg></span>EDUFARM</div>
     <nav class="nav" id="nav"></nav>
   </aside>
   <div class="main">
     <div class="top">
-      <div class="search">🔍 <input id="q" placeholder="Search classes, materials, questions…" oninput="renderTables()"></div>
-      <div class="bell" title="API settings" onclick="const u=prompt('API base URL (e.g. https://xxx.trycloudflare.com/api/v1):', localStorage.getItem('edufarm_api')||''); if(u){localStorage.setItem('edufarm_api',u.replace(/\/$/,'')); location.reload();}" style="cursor:pointer">⚙️</div>
-      <div class="bell" title="Notifications">🔔 <span class="dot" id="bellN">0</span></div>
+      <div class="search"><svg class="ic" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg> <input id="q" placeholder="Search classes, materials, questions…" oninput="renderTables()"></div>
+      <div class="bell" title="API settings" onclick="const u=prompt('API base URL (e.g. https://xxx.trycloudflare.com/api/v1):', localStorage.getItem('edufarm_api')||''); if(u){localStorage.setItem('edufarm_api',u.replace(/\/$/,'')); location.reload();}" style="cursor:pointer"><svg class="ic" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M12 2v3m0 14v3M2 12h3m14 0h3M4.9 4.9l2.1 2.1m10 10l2.1 2.1m0-14.2l-2.1 2.1m-10 10l-2.1 2.1"/></svg></div>
+      <div class="bell" title="Notifications"><svg class="ic" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 1 0-12 0c0 7-3 8-3 8h18s-3-1-3-8"/><path d="M10.3 21a2 2 0 0 0 3.4 0"/></svg> <span class="dot" id="bellN">0</span></div>
       <div class="profile"><span class="avatar" id="av">A</span>
         <select id="role" onchange="switchRole(this.value)">
           <option value="student">Ada · Student</option>
@@ -131,18 +133,18 @@ button{font-family:inherit}
     <div id="err"></div>
     <div class="greet">
       <div class="hello"><h1 id="hello">Good day, Scholar</h1><p id="sub">Here's your learning journey for today. Keep going!</p></div>
-      <div class="sched"><strong>📅 <span id="today"></span></strong><div id="sched" style="font-size:13px;margin-top:6px"></div></div>
+      <div class="sched"><strong><svg class="ic" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M8 3v4m8-4v4M3 10h18"/></svg> <span id="today"></span></strong><div id="sched" style="font-size:13px;margin-top:6px"></div></div>
       <div class="quote">“<span id="word">Loading today's Word…</span>”<div style="font-size:12px;font-family:Inter;color:var(--muted)" id="verse"></div></div>
     </div>
     <div class="stats" id="stats"></div>
     <div class="grid2">
       <div>
-        <div class="card"><h3><span id="t1">📚 Today's Classes</span><a href="#" onclick="return false">View All</a></h3><div id="classes"></div></div>
-        <div class="card"><h3>📢 Announcements <a href="#" onclick="return false">View All</a></h3><div id="anns"></div></div>
+        <div class="card"><h3><span id="t1"><svg class="ic" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20V4H6.5A2.5 2.5 0 0 0 4 6.5v13z"/></svg> Today's Classes</span><a href="#" onclick="return false">View All</a></h3><div id="classes"></div></div>
+        <div class="card"><h3><svg class="ic" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></svg> Announcements <a href="#" onclick="return false">View All</a></h3><div id="anns"></div></div>
       </div>
       <div>
-        <div class="card"><h3>📈 Performance Overview</h3><div id="chart"></div><div id="grades" style="font-size:13px;margin-top:8px"></div></div>
-        <div class="card"><h3>⚡ Quick Actions</h3><div class="qa" id="quick"></div></div>
+        <div class="card"><h3><svg class="ic" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 20V10m6 10V4m6 16v-7"/><path d="M2 20h20"/></svg> Performance Overview</h3><div id="chart"></div><div id="grades" style="font-size:13px;margin-top:8px"></div></div>
+        <div class="card"><h3><svg class="ic" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18h6M10 22h4"/><path d="M12 2a7 7 0 0 0-4 12.7c.6.5 1 1.4 1 2.3h6c0-.9.4-1.8 1-2.3A7 7 0 0 0 12 2z"/></svg> Quick Actions</h3><div class="qa" id="quick"></div></div>
       </div>
     </div>
     <footer>EDUFARM Portal · live data from local API :4000 · Student :3001 · Lecturer :3002 · Admin :3003</footer>
@@ -157,6 +159,38 @@ function apiBase() {
   catch (e) { return DEFAULT_API; }
 }
 const API = apiBase();
+// Inline SVG icon set (no emoji in the product). 24×24 stroke icons, currentColor.
+const P = {
+  home: '<path d="M3 11l9-8 9 8"/><path d="M5 10v10h5v-6h4v6h5V10"/>',
+  book: '<path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20V4H6.5A2.5 2.5 0 0 0 4 6.5v13z"/><path d="M4 19.5A2.5 2.5 0 0 0 6.5 22H20v-5"/>',
+  quiz: '<path d="M9 11l3 3 8-8"/><path d="M21 12v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h11"/>',
+  library: '<path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20V4H6.5A2.5 2.5 0 0 0 4 6.5v13z"/><path d="M9 8h7"/>',
+  qa: '<path d="M21 12a8 8 0 0 1-8 8H4l2-3a8 8 0 1 1 15-5z"/>',
+  ai: '<path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9L12 3z"/>',
+  verify: '<path d="M12 22s8-3.5 8-10V5l-8-3-8 3v7c0 6.5 8 10 8 10z"/><path d="M9 12l2 2 4-4"/>',
+  upload: '<path d="M12 16V4m0 0l-4 4m4-4l4 4"/><path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/>',
+  earnings: '<circle cx="12" cy="12" r="9"/><path d="M12 7v10M15 9.5c-.7-1-2-1.5-3-1.5-1.7 0-3 .9-3 2.5s1.3 2.3 3 2.5c1 .1 2.3.4 2.3 2s-1.3 2.5-3 2.5c-1 0-2.3-.5-3-1.5"/>',
+  bulb: '<path d="M9 18h6M10 22h4"/><path d="M12 2a7 7 0 0 0-4 12.7c.6.5 1 1.4 1 2.3h6c0-.9.4-1.8 1-2.3A7 7 0 0 0 12 2z"/>',
+  box: '<path d="M21 8l-9-5-9 5v8l9 5 9-5V8z"/><path d="M3 8l9 5 9-5M12 13v8"/>',
+  scales: '<path d="M12 3v18M5 7l14 10M19 7L5 17"/>',
+  mail: '<rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/>',
+  school: '<path d="M3 10l9-6 9 6"/><path d="M5 8v8m12-8v8M3 20h18"/>',
+  chart: '<path d="M4 20V10m6 10V4m6 16v-7"/><path d="M2 20h20"/>',
+  star: '<path d="M12 3l2.7 5.6 6.1.9-4.4 4.3 1 6.1-5.4-2.8-5.4 2.8 1-6.1L3.2 9.5l6.1-.9L12 3z"/>',
+  clock: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
+  bell: '<path d="M18 8a6 6 0 1 0-12 0c0 7-3 8-3 8h18s-3-1-3-8"/><path d="M10.3 21a2 2 0 0 0 3.4 0"/>',
+  search: '<circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/>',
+  gear: '<circle cx="12" cy="12" r="3"/><path d="M12 2v3m0 14v3M2 12h3m14 0h3M4.9 4.9l2.1 2.1m10 10l2.1 2.1m0-14.2l-2.1 2.1m-10 10l-2.1 2.1"/>',
+  calendar: '<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M8 3v4m8-4v4M3 10h18"/>',
+  check: '<path d="M4 12.5l5 5L20 6.5"/>',
+  grad: '<path d="M2 9l10-5 10 5-10 5L2 9z"/><path d="M6 11.5V16c0 1.7 2.7 3 6 3s6-1.3 6-3v-4.5"/>',
+  shield: '<path d="M12 22s8-3.5 8-10V5l-8-3-8 3v7c0 6.5 8 10 8 10z"/>',
+  chevR: '<path d="M9 6l6 6-6 6"/>',
+  file: '<path d="M6 2h8l4 4v16H6V2z"/><path d="M14 2v4h4"/>',
+  wallet: '<path d="M3 7a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7z"/><path d="M16 13h.01"/>',
+};
+const ic = (n, s = 15) => `<svg class="ic" width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${P[n] || ""}</svg>`;
+const dot = c => `<span class="sdot" style="background:${c}"></span>`;
 const USERS = {
   student: { email: "ada@student.demo-university.edu", name: "Ada Student" },
   lecturer: { email: "bello@demo-university.edu", name: "Dr. A. Bello" },
@@ -184,7 +218,7 @@ async function boot() {
     const w = await (await fetch(API + "/devotional/today")).json();
     if (!w.empty) { document.getElementById("word").textContent = w.title + " — " + w.body; document.getElementById("verse").textContent = w.verse; }
     await renderAll();
-  } catch (e) { document.getElementById("err").innerHTML = "⚠ " + e.message; }
+  } catch (e) { document.getElementById("err").innerHTML = "Error: " + e.message; }
 }
 async function switchRole(r) { role = r; await renderAll(); }
 
@@ -192,11 +226,11 @@ async function renderAll() {
   document.getElementById("av").textContent = USERS[role].name[0];
   document.getElementById("hello").textContent = daypart + ", " + USERS[role].name.split(" ")[0];
   const nav = {
-    student: [["🏠", "Dashboard", 1], ["📖", "My Classes", 0], ["📝", "Assessments", 0], ["📚", "Library", 0], ["❓", "Q&A", 0], ["🤖", "AI Assistant", 0], ["—", "ACCOUNT", -1], ["✔", "Verify", 0]],
-    lecturer: [["🏠", "Dashboard", 1], ["📖", "My Courses", 0], ["📤", "Materials", 0], ["📝", "Assessments", 0], ["💰", "Earnings", 0], ["💡", "Insights", 0], ["—", "ACCOUNT", -1], ["✔", "Verify", 0]],
-    admin: [["🏠", "Dashboard", 1], ["✔", "Verifications", 0], ["📦", "Reviews", 0], ["💰", "Settlement", 0], ["⚖", "Disputes", 0], ["✉", "Email", 0], ["🏫", "Onboarding", 0]],
+    student: [["home", "Dashboard", 1], ["book", "My Classes", 0], ["quiz", "Assessments", 0], ["library", "Library", 0], ["qa", "Q&A", 0], ["ai", "AI Assistant", 0], ["—", "ACCOUNT", -1], ["verify", "Verify", 0]],
+    lecturer: [["home", "Dashboard", 1], ["book", "My Courses", 0], ["upload", "Materials", 0], ["quiz", "Assessments", 0], ["earnings", "Earnings", 0], ["bulb", "Insights", 0], ["—", "ACCOUNT", -1], ["verify", "Verify", 0]],
+    admin: [["home", "Dashboard", 1], ["verify", "Verifications", 0], ["box", "Reviews", 0], ["earnings", "Settlement", 0], ["scales", "Disputes", 0], ["mail", "Email", 0], ["school", "Onboarding", 0]],
   }[role];
-  document.getElementById("nav").innerHTML = nav.map(([i, t, on]) => on < 0 ? `<div class="sec">${t}</div>` : `<a href="#" class="${on ? "on" : ""}" onclick="return false"><span class="ico">${i}</span>${t}</a>`).join("");
+  document.getElementById("nav").innerHTML = nav.map(([i, t, on]) => on < 0 ? `<div class="sec">${t}</div>` : `<a href="#" class="${on ? "on" : ""}" onclick="return false"><span class="ico">${ic(i, 16)}</span>${t}</a>`).join("");
   CACHE.notes = await api(role, "/notifications/me").catch(() => []);
   document.getElementById("bellN").textContent = CACHE.notes.length;
   if (role === "student") await renderStudent();
@@ -219,24 +253,24 @@ async function renderStudent() {
   const pending = asmts.filter(a => !a.attempts.length).length;
   const avgProg = prog.length ? Math.round(prog.reduce((s, p) => s + p.percent, 0) / prog.length) : 0;
   document.getElementById("sub").textContent = "Here's your learning journey for today. Keep going!";
-  document.getElementById("sched").innerHTML = approved.slice(0, 3).map((e, i) => `<div>${["🟣", "🔵", "🟢"][i % 3]} ${["09:00", "10:15", "12:00"][i % 3]} &nbsp;${e.course.code}</div>`).join("") || "No classes yet";
+  document.getElementById("sched").innerHTML = approved.slice(0, 3).map((e, i) => `<div>${dot(["#9E77ED", "#2E90FA", "#12B76A"][i % 3])} ${["09:00", "10:15", "12:00"][i % 3]} &nbsp;${e.course.code}</div>`).join("") || "No classes yet";
   document.getElementById("stats").innerHTML = `
-    <div class="stat"><div class="t">📊 Study Progress</div><div class="v">${avgProg}%</div><div class="s">${approved.length} active courses</div><div class="bar"><div style="width:${avgProg}%"></div></div></div>
-    <div class="stat"><div class="t">📝 Assessments</div><div class="v">${pending} <span style="font-size:14px;color:var(--muted)">pending</span></div><div class="s">${asmts.length} published total</div></div>
-    <div class="stat"><div class="t">🎓 Upcoming</div><div class="v">${asmts.length}</div><div class="s">Assessments scheduled</div></div>
-    <div class="stat"><div class="t">⭐ Points</div><div class="v">${pts.balance}</div><div class="s">Academic Points <span class="badge b-ok">non-cash</span></div></div>`;
+    <div class="stat"><div class="t">${ic("chart", 14)} Study Progress</div><div class="v">${avgProg}%</div><div class="s">${approved.length} active courses</div><div class="bar"><div style="width:${avgProg}%"></div></div></div>
+    <div class="stat"><div class="t">${ic("quiz", 14)} Assessments</div><div class="v">${pending} <span style="font-size:14px;color:var(--muted)">pending</span></div><div class="s">${asmts.length} published total</div></div>
+    <div class="stat"><div class="t">${ic("grad", 14)} Upcoming</div><div class="v">${asmts.length}</div><div class="s">Assessments scheduled</div></div>
+    <div class="stat"><div class="t">${ic("star", 14)} Points</div><div class="v">${pts.balance}</div><div class="s">Academic Points <span class="badge b-ok">non-cash</span></div></div>`;
   renderTables();
   const det = await api("student", `/courses/${approved[0]?.courseId || courses[0]?.id}`).catch(() => null);
   document.getElementById("anns").innerHTML = (det?.announcements || []).slice(0, 3).map(a =>
-    `<div class="ann">${a.isUrgent ? "🔴" : "🟡"} <strong>${a.title}</strong><br>${a.body}<div class="d">${a.category}</div></div>`).join("") || "No announcements";
+    `<div class="ann">${dot(a.isUrgent ? "#D92D20" : "#C9A227")} <strong>${a.title}</strong><br>${a.body}<div class="d">${a.category}</div></div>`).join("") || "No announcements";
   const scores = [];
   for (const a of asmts) for (const t of (a.attempts || [])) if (t.score != null) scores.push(Math.round(100 * t.score / t.maxScore));
   drawChart(scores.length ? scores : [avgProg]);
   document.getElementById("grades").innerHTML = `<span class="badge b-ok">A ≥70</span> <span class="badge b-info">B 50–69</span> <span class="badge b-warn">C &lt;50</span>`;
   document.getElementById("quick").innerHTML = `
-    <a class="qbtn q-pink" href="http://localhost:3001/library">📕 Library →</a>
-    <a class="qbtn q-blue" href="http://localhost:3001/courses">📖 Courses →</a>
-    <a class="qbtn q-green" href="http://localhost:3001/verify">✔ Verify →</a>`;
+    <a class="qbtn q-pink" href="http://localhost:3001/library">${ic("library", 15)} Library ${ic("chevR", 13)}</a>
+    <a class="qbtn q-blue" href="http://localhost:3001/courses">${ic("book", 15)} Courses ${ic("chevR", 13)}</a>
+    <a class="qbtn q-green" href="http://localhost:3001/verify">${ic("verify", 15)} Verify ${ic("chevR", 13)}</a>`;
 }
 
 async function renderLecturer() {
@@ -254,20 +288,20 @@ async function renderLecturer() {
     if (det) { pubMats += det.materials.length; unans += det.questions.filter(q => q.status === "unanswered").length; }
   }
   document.getElementById("sub").textContent = "Your teaching impact at a glance. Keep engaging!";
-  document.getElementById("sched").innerHTML = `<div>⏳ ${pendingEnr} enrollments awaiting approval</div><div>❓ ${unans} unanswered questions</div>`;
+  document.getElementById("sched").innerHTML = `<div>${ic("clock", 13)} ${pendingEnr} enrollments awaiting approval</div><div>${ic("qa", 13)} ${unans} unanswered questions</div>`;
   document.getElementById("stats").innerHTML = `
-    <div class="stat"><div class="t">📖 Courses</div><div class="v">${courses.length}</div><div class="s">${pubMats} published materials</div></div>
-    <div class="stat"><div class="t">⏳ Approvals</div><div class="v">${pendingEnr}</div><div class="s">Pending enrollments</div></div>
-    <div class="stat"><div class="t">❓ Q&A</div><div class="v">${unans}</div><div class="s">Unanswered</div></div>
-    <div class="stat"><div class="t">💰 Earnings</div><div class="v">${N(earn.pendingKobo || 0)}</div><div class="s">Pending eSpees <span class="badge b-ok">transparent</span></div></div>`;
+    <div class="stat"><div class="t">${ic("book", 14)} Courses</div><div class="v">${courses.length}</div><div class="s">${pubMats} published materials</div></div>
+    <div class="stat"><div class="t">${ic("clock", 14)} Approvals</div><div class="v">${pendingEnr}</div><div class="s">Pending enrollments</div></div>
+    <div class="stat"><div class="t">${ic("qa", 14)} Q&A</div><div class="v">${unans}</div><div class="s">Unanswered</div></div>
+    <div class="stat"><div class="t">${ic("earnings", 14)} Earnings</div><div class="v">${N(earn.pendingKobo || 0)}</div><div class="s">Pending eSpees <span class="badge b-ok">transparent</span></div></div>`;
   renderTables(true);
-  document.getElementById("anns").innerHTML = `<div class="ann">💡 Open a course in the <a href="http://localhost:3002/">lecturer console</a> to post announcements, upload materials, build quizzes and view AI insights.</div>`;
+  document.getElementById("anns").innerHTML = `<div class="ann">${ic("bulb", 14)} Open a course in the <a href="http://localhost:3002/">lecturer console</a> to post announcements, upload materials, build quizzes and view AI insights.</div>`;
   drawChart([20, 35, 50, 65, 80]);
   document.getElementById("grades").innerHTML = `<span class="muted">Class engagement trend (illustrative)</span>`;
   document.getElementById("quick").innerHTML = `
-    <a class="qbtn q-pink" href="http://localhost:3002/">📤 Manage courses →</a>
-    <a class="qbtn q-blue" href="http://localhost:3003/reviews">📦 Review queue →</a>
-    <a class="qbtn q-green" href="http://localhost:3003/settlements">💰 Settlement →</a>`;
+    <a class="qbtn q-pink" href="http://localhost:3002/">${ic("upload", 15)} Manage courses ${ic("chevR", 13)}</a>
+    <a class="qbtn q-blue" href="http://localhost:3003/reviews">${ic("box", 15)} Review queue ${ic("chevR", 13)}</a>
+    <a class="qbtn q-green" href="http://localhost:3003/settlements">${ic("earnings", 15)} Settlement ${ic("chevR", 13)}</a>`;
 }
 
 async function renderAdmin() {
@@ -279,31 +313,31 @@ async function renderAdmin() {
   const onboard = await api("admin", "/onboarding/pending").catch(() => []);
   CACHE.courses = [];
   document.getElementById("sub").textContent = "Ecosystem health and governance at a glance.";
-  document.getElementById("sched").innerHTML = `<div>✔ ${vS.length + vL.length} verifications pending</div><div>📦 ${queue.length} materials in review</div><div>⚖ ${disputes.filter(d => d.status === "open").length} open disputes</div>`;
+  document.getElementById("sched").innerHTML = `<div>${ic("verify", 13)} ${vS.length + vL.length} verifications pending</div><div>${ic("box", 13)} ${queue.length} materials in review</div><div>${ic("scales", 13)} ${disputes.filter(d => d.status === "open").length} open disputes</div>`;
   document.getElementById("stats").innerHTML = `
-    <div class="stat"><div class="t">✔ Verifications</div><div class="v">${vS.length + vL.length}</div><div class="s">${vS.length} students · ${vL.length} lecturers</div></div>
-    <div class="stat"><div class="t">📦 Review queue</div><div class="v">${queue.length}</div><div class="s">Awaiting publish decision</div></div>
-    <div class="stat"><div class="t">⚖ Disputes</div><div class="v">${disputes.filter(d => d.status === "open").length}</div><div class="s">${disputes.length} total reports</div></div>
-    <div class="stat"><div class="t">💰 eSpees</div><div class="v">${N(settle.pendingKobo || 0)}</div><div class="s">Pending · ${N(settle.settledKobo || 0)} settled</div></div>`;
-  document.getElementById("t1").textContent = "🏫 Institutions";
+    <div class="stat"><div class="t">${ic("verify", 14)} Verifications</div><div class="v">${vS.length + vL.length}</div><div class="s">${vS.length} students · ${vL.length} lecturers</div></div>
+    <div class="stat"><div class="t">${ic("box", 14)} Review queue</div><div class="v">${queue.length}</div><div class="s">Awaiting publish decision</div></div>
+    <div class="stat"><div class="t">${ic("scales", 14)} Disputes</div><div class="v">${disputes.filter(d => d.status === "open").length}</div><div class="s">${disputes.length} total reports</div></div>
+    <div class="stat"><div class="t">${ic("earnings", 14)} eSpees</div><div class="v">${N(settle.pendingKobo || 0)}</div><div class="s">Pending · ${N(settle.settledKobo || 0)} settled</div></div>`;
+  document.getElementById("t1").innerHTML = `${ic("school")} Institutions`;
   document.getElementById("classes").innerHTML = `<table><tr><th>Item</th><th>Status</th><th>Action</th></tr>
     ${onboard.map(u => `<tr><td>${u.name} (${u.slug})</td><td><span class="badge b-warn">pending</span></td><td><a href="http://localhost:3003/onboarding">Review</a></td></tr>`).join("") || '<tr><td colspan="3">No pending onboarding</td></tr>'}</table>`;
-  document.getElementById("anns").innerHTML = queue.slice(0, 3).map(m => `<div class="ann">📦 <strong>${m.title}</strong> · ${m.course?.code || ""}<div class="d">awaiting review</div></div>`).join("") || "Review queue clear ✅";
+  document.getElementById("anns").innerHTML = queue.slice(0, 3).map(m => `<div class="ann">${ic("box", 13)} <strong>${m.title}</strong> · ${m.course?.code || ""}<div class="d">awaiting review</div></div>`).join("") || `Review queue clear ${ic("check", 13)}`;
   drawChart([vS.length + vL.length, queue.length, disputes.length, onboard.length]);
   document.getElementById("grades").innerHTML = `<span class="muted">Governance load by queue</span>`;
   document.getElementById("quick").innerHTML = `
-    <a class="qbtn q-pink" href="http://localhost:3003/verifications">✔ Verify users →</a>
-    <a class="qbtn q-blue" href="http://localhost:3003/settlements">💰 Settle →</a>
-    <a class="qbtn q-green" href="http://localhost:3003/disputes">⚖ Disputes →</a>`;
+    <a class="qbtn q-pink" href="http://localhost:3003/verifications">${ic("verify", 15)} Verify users ${ic("chevR", 13)}</a>
+    <a class="qbtn q-blue" href="http://localhost:3003/settlements">${ic("earnings", 15)} Settle ${ic("chevR", 13)}</a>
+    <a class="qbtn q-green" href="http://localhost:3003/disputes">${ic("scales", 15)} Disputes ${ic("chevR", 13)}</a>`;
 }
 
 function renderTables(lect = false) {
   if (role === "admin") return; // admin main table is institutions, not courses
   const q = (document.getElementById("q").value || "").toLowerCase();
   const rows = (CACHE.courses || []).filter(c => (c.code + " " + c.title).toLowerCase().includes(q));
-  document.getElementById("t1").textContent = lect ? "📖 My Courses" : "📚 Today's Classes";
+  document.getElementById("t1").innerHTML = lect ? `${ic("book")} My Courses` : `${ic("book")} Today's Classes`;
   document.getElementById("classes").innerHTML = `<table><tr><th>Code</th><th>Title</th><th>Status</th><th></th></tr>` +
-    rows.map(c => `<tr><td><strong>${c.code}</strong></td><td>${c.title}</td><td>${c.isOfficial ? '<span class="badge b-ok">Official</span>' : ""}</td><td><a href="http://localhost:${lect ? "3002" : "3001"}/courses/${c.id}">${lect ? "Manage" : "Open"} →</a></td></tr>`).join("") + `</table>`;
+    rows.map(c => `<tr><td><strong>${c.code}</strong></td><td>${c.title}</td><td>${c.isOfficial ? '<span class="badge b-ok">Official</span>' : ""}</td><td><a href="http://localhost:${lect ? "3002" : "3001"}/courses/${c.id}">${lect ? "Manage" : "Open"} ${ic("chevR", 12)}</a></td></tr>`).join("") + `</table>`;
 }
 
 function drawChart(vals) {

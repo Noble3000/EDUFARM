@@ -230,3 +230,15 @@
 - **Files:** `schema.prisma` + migration, `routes/grades.ts`, `main.ts`, student grades page + nav, all 4 docs, `Docs/PRD.md` (this entry)
 - **Commit:** `8fb744e` (code) + `cd4abf5` (Amendment A1, README, PRDs, plan, migration)
 - **Status:** Done, pushed to `main`.
+
+### 022 — 2026-09-29 — Real SVG icons everywhere, zero emoji
+- **Instruction:** "for my entire bildup work with realtime icons not emojis"
+- **Change:**
+  - New shared set `packages/ui/src/icons.tsx` (37 stroke SVG icons, currentColor, `Icon` + `Dot` exports) wired into all apps via `transpilePackages`; `@edufarm/ui` gained react devDeps.
+  - Apps: reader lock/chevrons/star, points star, grades delete-X, lecturer-check badge, lecturer insight bulb, icon nav bars in all 3 layouts.
+  - `index.html`: `ic()` helper + status dots; nav, stats, announcements, quick actions, headers, logo, search/gear/bell all SVG.
+  - `design.html` + `Docs/DESIGN_SYSTEM_PREVIEW.html`: check/lock glyphs swapped to inline SVG.
+  - Verified: all 3 production builds green, PM2 restarted, 4/4 pages 200, served grades page scans emoji-free.
+- **Files:** `packages/ui/{src/icons.tsx,src/index.ts,package.json}`, 3 `next.config.js`, 9 app files, `index.html`, `design.html`, `DESIGN_SYSTEM_PREVIEW.html`, `Docs/PRD.md` (this entry)
+- **Commit:** (to be filled on push)
+- **Status:** In progress.

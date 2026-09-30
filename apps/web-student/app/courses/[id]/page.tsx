@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
+import { Icon } from "@edufarm/ui";
 
 type Course = {
   id: string; code: string; title: string;
@@ -59,7 +60,7 @@ export default function CourseDetail({ params }: { params: { id: string } }) {
         {c.questions.map((x) => (
           <div key={x.id} style={{ borderTop: "1px solid #eee", paddingTop: 8 }}>
             <p><strong>{x.title}</strong> <span className="badge b-ed">{x.status}</span><br /><span className="muted">{x.body}</span></p>
-            {x.answers.map((a, i) => <p key={i} style={{ marginLeft: 12 }}>{a.isLecturer && <span className="badge b-off">Lecturer ✓</span>}{a.body}</p>)}
+            {x.answers.map((a, i) => <p key={i} style={{ marginLeft: 12 }}>{a.isLecturer && <span className="badge b-off"><Icon name="check" size={12} /> Lecturer</span>}{a.body}</p>)}
           </div>
         ))}
         <h4>Ask a question</h4>

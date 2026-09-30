@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Icon } from "@edufarm/ui";
 export const metadata: Metadata = { title: "EDUFARM — Lecturer" };
 const CSS = `:root{--brand:#0E5A3C;--muted:#667085;--line:#D0D5DD;--bg:#F9FAFB}
 *{box-sizing:border-box}body{margin:0;font-family:Inter,system-ui,sans-serif;color:#101828;background:var(--bg)}
@@ -14,7 +15,7 @@ button.sec{background:#fff;color:#0E5A3C;border:1px solid #0E5A3C}input,textarea
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en"><body><style>{CSS}</style>
-      <header className="top"><nav><strong>EDUFARM · Lecturer</strong><a href="/">Dashboard</a><a href="/signup">Signup</a><a href="/login">Login</a></nav></header>
+      <header className="top"><nav><strong><Icon name="grad" size={16} /> EDUFARM · Lecturer</strong><a href="/"><Icon name="dashboard" size={14} /> Dashboard</a><a href="/signup"><Icon name="plus" size={14} /> Signup</a><a href="/login"><Icon name="user" size={14} /> Login</a></nav></header>
       <main>{children}</main>
     </body></html>
   );
