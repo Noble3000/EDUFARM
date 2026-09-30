@@ -240,5 +240,5 @@
   - `design.html` + `Docs/DESIGN_SYSTEM_PREVIEW.html`: check/lock glyphs swapped to inline SVG.
   - Verified: all 3 production builds green, PM2 restarted, 4/4 pages 200, served grades page scans emoji-free.
 - **Files:** `packages/ui/{src/icons.tsx,src/index.ts,package.json}`, 3 `next.config.js`, 9 app files, `index.html`, `design.html`, `DESIGN_SYSTEM_PREVIEW.html`, `Docs/PRD.md` (this entry)
-- **Commit:** (to be filled on push)
-- **Status:** In progress.
+- **Commit:** `03a9e90 SVG icon set replaces all emoji (apps + portal + design docs)`
+- **Status:** Done, pushed to `main`.
