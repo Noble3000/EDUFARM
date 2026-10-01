@@ -242,3 +242,10 @@
 - **Files:** `packages/ui/{src/icons.tsx,src/index.ts,package.json}`, 3 `next.config.js`, 9 app files, `index.html`, `design.html`, `DESIGN_SYSTEM_PREVIEW.html`, `Docs/PRD.md` (this entry)
 - **Commit:** `03a9e90 SVG icon set replaces all emoji (apps + portal + design docs)`
 - **Status:** Done, pushed to `main`.
+
+### 023 — 2026-09-29 — STANDING RULE: local-first, deploy only on explicit instruction
+- **Instruction:** "i want you to build a lot on my local system before any deployment, this information is very important, deploy only when i ask you to"
+- **Rule (permanent until explicitly lifted):** all building, testing, and verification happen on the owner's local device (PM2 + local Postgres + localhost). No cloud deployment of any kind — no Vercel/Render/Railway/Fly, no custom domains, no production hosting setup, no hosted databases/storage migration — unless the owner explicitly says "deploy". Temporary Cloudflare tunnels for viewing on phone/browser remain allowed only when asked for (they expose local ports, they are not deployments). GitHub pushes continue as source control (not deployment).
+- **Files:** `Docs/PRD.md` (this entry)
+- **Commit:** (to be filled on push)
+- **Status:** In progress.
