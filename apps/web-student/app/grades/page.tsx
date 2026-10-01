@@ -53,9 +53,10 @@ export default function Grades() {
         <p className="muted">GPA = Σ(grade point × units) ÷ Σunits · A=5 B=4 C=3 D=2 E=1 F=0. Private to you — lecturers never see this.</p>
       </div>
       <div className="card">
-        <h3>Add semester</h3>
+        <h3 style={{ display: "flex", alignItems: "center", gap: 8 }}><Icon name="plus" size={15} /> Add semester</h3>
+        <label className="flabel" htmlFor="sem-name">Semester name</label>
         <div className="row">
-          <input style={{ maxWidth: 280 }} placeholder="e.g. Year 2 Semester 1" value={semName} onChange={(e) => setSemName(e.target.value)} />
+          <input id="sem-name" style={{ maxWidth: 280 }} placeholder="e.g. Year 2 Semester 1" value={semName} onChange={(e) => setSemName(e.target.value)} />
           <button onClick={addSem}>Add</button>
         </div>
         <p>{msg}</p>
@@ -75,11 +76,11 @@ export default function Grades() {
             </tbody>
           </table>
           <div className="row" style={{ marginTop: 8 }}>
-            <input style={{ maxWidth: 110 }} placeholder="BIO 201" value={forms[s.id]?.code ?? ""} onChange={(e) => set(s.id, "code", e.target.value)} />
-            <input style={{ maxWidth: 70 }} placeholder="units" type="number" value={forms[s.id]?.units ?? ""} onChange={(e) => set(s.id, "units", e.target.value)} />
-            <select style={{ maxWidth: 90 }} value={forms[s.id]?.grade ?? "A"} onChange={(e) => set(s.id, "grade", e.target.value)}>
+            <div style={{ flex: "1 1 110px" }}><label className="flabel" htmlFor={`code-${s.id}`}>Code</label><input id={`code-${s.id}`} style={{ maxWidth: 130 }} placeholder="BIO 201" value={forms[s.id]?.code ?? ""} onChange={(e) => set(s.id, "code", e.target.value)} /></div>
+            <div style={{ flex: "0 1 80px" }}><label className="flabel" htmlFor={`units-${s.id}`}>Units</label><input id={`units-${s.id}`} style={{ maxWidth: 80 }} placeholder="3" type="number" value={forms[s.id]?.units ?? ""} onChange={(e) => set(s.id, "units", e.target.value)} /></div>
+            <div style={{ flex: "0 1 90px" }}><label className="flabel" htmlFor={`grade-${s.id}`}>Grade</label><select id={`grade-${s.id}`} style={{ maxWidth: 90 }} value={forms[s.id]?.grade ?? "A"} onChange={(e) => set(s.id, "grade", e.target.value)}>
               {["A", "B", "C", "D", "E", "F"].map((g) => <option key={g} value={g}>{g}</option>)}
-            </select>
+            </select></div>
             <button className="sec" onClick={() => addCourse(s.id)}>Add course</button>
             <button className="sec" onClick={async () => { await api(`/grades/semesters/${s.id}`, { method: "DELETE" }); load(); }}>Delete semester</button>
           </div>

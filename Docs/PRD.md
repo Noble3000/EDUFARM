@@ -249,3 +249,15 @@
 - **Files:** `Docs/PRD.md` (this entry)
 - **Commit:** `b7da183 PRD entry 023: standing local-first no-deploy rule`
 - **Status:** Done, pushed to `main`.
+
+### 024 — 2026-10-01 — PWA-first + aligned youthful student ecosystem (standing instruction)
+- **Instruction:** "remember build first as a PWA or a web application, take note of this information and ensure all the text and components are alligned properly, make it a youthful and student ecosystem filled using all the informations i have provided to you previously"
+- **Standing note (remembered):** web-first as installable PWA (not native); every screen ships mobile-first, installable, offline-tolerant. Logged here so future builds keep it.
+- **Change:**
+  - PWA foundation in all 3 apps: `public/manifest.webmanifest` (name/short_name/standalone/theme), `public/icons/icon.svg` (green+gold grad cap), `public/sw.js` (app-shell cache, never caches API/R2), `layout.tsx` metadata (manifest, appleWebApp, icons) + `viewport` (themeColor, viewportFit cover) + SW register + apple-touch-icon. Student theme `#0E5A3C`, lecturer `#0A4230`, admin `#101828`.
+  - Alignment fix everywhere in shells: one 1080px rail, left-aligned text, shared icon+text baseline, muted corrected `#667085` → `#344054` (7:1), base 16px/1.6 Sora/Inter, buttons 44px 12×20 + gold focus ring, inputs 44px with real `<label>`s (grades form gained Code/Units/Grade + Semester labels), tables left-aligned, sticky top nav + mobile bottom nav (PWA thumb zone) in student.
+  - Youthful student hub (`web-student/app/page.tsx` rebuilt): gradient hero with daypart greeting + live counts, pill section tabs, `grid2` rail; left = Word (gold edge) → reflection → priorities (urgent + pending/total assessments + avg progress) → continue → My Courses (aligned progress bars) → lecturer updates → Q&A; right = study-pulse 2×2 (progress/CGPA/points/library) → points rules → AI teaser → library+CGPA → trust/verify. Unauthed state is a youthful PWA invite (install hint + demo logins). Zero emoji, all SVG `Icon`.
+- **Files:** 3× `public/manifest.webmanifest`, 3× `public/icons/icon.svg`, 3× `public/sw.js`, 3× `app/layout.tsx`, `web-student/app/page.tsx`, `web-student/app/grades/page.tsx` (labels), `Docs/PRD.md` (this entry)
+- **Verify:** `typecheck` clean (student/lecturer/admin); `web-student build` green (11 routes); PWA files local-only until PM2 restart serves `.next` + `public/`.
+- **Commit:** (this push)
+- **Status:** Done, local-first (no deploy per rule 023).

@@ -170,10 +170,16 @@ importers:
   packages/types: {}
 
   packages/ui:
-    dependencies:
+    devDependencies:
+      '@types/react':
+        specifier: ^18.3.31
+        version: 18.3.31
       react:
         specifier: ^18
         version: 18.3.1
+      typescript:
+        specifier: ^5.5.0
+        version: 5.9.3
 
 packages:
 

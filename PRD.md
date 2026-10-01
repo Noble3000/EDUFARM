@@ -137,3 +137,6 @@ Next.js PWA + Fastify API self-hosted on local device (no Vercel) · Paystack/Fl
 - 019: Phone access — Cloudflare tunnels + `infra/static-server.js` + configurable API URL (`?api=`, ⚙️, login field).
 - 020: Step 1 hardening — marketing home, role-aware email/password signup/login (scrypt), verification queues.
 - 021: CGPA Calculator (Amendment A1) — semesters/courses, 5-point GPA + CGPA + degree class, private, live at `/grades`.
+- 022: Real SVG icons everywhere, zero emoji — shared `packages/ui` set wired into apps + portal + design docs.
+- 023: STANDING RULE local-first — build/test locally (PM2 + local Postgres); deploy only on explicit instruction.
+- 024 (2026-10-01): PWA-first standing note + aligned youthful student hub — manifests/icons/SW + metadata in all 3 apps, one 1080px rail, muted #344054, 44px targets + labels, rebuilt student home (Word → priorities → continue → courses → updates → Q&A → points → AI + pulse/library/CGPA/trust).
