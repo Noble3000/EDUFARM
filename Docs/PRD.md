@@ -271,5 +271,5 @@
   - Fixed collateral: admin layout `??` mojibake in brand line (restored `·`).
   - Verified: 3 production builds green, PM2 restarted, 4/4 key pages 200.
 - **Files:** `packages/ui/{src/Nav.tsx,src/index.ts}`, 3 `app/layout.tsx`, 4 detail pages, `Docs/PRD.md` (this entry)
-- **Commit:** (to be filled on push)
-- **Status:** In progress.
+- **Commit:** `92dbfac Easy navigation: active nav, portal switcher, breadcrumbs, mobile bars` (+ tsbuildinfo cleanup)
+- **Status:** Done, pushed to `main`.
