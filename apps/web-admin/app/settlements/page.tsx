@@ -1,31 +1,90 @@
 "use client";
 import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
+import { Alert, Confirm, DataTable, LoadingState, SuccessNote } from "@edufarm/ui";
 
 export default function Settlements() {
   const [ov, setOv] = useState<{ pendingKobo: number; availableKobo: number; settledKobo: number; holdDays: number } | null>(null);
-  const [msg, setMsg] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [ok, setOk] = useState("");
+  const [err, setErr] = useState("");
+  const [confirm, setConfirm] = useState<null | "run" | "pay">(null);
   async function load() {
-    setOv(await api("/settlement/overview").catch(() => null));
+    setLoading(true);
+    try {
+      setOv(await api("/settlement/overview"));
+    } catch {
+      setOv(null);
+    } finally {
+      setLoading(false);
+    }
   }
   useEffect(() => { load(); }, []);
+  async function doRun() {
+    setConfirm(null);
+    setOk("");
+    setErr("");
+    try {
+      const r = await api("/settlement/run", { method: "POST", body: JSON.stringify({}) });
+      setOk(`Released ${r.released} entries to available.`);
+      load();
+    } catch (e) {
+      setErr((e as Error).message ?? "Settlement run failed.");
+    }
+  }
+  async function doPay() {
+    setConfirm(null);
+    setOk("");
+    setErr("");
+    try {
+      const r = await api("/settlement/pay", { method: "POST", body: JSON.stringify({ reference: "dev-cash" }) });
+      setOk(`Paid ${r.settled} entries · ₦${(r.totalKobo / 100).toFixed(2)}.`);
+      load();
+    } catch (e) {
+      setErr((e as Error).message ?? "Payout failed.");
+    }
+  }
   return (
     <div className="card">
       <h2>eSpees settlement</h2>
-      {ov ? (
-        <p>Pending ₦{(ov.pendingKobo / 100).toFixed(2)} · Available ₦{(ov.availableKobo / 100).toFixed(2)} · Settled ₦{(ov.settledKobo / 100).toFixed(2)} <span className="muted">(hold {ov.holdDays}d)</span></p>
-      ) : <p className="muted">Log in as platform admin first.</p>}
+      {loading ? (
+        <LoadingState label="Loading settlement overview…" lines={2} />
+      ) : ov ? (
+        <DataTable caption={`Settlement balances (hold ${ov.holdDays}d)`} head={["Pending", "Available", "Settled", "Hold"]}>
+          <tr>
+            <td>₦{(ov.pendingKobo / 100).toFixed(2)}</td>
+            <td>₦{(ov.availableKobo / 100).toFixed(2)}</td>
+            <td>₦{(ov.settledKobo / 100).toFixed(2)}</td>
+            <td>{ov.holdDays}d</td>
+          </tr>
+        </DataTable>
+      ) : (
+        <p className="muted">Log in as platform admin first.</p>
+      )}
       <div className="row">
-        <button onClick={async () => {
-          const r = await api("/settlement/run", { method: "POST", body: JSON.stringify({}) });
-          setMsg(`Released ${r.released} entries to available.`); load();
-        }}>Run settlement (pending → available)</button>
-        <button className="sec" onClick={async () => {
-          const r = await api("/settlement/pay", { method: "POST", body: JSON.stringify({ reference: "dev-cash" }) });
-          setMsg(`Paid ${r.settled} entries · ₦${(r.totalKobo / 100).toFixed(2)}.`); load();
-        }}>Pay out (available → settled)</button>
+        <button onClick={() => setConfirm("run")} disabled={loading}>Run settlement (pending to available)</button>
+        <button className="sec" onClick={() => setConfirm("pay")} disabled={loading}>Pay out (available to settled)</button>
       </div>
-      <p>{msg}</p>
+      {ok && <div style={{ marginTop: 12 }}><SuccessNote>{ok}</SuccessNote></div>}
+      {err && <div style={{ marginTop: 12 }}><Alert kind="error">{err}</Alert></div>}
+      {confirm === "run" && (
+        <Confirm
+          title="Run settlement?"
+          body="Release matured pending entries to available. Same settlement run call executes on confirm."
+          confirmLabel="Run settlement"
+          onConfirm={doRun}
+          onCancel={() => setConfirm(null)}
+        />
+      )}
+      {confirm === "pay" && (
+        <Confirm
+          title="Pay out available earnings?"
+          body="Settle all available entries with reference dev-cash. Same payout call executes on confirm."
+          confirmLabel="Pay out"
+          onConfirm={doPay}
+          onCancel={() => setConfirm(null)}
+        />
+      )}
     </div>
   );
 }

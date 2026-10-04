@@ -2,7 +2,7 @@
 import { useEffect, useState } from "react";
 import { Crumb } from "@edufarm/ui";
 import { api, getUser } from "@/lib/api";
-import { Icon } from "@edufarm/ui";
+import { EmptyState, ErrorState, Field, Icon } from "@edufarm/ui";
 
 // Protected reader shell: page navigation + watermark + dwell pings + mock checkout on 402.
 export default function Reader({ params }: { params: { id: string } }) {
@@ -63,15 +63,20 @@ export default function Reader({ params }: { params: { id: string } }) {
     <div>
       <Crumb trail={[{ href: '/', label: 'Home' }, { href: '/library', label: 'Library' }, { label: 'Reader' }]} />
       <h2>{meta?.title ?? "Reader"} {meta && <span className="badge b-off">Official v{meta.version}</span>}</h2>
-      {err && <div className="card" style={{ borderColor: "#D92D20" }}><p>{err}</p>
-        {price != null && <div>
-          <div className="row"><span>₦{(price / 100).toFixed(2)}</span>
-            <input style={{ maxWidth: 160 }} placeholder="Points (min 5000)" value={pts} onChange={(e) => setPts(e.target.value)} />
-            <button onClick={buy}>Buy now (mock checkout)</button>
-          </div>
-          <p className="muted">10 kobo per point · max 50% of price in points.</p>
-        </div>}
-      </div>}
+      {err && (
+        <div style={{ marginBottom: 12 }}>
+          <ErrorState message={err} onRetry={() => load(page)} />
+          {price != null && (
+            <div className="card">
+              <p><strong>₦{(price / 100).toFixed(2)}</strong></p>
+              <Field label="Points to use" optional hint="10 kobo per point · max 50% of price in points. Minimum 5000 to redeem.">
+                <input style={{ maxWidth: 160 }} placeholder="Points (min 5000)" value={pts} onChange={(e) => setPts(e.target.value)} inputMode="numeric" />
+              </Field>
+              <div className="row"><button onClick={buy}>Buy now (mock checkout)</button></div>
+            </div>
+          )}
+        </div>
+      )}
       <div className="card" style={{ background: "#1D2939", color: "#fff", position: "relative", minHeight: 300 }} onContextMenu={(e) => e.preventDefault()}>
         <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", opacity: 0.15, transform: "rotate(-18deg)", fontSize: 13, pointerEvents: "none", textAlign: "center" }}>
           {user?.name ?? "?"} · {user?.email ?? "?"} · {meta?.course?.code ?? ""} · Do not redistribute
@@ -92,10 +97,16 @@ export default function Reader({ params }: { params: { id: string } }) {
             {r.replies.map((rp, i) => <p key={i} style={{ marginLeft: 12 }}>{rp.isLecturer && <span className="badge b-off">Lecturer</span>}{rp.body}</p>)}
           </div>
         ))}
-        {!reviews.length && <p className="muted">No reviews yet (requires meaningful access).</p>}
+        {!reviews.length && (
+          <EmptyState icon="star" title="No reviews yet" body="Reviews unlock after meaningful access to this material." />
+        )}
         <h4>Write a review</h4>
-        <input type="number" min={1} max={5} value={rev.rating} onChange={(e) => setRev({ ...rev, rating: Number(e.target.value) })} />
-        <textarea value={rev.body} onChange={(e) => setRev({ ...rev, body: e.target.value })} placeholder="What did you think?" />
+        <Field label="Rating (1–5)">
+          <input type="number" min={1} max={5} value={rev.rating} onChange={(e) => setRev({ ...rev, rating: Number(e.target.value) })} />
+        </Field>
+        <Field label="Your review">
+          <textarea value={rev.body} onChange={(e) => setRev({ ...rev, body: e.target.value })} placeholder="What did you think?" rows={3} />
+        </Field>
         <button onClick={postReview}>Post review</button>
       </div>
     </div>

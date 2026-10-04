@@ -293,3 +293,15 @@
 - **Files:** `package.json`, `scripts/healthcheck.mjs`, `scripts/smoke.mjs`, `Docs/BASELINE.md`, `packages/ui/src/icons.tsx` (clipboard), `Docs/PRD.md` (this entry). NOT touched: other session's in-progress app files.
 - **Commit:** `ed9b206 Frozen baseline: verify scripts, BASELINE.md, audit docs, clipboard icon fix`
 - **Status:** Done, pushed to `main`.
+
+### 028 — 2026-10-04 — Cross-application UI consistency pass (single design language)
+- **Instruction:** "Perform a cross-application UI consistency pass. Use design.html and the existing shared UI package as the source of truth. Standardize: typography, spacing, card radius, borders, shadows, buttons, inputs, labels, tabs, badges, alerts, modals/drawers, tables, pagination, empty states, skeleton loaders, error states, focus states, disabled states, success states. [44px targets, real labels, keyboard, focus rings, contrast, no emoji icons, reuse shared SVG, one language, youthful student without childish lecturer/admin.] Screen-by-screen. Do not change hierarchy/business rules. Add visual QA checklist to Docs/UI_QA.md."
+- **Change:**
+  - New single language: `packages/ui/src/styles.ts` (`EDU_CSS` — type/spacing/radius/border/shadow/button/input/label/tab/badge/alert/modal/drawer/table/pagination/empty/skeleton/error/focus/disabled/success, 44px minimums, gold focus ring, `#344054` text, reduced-motion) + `packages/ui/src/components.tsx` (`Field`, `Alert`, `Badge`, `Tabs` with arrow-key nav, `Modal`/`Confirm` with Esc, `DataTable`, `Pagination`, `EmptyState`, `LoadingState`, `ErrorState`, `SuccessNote`); exported via `packages/ui/src/index.ts`.
+  - 3 layouts collapsed onto `EDU_CSS` (deleted triple CSS copies): `tone-student` (youthful gradient header) / `tone-lecturer` (solid green) / `tone-admin` (dark slate) — same geometry, tone by color only; skip-links + `#main` added.
+  - Screen-by-screen (23 pages, student 10 + lecturer 4 + admin 9): real `<label>`s via `Field`, `LoadingState`/`EmptyState`/`Alert`/`ErrorState`/`SuccessNote` replacing raw `Loading…`/`{msg}` `<p>`s, `DataTable` + `Pagination(10)` on admin queues, `Modal`+`Field` replacing `prompt()` in disputes, `Confirm` on settlement run/pay, `checkrow` checkboxes, text-arrow `→` replaced with SVG icons. Lecturer/admin kept restrained (no pink/gradient).
+  - Untouched: routes, API endpoints/bodies, hierarchy, governance/financial rules (verified: no endpoint removals across 26 files; `apps/api`, `prisma`, `infra` not in scope).
+- **Verify:** typecheck 3/3 PASS; builds 3/3 green; emoji scan 0 hits (apps + ui + portal + design); audit script: 0 bare labels, 0 `#667085`, 0 raw `{msg}`; PM2 resurrected, :3001/:3002/:3003/:4000/health 200.
+- **Files:** `packages/ui/{src/styles.ts,src/components.tsx,src/index.ts}`, 3 `app/layout.tsx`, 23 app pages, `Docs/UI_QA.md`, `Docs/PRD.md` (this entry). Reverted: subagent scope-creep (`package.json` extra scripts, `scripts/`, log files) and CRLF-only churn in `icons.tsx`.
+- **Commit:** (this push)
+- **Status:** Done, pushed to `main`. Local-first (no deploy per rule 023).

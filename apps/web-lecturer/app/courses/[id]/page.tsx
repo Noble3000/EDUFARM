@@ -1,118 +1,261 @@
 "use client";
 import { useEffect, useState } from "react";
-import { Crumb } from "@edufarm/ui";
+import { Alert, Badge, Crumb, DataTable, EmptyState, Field, LoadingState, SuccessNote } from "@edufarm/ui";
 import { api } from "@/lib/api";
-import { Icon } from "@edufarm/ui";
 
-type Enr = { id: string; status: string; student: { user: { name: string; email: string } } };
+type Enr = { id: string; status: string; student: { id?: string; user: { name: string; email: string } } };
+
+function statusKind(s: string): string {
+  const v = s.toLowerCase();
+  if (v === "approved" || v === "published" || v === "official") return "ok";
+  if (v === "rejected" || v === "urgent") return "bad";
+  if (v === "pending") return "warn";
+  return "edition";
+}
 
 export default function ManageCourse({ params }: { params: { id: string } }) {
   const [enrs, setEnrs] = useState<Enr[]>([]);
+  const [enrLoading, setEnrLoading] = useState(true);
   const [ann, setAnn] = useState({ category: "course-notice", title: "", body: "", isUrgent: false });
   const [mat, setMat] = useState({ title: "", type: "lecture-notes", isFree: true, priceKobo: 50000, accessDurationDays: 90 });
-  const [msg, setMsg] = useState("");
+  const [ok, setOk] = useState("");
+  const [err, setErr] = useState("");
   const [asmts, setAsmts] = useState<{ id: string; title: string; status: string }[]>([]);
+  const [asmtLoading, setAsmtLoading] = useState(true);
   const [atitle, setAtitle] = useState("");
   const [grade, setGrade] = useState<{ attempts: { id: string; status: string; score: number | null }[] } | null>(null);
+  const [attemptsLoading, setAttemptsLoading] = useState(false);
   const [gradeId, setGradeId] = useState("");
+  async function loadAttempts(id: string) {
+    setAttemptsLoading(true);
+    try {
+      setGrade(await api(`/assessments/${id}/attempts`).catch(() => null));
+    } finally {
+      setAttemptsLoading(false);
+    }
+  }
   async function refresh() {
-    setEnrs(await api(`/courses/${params.id}/enrollments`).catch(() => []));
+    setEnrLoading(true);
+    try {
+      setEnrs(await api(`/courses/${params.id}/enrollments`).catch(() => []));
+    } finally {
+      setEnrLoading(false);
+    }
   }
   useEffect(() => {
     refresh();
-    api(`/courses/${params.id}/assessments/lecturer`).then(setAsmts).catch(() => []);
+    setAsmtLoading(true);
+    api(`/courses/${params.id}/assessments/lecturer`).then(setAsmts).catch(() => []).finally(() => setAsmtLoading(false));
   }, [params.id]);
   async function decide(id: string, decision: string) {
-    await api(`/enrollments/${id}/decide`, { method: "POST", body: JSON.stringify({ decision }) });
-    refresh();
+    setOk("");
+    setErr("");
+    try {
+      await api(`/enrollments/${id}/decide`, { method: "POST", body: JSON.stringify({ decision }) });
+      setOk(decision === "approve" ? "Enrollment approved." : "Enrollment rejected.");
+      refresh();
+    } catch (e) {
+      setErr((e as Error).message);
+    }
   }
   async function postAnn() {
-    await api(`/courses/${params.id}/announcements`, { method: "POST", body: JSON.stringify(ann) });
-    setAnn({ ...ann, title: "", body: "" }); setMsg("Announcement posted.");
+    setOk("");
+    setErr("");
+    try {
+      await api(`/courses/${params.id}/announcements`, { method: "POST", body: JSON.stringify(ann) });
+      setAnn({ ...ann, title: "", body: "" });
+      setOk("Announcement posted.");
+    } catch (e) {
+      setErr((e as Error).message);
+    }
   }
   async function upload(submit: boolean) {
-    const created = await api(`/courses/${params.id}/materials`, {
-      method: "POST",
-      body: JSON.stringify({ ...mat, priceKobo: Number(mat.priceKobo), accessDurationDays: Number(mat.accessDurationDays), fileKey: "dev/mock.pdf", checksum: "dev" }),
-    });
-    if (submit) await api(`/materials/${created.id}/submit`, { method: "POST" });
-    setMsg(submit ? "Submitted for platform review." : "Draft saved.");
+    setOk("");
+    setErr("");
+    try {
+      const created = await api(`/courses/${params.id}/materials`, {
+        method: "POST",
+        body: JSON.stringify({ ...mat, priceKobo: Number(mat.priceKobo), accessDurationDays: Number(mat.accessDurationDays), fileKey: "dev/mock.pdf", checksum: "dev" }),
+      });
+      if (submit) await api(`/materials/${created.id}/submit`, { method: "POST" });
+      setOk(submit ? "Submitted for platform review." : "Draft saved.");
+    } catch (e) {
+      setErr((e as Error).message);
+    }
   }
   return (
     <div>
       <Crumb trail={[{ href: '/', label: 'Dashboard' }, { label: 'Manage course' }]} />
       <h2>Manage course</h2>
+      {ok && <SuccessNote>{ok}</SuccessNote>}
+      {err && <Alert kind="error">{err}</Alert>}
       <div className="card"><h3>Enrollments</h3>
-        {enrs.map((e) => (
-          <div className="row" key={e.id} style={{ marginBottom: 8 }}>
-            <span>{e.student.user.name} ({e.student.user.email}) — <strong>{e.status}</strong></span>
-            <button className="sec" onClick={() => decide(e.id, "approve")}>Approve</button>
-            <button className="sec" onClick={() => decide(e.id, "reject")}>Reject</button>
-            <button className="sec" onClick={async () => {
-              try {
-                await api("/points/recognize", { method: "POST", body: JSON.stringify({ studentId: (e.student as unknown as { id: string }).id, reason: "participation" }) });
-                setMsg("Recognition +5 points awarded.");
-              } catch (err) { setMsg((err as Error).message); }
-            }}>Recognize +5</button>
-          </div>
-        ))}
-        {!enrs.length && <p className="muted">No enrollments (or not logged in as lecturer).</p>}
+        {enrLoading && <LoadingState label="Loading enrollments…" />}
+        {!enrLoading && enrs.length === 0 && (
+          <EmptyState
+            icon="user"
+            title="No enrollment requests"
+            body="No enrollments yet, or you are not logged in as lecturer."
+            action={<a className="btn sec" href="/">Back to dashboard</a>}
+          />
+        )}
+        {!enrLoading && enrs.length > 0 && (
+          <DataTable caption="Student enrollment requests" head={["Student", "Email", "Status", "Actions"]}>
+            {enrs.map((e) => (
+              <tr key={e.id}>
+                <td>{e.student.user.name}</td>
+                <td>{e.student.user.email}</td>
+                <td><Badge kind={statusKind(e.status)}>{e.status}</Badge></td>
+                <td>
+                  <div className="row tight">
+                    <button className="sec" onClick={() => decide(e.id, "approve")} aria-label={`Approve ${e.student.user.name}`}>Approve</button>
+                    <button className="sec" onClick={() => decide(e.id, "reject")} aria-label={`Reject ${e.student.user.name}`}>Reject</button>
+                    <button className="sec" onClick={async () => {
+                      setOk("");
+                      setErr("");
+                      try {
+                        await api("/points/recognize", { method: "POST", body: JSON.stringify({ studentId: (e.student as unknown as { id: string }).id, reason: "participation" }) });
+                        setOk("Recognition +5 points awarded.");
+                      } catch (err) { setErr((err as Error).message); }
+                    }}>Recognize +5</button>
+                  </div>
+                </td>
+              </tr>
+            ))}
+          </DataTable>
+        )}
       </div>
       <div className="card"><h3>New announcement</h3>
-        <select value={ann.category} onChange={(e) => setAnn({ ...ann, category: e.target.value })}>
-          {["new-material", "assignment", "test", "course-notice", "general", "urgent-update"].map((c) => <option key={c} value={c}>{c}</option>)}
-        </select>
-        <input placeholder="Title" value={ann.title} onChange={(e) => setAnn({ ...ann, title: e.target.value })} />
-        <textarea placeholder="Body" value={ann.body} onChange={(e) => setAnn({ ...ann, body: e.target.value })} />
-        <label><input type="checkbox" style={{ width: "auto" }} checked={ann.isUrgent} onChange={(e) => setAnn({ ...ann, isUrgent: e.target.checked })} /> Urgent</label>
+        <Field label="Category">
+          <select value={ann.category} onChange={(e) => setAnn({ ...ann, category: e.target.value })}>
+            {["new-material", "assignment", "test", "course-notice", "general", "urgent-update"].map((c) => <option key={c} value={c}>{c}</option>)}
+          </select>
+        </Field>
+        <Field label="Title">
+          <input value={ann.title} onChange={(e) => setAnn({ ...ann, title: e.target.value })} />
+        </Field>
+        <Field label="Body">
+          <textarea value={ann.body} onChange={(e) => setAnn({ ...ann, body: e.target.value })} />
+        </Field>
+        <label className="checkrow"><input type="checkbox" checked={ann.isUrgent} onChange={(e) => setAnn({ ...ann, isUrgent: e.target.checked })} /> Urgent</label>
         <div><button onClick={postAnn}>Post</button></div>
       </div>
       <div className="card"><h3>Upload material</h3>
-        <input placeholder="Title" value={mat.title} onChange={(e) => setMat({ ...mat, title: e.target.value })} />
-        <select value={mat.type} onChange={(e) => setMat({ ...mat, type: e.target.value })}>
-          {["lecture-notes", "course-pack", "revision-guide", "practice-questions", "exam-prep"].map((t) => <option key={t} value={t}>{t}</option>)}
-        </select>
-        <label><input type="checkbox" style={{ width: "auto" }} checked={mat.isFree} onChange={(e) => setMat({ ...mat, isFree: e.target.checked })} /> Free</label>
-        {!mat.isFree && <input type="number" value={mat.priceKobo} onChange={(e) => setMat({ ...mat, priceKobo: Number(e.target.value) })} />}
+        <Field label="Title">
+          <input value={mat.title} onChange={(e) => setMat({ ...mat, title: e.target.value })} />
+        </Field>
+        <Field label="Type">
+          <select value={mat.type} onChange={(e) => setMat({ ...mat, type: e.target.value })}>
+            {["lecture-notes", "course-pack", "revision-guide", "practice-questions", "exam-prep"].map((t) => <option key={t} value={t}>{t}</option>)}
+          </select>
+        </Field>
+        <label className="checkrow"><input type="checkbox" checked={mat.isFree} onChange={(e) => setMat({ ...mat, isFree: e.target.checked })} /> Free</label>
+        {!mat.isFree && (
+          <Field label="Price (kobo)" hint="50000 kobo = ₦500.">
+            <input type="number" min={0} value={mat.priceKobo} onChange={(e) => setMat({ ...mat, priceKobo: Number(e.target.value) })} />
+          </Field>
+        )}
         <div className="row">
           <button className="sec" onClick={() => upload(false)}>Save draft</button>
           <button onClick={() => upload(true)}>Submit for review</button>
         </div>
-        <p>{msg}</p>
-        <p className="muted">File bytes → R2 in reader spike; metadata + lifecycle live now. Answer Q&A from the student course page data via API.</p>
+        <p className="muted" style={{ marginTop: 8 }}>File bytes → R2 in reader spike; metadata + lifecycle live now. Answer Q&amp;A from the student course page data via API.</p>
       </div>
       <div className="card"><h3>Assessments</h3>
-        <input placeholder="New assessment title (quiz)" value={atitle} onChange={(e) => setAtitle(e.target.value)} />
+        <Field label="New assessment title" htmlFor="asmt-title" hint="Creates a quiz draft. Add questions below, then publish.">
+          <input id="asmt-title" placeholder="e.g. Week 3 quiz" value={atitle} onChange={(e) => setAtitle(e.target.value)} />
+        </Field>
         <div className="row">
           <button onClick={async () => {
-            const a = await api(`/courses/${params.id}/assessments`, { method: "POST", body: JSON.stringify({ title: atitle, type: "quiz" }) });
-            setAtitle(""); setGradeId(a.id); setMsg(`Created ${a.title} — add questions below, then publish.`);
-            setAsmts([...asmts, a]);
+            setOk("");
+            setErr("");
+            try {
+              const a = await api(`/courses/${params.id}/assessments`, { method: "POST", body: JSON.stringify({ title: atitle, type: "quiz" }) });
+              setAtitle("");
+              setGradeId(a.id);
+              setOk(`Created ${a.title} — add questions below, then publish.`);
+              setAsmts([...asmts, a]);
+            } catch (e) {
+              setErr((e as Error).message);
+            }
           }}>Create draft</button>
           <button className="sec" onClick={async () => {
-            setAsmts(await api(`/courses/${params.id}/assessments/lecturer`).catch(() => []));
+            setAsmtLoading(true);
+            try {
+              setAsmts(await api(`/courses/${params.id}/assessments/lecturer`).catch(() => []));
+            } finally {
+              setAsmtLoading(false);
+            }
           }}>Refresh list</button>
         </div>
-        {asmts.map((a) => (
-          <div className="row" key={a.id} style={{ marginTop: 8 }}>
-            <span><strong>{a.title}</strong> · {a.status}</span>
-            <button className="sec" onClick={() => setGradeId(a.id)}>Open</button>
-            <button onClick={async () => {
-              await api(`/assessments/${a.id}/publish`, { method: "POST", body: JSON.stringify({}) });
-              setMsg(`Published ${a.title} — students notified.`);
-            }}>Publish</button>
+        {asmtLoading && <div style={{ marginTop: 12 }}><LoadingState label="Loading assessments…" lines={2} /></div>}
+        {!asmtLoading && asmts.length === 0 && (
+          <div style={{ marginTop: 12 }}>
+            <EmptyState
+              icon="quiz"
+              title="No assessments yet"
+              body="Create your first quiz draft above to get started."
+              action={<button className="sec" onClick={() => document.getElementById("asmt-title")?.focus()}>Start above</button>}
+            />
           </div>
-        ))}
+        )}
+        {!asmtLoading && asmts.length > 0 && (
+          <div style={{ marginTop: 12 }}>
+            <DataTable caption="Course assessments" head={["Title", "Status", "Actions"]}>
+              {asmts.map((a) => (
+                <tr key={a.id}>
+                  <td><strong>{a.title}</strong></td>
+                  <td><Badge kind={statusKind(a.status)}>{a.status}</Badge></td>
+                  <td>
+                    <div className="row tight">
+                      <button className="sec" onClick={() => setGradeId(a.id)} aria-label={`Open ${a.title}`}>Open</button>
+                      <button onClick={async () => {
+                        setOk("");
+                        setErr("");
+                        try {
+                          await api(`/assessments/${a.id}/publish`, { method: "POST", body: JSON.stringify({}) });
+                          setOk(`Published ${a.title} — students notified.`);
+                        } catch (e) {
+                          setErr((e as Error).message);
+                        }
+                      }} aria-label={`Publish ${a.title}`}>Publish</button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </DataTable>
+          </div>
+        )}
         {gradeId && <div style={{ marginTop: 12 }}>
-          <h4>Add MCQ question to {gradeId.slice(0, 8)}…</h4>
-          <QuestionForm assessmentId={gradeId} onDone={(m) => setMsg(m)} />
-          <h4>Attempts</h4>
-          <button className="sec" onClick={async () => {
-            setGrade(await api(`/assessments/${gradeId}/attempts`).catch(() => null));
-          }}>Load attempts</button>
-          {grade?.attempts.map((t) => (
-            <p key={t.id}>· {t.id.slice(0, 8)} — {t.status}{t.score != null ? ` ${t.score}` : ""}</p>
-          ))}
+          <h4>Add MCQ question</h4>
+          <p className="muted">Assessment {gradeId.slice(0, 8)}… — questions save immediately to the draft.</p>
+          <QuestionForm assessmentId={gradeId} onDone={(m) => { setOk(m); setErr(""); }} onError={(m) => { setErr(m); setOk(""); }} />
+          <h4 style={{ marginTop: 12 }}>Attempts</h4>
+          <button className="sec" onClick={() => loadAttempts(gradeId)}>Load attempts</button>
+          {attemptsLoading && <div style={{ marginTop: 8 }}><LoadingState label="Loading attempts…" lines={2} /></div>}
+          {!attemptsLoading && grade && grade.attempts.length === 0 && (
+            <div style={{ marginTop: 8 }}>
+              <EmptyState
+                icon="search"
+                title="No attempts yet"
+                body="Students have not attempted this assessment."
+                action={<button className="sec" onClick={() => loadAttempts(gradeId)}>Reload attempts</button>}
+              />
+            </div>
+          )}
+          {!attemptsLoading && grade && grade.attempts.length > 0 && (
+            <div style={{ marginTop: 8 }}>
+              <DataTable caption="Student attempts" head={["Attempt", "Status", "Score"]}>
+                {grade.attempts.map((t) => (
+                  <tr key={t.id}>
+                    <td>{t.id.slice(0, 8)}</td>
+                    <td><Badge kind={statusKind(t.status)}>{t.status}</Badge></td>
+                    <td>{t.score != null ? String(t.score) : "—"}</td>
+                  </tr>
+                ))}
+              </DataTable>
+            </div>
+          )}
         </div>}
       </div>
       <Insights courseId={params.id} />
@@ -127,42 +270,99 @@ function Insights({ courseId }: { courseId: string }) {
     weakCompletion: { materialId: string; title: string; readers: number }[];
     enrolled: number; suggestions: string[];
   } | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [err, setErr] = useState("");
   return (
     <div className="card">
       <h3>AI insights</h3>
-      <button className="sec" onClick={async () => {
-        setIns(await api(`/courses/${courseId}/insights`).catch(() => null));
-      }}>Generate insights</button>
-      {ins && (
-        <div>
+      <p className="muted">Enrollment, assessment performance and reading completion at a glance.</p>
+      <button className="sec" disabled={loading} onClick={async () => {
+        setLoading(true);
+        setErr("");
+        try {
+          setIns(await api(`/courses/${courseId}/insights`).catch(() => null));
+        } finally {
+          setLoading(false);
+        }
+      }}>{loading ? "Generating…" : "Generate insights"}</button>
+      {loading && <div style={{ marginTop: 12 }}><LoadingState label="Generating insights…" lines={2} /></div>}
+      {err && <div style={{ marginTop: 12 }}><Alert kind="error">{err}</Alert></div>}
+      {ins && !loading && (
+        <div style={{ marginTop: 12 }}>
           <p className="muted">Enrolled: {ins.enrolled}</p>
-          {ins.assessmentStats.map((a) => (
-            <p key={a.id}>· {a.title}: {a.attempts} attempts{a.avgScore != null ? `, avg ${a.avgScore}/${a.maxScore}` : ""}</p>
-          ))}
-          {!!ins.unanswered.length && <p>Unanswered ({ins.unanswered.length}): {ins.unanswered.map((u) => u.title).join("; ")}</p>}
-          {!!ins.weakCompletion.length && <p>Weak completion: {ins.weakCompletion.map((w) => `${w.title} (${w.readers} readers)`).join("; ")}</p>}
-          {ins.suggestions.map((s, i) => <p key={i}><Icon name="bulb" size={14} /> {s}</p>)}
+          {ins.assessmentStats.length > 0 ? (
+            <DataTable caption="Assessment performance" head={["Assessment", "Attempts", "Average"]}>
+              {ins.assessmentStats.map((a) => (
+                <tr key={a.id}>
+                  <td>{a.title}</td>
+                  <td>{a.attempts}</td>
+                  <td>{a.avgScore != null ? `${a.avgScore}/${a.maxScore}` : "—"}</td>
+                </tr>
+              ))}
+            </DataTable>
+          ) : (
+            <EmptyState
+              icon="clipboard"
+              title="No assessment data"
+              body="Publish an assessment to see performance here."
+              action={<button className="sec" onClick={() => document.getElementById("asmt-title")?.focus()}>Create assessment</button>}
+            />
+          )}
+          {!!ins.unanswered.length && (
+            <div style={{ marginTop: 12 }}>
+              <Alert kind="info" title={`Unanswered (${ins.unanswered.length})`}>
+                {ins.unanswered.map((u) => u.title).join("; ")}
+              </Alert>
+            </div>
+          )}
+          {!!ins.weakCompletion.length && (
+            <div style={{ marginTop: 12 }}>
+              <Alert kind="warn" title="Weak completion">
+                {ins.weakCompletion.map((w) => `${w.title} (${w.readers} readers)`).join("; ")}
+              </Alert>
+            </div>
+          )}
+          {ins.suggestions.length > 0 && (
+            <div style={{ marginTop: 12 }}>
+              <Alert kind="info" icon="bulb" title="Suggestions">
+                <ul style={{ margin: "6px 0 0", paddingLeft: 18 }}>
+                  {ins.suggestions.map((s, i) => <li key={i}>{s}</li>)}
+                </ul>
+              </Alert>
+            </div>
+          )}
         </div>
       )}
     </div>
   );
 }
 
-function QuestionForm({ assessmentId, onDone }: { assessmentId: string; onDone: (m: string) => void }) {
+function QuestionForm({ assessmentId, onDone, onError }: { assessmentId: string; onDone: (m: string) => void; onError: (m: string) => void }) {
   const [text, setText] = useState("");
   const [options, setOptions] = useState("A,B,C,D");
   const [correctIndex, setCorrectIndex] = useState(0);
   return (
     <div>
-      <input placeholder="Question text" value={text} onChange={(e) => setText(e.target.value)} />
-      <input placeholder="Options comma-separated" value={options} onChange={(e) => setOptions(e.target.value)} />
-      <input type="number" min={0} value={correctIndex} onChange={(e) => setCorrectIndex(Number(e.target.value))} />
+      <Field label="Question text">
+        <input value={text} onChange={(e) => setText(e.target.value)} />
+      </Field>
+      <Field label="Options" hint="Comma-separated, e.g. A,B,C,D.">
+        <input value={options} onChange={(e) => setOptions(e.target.value)} />
+      </Field>
+      <Field label="Correct option index" hint="0 = first option.">
+        <input type="number" min={0} value={correctIndex} onChange={(e) => setCorrectIndex(Number(e.target.value))} />
+      </Field>
       <button onClick={async () => {
-        await api(`/assessments/${assessmentId}/questions`, {
-          method: "POST",
-          body: JSON.stringify({ text, kind: "mcq", options: options.split(",").map((s) => s.trim()), correctIndex }),
-        });
-        setText(""); onDone("Question added.");
+        try {
+          await api(`/assessments/${assessmentId}/questions`, {
+            method: "POST",
+            body: JSON.stringify({ text, kind: "mcq", options: options.split(",").map((s) => s.trim()), correctIndex }),
+          });
+          setText("");
+          onDone("Question added.");
+        } catch (e) {
+          onError((e as Error).message);
+        }
       }}>Add question</button>
     </div>
   );

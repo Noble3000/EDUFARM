@@ -140,3 +140,7 @@ Next.js PWA + Fastify API self-hosted on local device (no Vercel) · Paystack/Fl
 - 022: Real SVG icons everywhere, zero emoji — shared `packages/ui` set wired into apps + portal + design docs.
 - 023: STANDING RULE local-first — build/test locally (PM2 + local Postgres); deploy only on explicit instruction.
 - 024 (2026-10-01): PWA-first standing note + aligned youthful student hub — manifests/icons/SW + metadata in all 3 apps, one 1080px rail, muted #344054, 44px targets + labels, rebuilt student home (Word → priorities → continue → courses → updates → Q&A → points → AI + pulse/library/CGPA/trust).
+- 025: Easy navigation — active nav (`aria-current`), portal switcher, breadcrumbs, mobile bars.
+- 026: Lead-engineer baseline audit (read-only) — `FINAL_AUDIT` + `COMPLETION_MATRIX` + `API_GAPS` + `EXTERNAL_SERVICES`.
+- 027: Frozen baseline — verify scripts + `BASELINE.md` (toolchain/processes/DB/results, 23 pages + 88 endpoints).
+- 028 (2026-10-04): Cross-app UI consistency — single `EDU_CSS` + shared components in `@edufarm/ui`, 3 layouts collapsed (tone by color), 23 screens standardized (labels/states/tables/pagination/modals), QA checklist in `Docs/UI_QA.md`. No hierarchy/business-rule changes.

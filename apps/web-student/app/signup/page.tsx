@@ -1,11 +1,14 @@
 "use client";
 import { useEffect, useState } from "react";
 import { API } from "@/lib/api";
+import { Alert, Field, LoadingState, SuccessNote } from "@edufarm/ui";
 
 export default function Signup() {
   const [unis, setUnis] = useState<{ id: string; name: string }[]>([]);
   const [f, setF] = useState({ name: "", email: "", password: "", universityId: "", matricNo: "" });
   const [msg, setMsg] = useState("");
+  const busy = msg === "…";
+  const isSuccess = msg.startsWith("Welcome,");
   useEffect(() => {
     fetch(`${API}/universities`).then((r) => r.json()).then(setUnis).catch(() => {});
   }, []);
@@ -24,18 +27,31 @@ export default function Signup() {
     <div className="card">
       <h2>Student sign up</h2>
       <p className="muted">Step 1 of verification: your institution confirms your matric number (PRD §5.1).</p>
-      <label>Full name</label><input value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} />
-      <label>Email</label><input value={f.email} onChange={(e) => setF({ ...f, email: e.target.value })} />
-      <label>Password (8+ chars)</label><input type="password" value={f.password} onChange={(e) => setF({ ...f, password: e.target.value })} />
-      <label>University</label>
-      <select value={f.universityId} onChange={(e) => setF({ ...f, universityId: e.target.value })}>
-        <option value="">— choose —</option>
-        {unis.map((u) => <option key={u.id} value={u.id}>{u.name}</option>)}
-      </select>
-      <label>Matric No</label><input value={f.matricNo} onChange={(e) => setF({ ...f, matricNo: e.target.value })} placeholder="STU-042" />
-      <button onClick={signup}>Create account</button>
-      <p>{msg}</p>
-      <p className="muted">Already registered? <a href="/login">Sign in →</a></p>
+      <Field label="Full name">
+        <input value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} autoComplete="name" />
+      </Field>
+      <Field label="Email">
+        <input type="email" value={f.email} onChange={(e) => setF({ ...f, email: e.target.value })} autoComplete="email" />
+      </Field>
+      <Field label="Password (8+ chars)" hint="Minimum 8 characters.">
+        <input type="password" value={f.password} onChange={(e) => setF({ ...f, password: e.target.value })} autoComplete="new-password" />
+      </Field>
+      <Field label="University">
+        <select value={f.universityId} onChange={(e) => setF({ ...f, universityId: e.target.value })}>
+          <option value="">— choose —</option>
+          {unis.map((u) => <option key={u.id} value={u.id}>{u.name}</option>)}
+        </select>
+      </Field>
+      <Field label="Matric No" hint="As issued by your institution, e.g. STU-042.">
+        <input value={f.matricNo} onChange={(e) => setF({ ...f, matricNo: e.target.value })} placeholder="STU-042" />
+      </Field>
+      <button onClick={signup} disabled={busy}>Create account</button>
+      <div style={{ marginTop: 12 }}>
+        {busy && <LoadingState lines={1} label="Creating your account…" />}
+        {!busy && isSuccess && <SuccessNote>{msg}</SuccessNote>}
+        {!busy && msg && !isSuccess && <Alert kind="error">{msg}</Alert>}
+      </div>
+      <p className="muted">Already registered? <a href="/login">Sign in</a></p>
     </div>
   );
 }

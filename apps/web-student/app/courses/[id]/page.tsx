@@ -2,7 +2,7 @@
 import { useEffect, useState } from "react";
 import { Crumb } from "@edufarm/ui";
 import { api } from "@/lib/api";
-import { Icon } from "@edufarm/ui";
+import { Alert, EmptyState, Field, Icon, LoadingState } from "@edufarm/ui";
 
 type Course = {
   id: string; code: string; title: string;
@@ -24,7 +24,12 @@ export default function CourseDetail({ params }: { params: { id: string } }) {
     setQ({ title: "", body: "" });
     setC(await api(`/courses/${params.id}`));
   }
-  if (!c) return <p>Loading…</p>;
+  if (!c) return (
+    <div>
+      <Crumb trail={[{ href: '/', label: 'Home' }, { href: '/courses', label: 'Courses' }, { label: 'Course' }]} />
+      <LoadingState label="Loading course…" />
+    </div>
+  );
   return (
     <div>
       <Crumb trail={[{ href: '/', label: 'Home' }, { href: '/courses', label: 'Courses' }, { label: 'Course' }]} />
@@ -37,14 +42,18 @@ export default function CourseDetail({ params }: { params: { id: string } }) {
             {m.isFree ? <span className="badge b-ed">Free</span> : <span className="badge b-ed">₦{(m.priceKobo / 100).toFixed(2)}</span>}
           </p>
         ))}
-        {!c.materials.length && <p className="muted">No published materials yet.</p>}
+        {!c.materials.length && (
+          <EmptyState icon="book" title="No published materials yet" body="Your lecturer has not published official materials for this course." />
+        )}
       </div>
       <div className="card">
         <h3>Announcements</h3>
         {c.announcements.map((a) => (
           <p key={a.id}>{a.isUrgent && <span className="badge b-urg">Urgent</span>}<strong>{a.title}</strong> <span className="muted">[{a.category}]</span><br />{a.body}</p>
         ))}
-        {!c.announcements.length && <p className="muted">None yet.</p>}
+        {!c.announcements.length && (
+          <EmptyState icon="announce" title="No announcements" body="When your lecturer posts an update, it will land here." />
+        )}
       </div>
       <div className="card">
         <h3>Assessments</h3>
@@ -55,7 +64,9 @@ export default function CourseDetail({ params }: { params: { id: string } }) {
             {a.dueAt && <span className="muted"> due {new Date(a.dueAt).toLocaleDateString()}</span>}
           </p>
         ))}
-        {!asmts.length && <p className="muted">No published assessments yet.</p>}
+        {!asmts.length && (
+          <EmptyState icon="quiz" title="No published assessments yet" body="Practice and graded tests for this course will appear here." />
+        )}
       </div>
       <div className="card">
         <h3>Course Q&A</h3>
@@ -65,9 +76,16 @@ export default function CourseDetail({ params }: { params: { id: string } }) {
             {x.answers.map((a, i) => <p key={i} style={{ marginLeft: 12 }}>{a.isLecturer && <span className="badge b-off"><Icon name="check" size={12} /> Lecturer</span>}{a.body}</p>)}
           </div>
         ))}
+        {!c.questions.length && (
+          <EmptyState icon="qa" title="No questions yet" body="Be the first to ask — lecturer replies show for the whole class." />
+        )}
         <h4>Ask a question</h4>
-        <input placeholder="Title" value={q.title} onChange={(e) => setQ({ ...q, title: e.target.value })} />
-        <textarea placeholder="Details" value={q.body} onChange={(e) => setQ({ ...q, body: e.target.value })} />
+        <Field label="Question title">
+          <input value={q.title} onChange={(e) => setQ({ ...q, title: e.target.value })} placeholder="e.g. How do I apply this formula?" />
+        </Field>
+        <Field label="Details">
+          <textarea value={q.body} onChange={(e) => setQ({ ...q, body: e.target.value })} placeholder="Add context for your classmates and lecturer" rows={3} />
+        </Field>
         <button onClick={ask}>Post question</button>
       </div>
       <AskAI courseId={params.id} />
@@ -79,6 +97,7 @@ function AskAI({ courseId }: { courseId: string }) {
   const [question, setQuestion] = useState("");
   const [res, setRes] = useState<{ grounded: boolean; answer: string; citations: { title: string; version: number }[]; additionalContext: string | null } | null>(null);
   const [msg, setMsg] = useState("");
+  const busy = msg === "…";
   async function askAI() {
     setMsg("…"); setRes(null);
     try {
@@ -89,9 +108,14 @@ function AskAI({ courseId }: { courseId: string }) {
   return (
     <div className="card">
       <h3>AI Study Assistant <span className="badge b-ed">grounded</span></h3>
-      <input placeholder="Ask about your authorized materials…" value={question} onChange={(e) => setQuestion(e.target.value)} />
-      <button onClick={askAI}>Ask</button>
-      <p>{msg}</p>
+      <Field label="Ask about your authorized materials">
+        <input value={question} onChange={(e) => setQuestion(e.target.value)} placeholder="Ask about your authorized materials…" />
+      </Field>
+      <button onClick={askAI} disabled={busy}>Ask</button>
+      <div style={{ marginTop: 12 }}>
+        {busy && <LoadingState lines={1} label="Asking AI…" />}
+        {msg && !busy && <Alert kind="error">{msg}</Alert>}
+      </div>
       {res && (
         <div>
           <p>{res.answer}</p>

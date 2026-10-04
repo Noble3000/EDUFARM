@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
-import { Icon } from "@edufarm/ui";
+import { Alert, DataTable, EmptyState, LoadingState, Icon } from "@edufarm/ui";
 
 type Course = { id: string; code: string; title: string | null; units: number; grade: string };
 type Sem = { id: string; name: string; courses: Course[]; gpa: number | null; units: number };
@@ -24,7 +24,7 @@ export default function Grades() {
   async function addSem() {
     try {
       await api("/grades/semesters", { method: "POST", body: JSON.stringify({ name: semName }) });
-      setSemName(""); load();
+      setSemName(""); setMsg(""); load();
     } catch (e) { setMsg((e as Error).message); }
   }
   async function addCourse(semId: string) {
@@ -34,7 +34,7 @@ export default function Grades() {
         method: "POST",
         body: JSON.stringify({ code: f.code, units: Number(f.units), grade: f.grade }),
       });
-      setForms({ ...forms, [semId]: { code: "", units: "", grade: "A" } }); load();
+      setForms({ ...forms, [semId]: { code: "", units: "", grade: "A" } }); setMsg(""); load();
     } catch (e) { setMsg((e as Error).message); }
   }
   const set = (semId: string, k: "code" | "units" | "grade", v: string) => {
@@ -59,22 +59,24 @@ export default function Grades() {
           <input id="sem-name" style={{ maxWidth: 280 }} placeholder="e.g. Year 2 Semester 1" value={semName} onChange={(e) => setSemName(e.target.value)} />
           <button onClick={addSem}>Add</button>
         </div>
-        <p>{msg}</p>
+        {msg && <div style={{ marginTop: 12 }}><Alert kind="error">{msg}</Alert></div>}
       </div>
       {data?.semesters.map((s) => (
         <div className="card" key={s.id}>
           <h3>{s.name} — GPA {s.gpa ?? "—"} <span className="muted">({s.units} units)</span> <Class gpa={s.gpa} /></h3>
-          <table style={{ width: "100%", fontSize: 14 }}>
-            <tbody>
+          {s.courses.length > 0 ? (
+            <DataTable caption={`${s.name} courses`} head={["Course", "Units", "Grade", ""]}>
               {s.courses.map((c) => (
-                <tr key={c.id} style={{ borderTop: "1px solid #eee" }}>
+                <tr key={c.id}>
                   <td><strong>{c.code}</strong> {c.title && <span className="muted">{c.title}</span>}</td>
                   <td>{c.units}u</td><td>{c.grade}</td>
-                  <td><button className="sec" onClick={async () => { await api(`/grades/courses/${c.id}`, { method: "DELETE" }); load(); }}><Icon name="x" size={13} /></button></td>
+                  <td><button className="sec" aria-label={`Remove ${c.code}`} onClick={async () => { await api(`/grades/courses/${c.id}`, { method: "DELETE" }); load(); }}><Icon name="x" size={13} /></button></td>
                 </tr>
               ))}
-            </tbody>
-          </table>
+            </DataTable>
+          ) : (
+            <EmptyState icon="book" title="No courses yet" body="Add your first course for this semester below." />
+          )}
           <div className="row" style={{ marginTop: 8 }}>
             <div style={{ flex: "1 1 110px" }}><label className="flabel" htmlFor={`code-${s.id}`}>Code</label><input id={`code-${s.id}`} style={{ maxWidth: 130 }} placeholder="BIO 201" value={forms[s.id]?.code ?? ""} onChange={(e) => set(s.id, "code", e.target.value)} /></div>
             <div style={{ flex: "0 1 80px" }}><label className="flabel" htmlFor={`units-${s.id}`}>Units</label><input id={`units-${s.id}`} style={{ maxWidth: 80 }} placeholder="3" type="number" value={forms[s.id]?.units ?? ""} onChange={(e) => set(s.id, "units", e.target.value)} /></div>
@@ -86,7 +88,14 @@ export default function Grades() {
           </div>
         </div>
       ))}
-      {!data && <p>Loading… (log in first)</p>}
+      {!data && <LoadingState label="Loading your grades…" />}
+      {data && !data.semesters.length && (
+        <EmptyState
+          icon="chart"
+          title="No semesters yet"
+          body="Add your first semester above to start tracking your CGPA."
+        />
+      )}
     </div>
   );
 }

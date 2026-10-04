@@ -2,6 +2,7 @@
 import { useEffect, useState } from "react";
 import { Crumb } from "@edufarm/ui";
 import { api } from "@/lib/api";
+import { Alert, Field, LoadingState, SuccessNote } from "@edufarm/ui";
 
 type Q = { id: string; text: string; kind: string; options: string[]; marks: number };
 
@@ -12,6 +13,7 @@ export default function Attempt({ params }: { params: { id: string } }) {
   const [ans, setAns] = useState<Record<string, { selectedIndex?: number; body?: string }>>({});
   const [result, setResult] = useState<{ status: string; score: number | null; maxScore: number | null } | null>(null);
   const [msg, setMsg] = useState("");
+  const busy = msg === "…";
 
   async function start() {
     setMsg("…");
@@ -42,8 +44,8 @@ export default function Attempt({ params }: { params: { id: string } }) {
       <div className="card">
         <h2>{title} — {result.status}</h2>
         {result.score != null
-          ? <p>Score: <strong>{result.score}/{result.maxScore}</strong> (auto-graded)</p>
-          : <p>Submitted — theory answers await lecturer grading.</p>}
+          ? <SuccessNote>Score: <strong>{result.score}/{result.maxScore}</strong> (auto-graded)</SuccessNote>
+          : <SuccessNote>Submitted — theory answers await lecturer grading.</SuccessNote>}
         <p><a href="/">Back home</a></p>
       </div>
     );
@@ -52,23 +54,30 @@ export default function Attempt({ params }: { params: { id: string } }) {
     <div>
       <Crumb trail={[{ href: '/', label: 'Home' }, { label: 'Assessment' }]} />
       <h2>{title || "Assessment"}</h2>
+      {!attemptId && busy && <LoadingState label="Starting assessment…" />}
       {qs.map((q, i) => (
         <div className="card" key={q.id}>
-          <p><strong>Q{i + 1} ({q.marks} mk{ q.marks > 1 ? "s" : ""})</strong> — {q.text}</p>
+          <p><strong>Q{i + 1} ({q.marks} mk{q.marks > 1 ? "s" : ""})</strong> — {q.text}</p>
           {q.kind === "mcq" ? (
-            q.options.map((o, oi) => (
-              <label key={oi} style={{ display: "block", margin: "6px 0" }}>
-                <input type="radio" style={{ width: "auto" }} name={q.id} checked={ans[q.id]?.selectedIndex === oi}
-                  onChange={() => setAns({ ...ans, [q.id]: { selectedIndex: oi } })} /> {o}
-              </label>
-            ))
+            <div role="radiogroup" aria-label={`Options for question ${i + 1}`}>
+              {q.options.map((o, oi) => (
+                <label key={oi} className="checkrow">
+                  <input type="radio" name={q.id} checked={ans[q.id]?.selectedIndex === oi}
+                    onChange={() => setAns({ ...ans, [q.id]: { selectedIndex: oi } })} /> {o}
+                </label>
+              ))}
+            </div>
           ) : (
-            <textarea value={ans[q.id]?.body ?? ""} onChange={(e) => setAns({ ...ans, [q.id]: { body: e.target.value } })} rows={4} />
+            <Field label={`Answer for question ${i + 1}`}>
+              <textarea value={ans[q.id]?.body ?? ""} onChange={(e) => setAns({ ...ans, [q.id]: { body: e.target.value } })} rows={4} />
+            </Field>
           )}
         </div>
       ))}
       {attemptId && <button onClick={submit}>Submit answers</button>}
-      <p>{msg}</p>
+      <div style={{ marginTop: 12 }}>
+        {msg && !busy && <Alert kind="error">{msg}</Alert>}
+      </div>
     </div>
   );
 }

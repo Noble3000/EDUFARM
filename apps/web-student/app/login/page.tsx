@@ -1,12 +1,15 @@
 "use client";
 import { useState } from "react";
 import { apiUrl } from "@/lib/api";
+import { Alert, Field, LoadingState, SuccessNote } from "@edufarm/ui";
 
 export default function Login() {
   const [email, setEmail] = useState("ada@student.demo-university.edu");
   const [password, setPassword] = useState("");
   const [api, setApi] = useState("");
   const [msg, setMsg] = useState("");
+  const busy = msg === "…";
+  const isSuccess = msg.startsWith("Logged in") || msg === "Logged out.";
   async function login(useDemo = false) {
     if (api.trim()) localStorage.setItem("edufarm_api", api.trim().replace(/\/$/, ""));
     setMsg("…");
@@ -27,16 +30,26 @@ export default function Login() {
   return (
     <div className="card">
       <h2>Student sign in</h2>
-      <label>Email</label><input value={email} onChange={(e) => setEmail(e.target.value)} />
-      <label>Password</label><input type="password" value={password} onChange={(e) => setPassword(e.target.value)} />
-      <input placeholder="API URL (only for phone/remote — leave empty on this device)" value={api} onChange={(e) => setApi(e.target.value)} />
+      <Field label="Email">
+        <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="email" />
+      </Field>
+      <Field label="Password">
+        <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="current-password" />
+      </Field>
+      <Field label="API URL" optional hint="Only for phone or remote access — leave empty on this device.">
+        <input value={api} onChange={(e) => setApi(e.target.value)} placeholder="https://api.example.com" inputMode="url" />
+      </Field>
       <div className="row">
-        <button onClick={() => login(false)}>Sign in</button>
-        <button className="sec" onClick={() => login(true)}>Demo login</button>
+        <button onClick={() => login(false)} disabled={busy}>Sign in</button>
+        <button className="sec" onClick={() => login(true)} disabled={busy}>Demo login</button>
         <button className="sec" onClick={logout}>Log out</button>
       </div>
-      <p>{msg}</p>
-      <p className="muted">New here? <a href="/signup">Create a student account →</a> (institution verifies you after signup)</p>
+      <div style={{ marginTop: 12 }}>
+        {busy && <LoadingState lines={1} label="Signing you in…" />}
+        {!busy && isSuccess && msg && <SuccessNote>{msg}</SuccessNote>}
+        {!busy && msg && !isSuccess && <Alert kind="error">{msg}</Alert>}
+      </div>
+      <p className="muted">New here? <a href="/signup">Create a student account</a> (institution verifies you after signup)</p>
     </div>
   );
 }
