@@ -255,8 +255,8 @@
 - **Change:** Audited 23 pages (19 static + 4 dynamic, all 200), 19 API modules, 6 migrations, role-boundary probes (student blocked 403 on all staff routes; price bounds 400; answer keys stripped; AI refusal works). Wrote the 4 docs. No code touched.
 - **Headline findings:** auth spoofable via header + open demo login (P0); no file bytes (P0 vs PRD); secret committed in ecosystem.config.js (P1); expiry/bundles/ownership gaps (P1); verbose 500s + no rate limits (P1); multi-institution UI traversal bug (P1). Full detail in Docs/FINAL_AUDIT.md.
 - **Files:** `Docs/FINAL_AUDIT.md`, `Docs/COMPLETION_MATRIX.md`, `Docs/API_GAPS.md`, `Docs/EXTERNAL_SERVICES.md`, `Docs/PRD.md` (this entry)
-- **Commit:** (to be filled on push)
-- **Status:** In progress.
+- **Commit:** `71febae Baseline audit: FINAL_AUDIT + COMPLETION_MATRIX + API_GAPS + EXTERNAL_SERVICES + entry 026`
+- **Status:** Done, pushed to `main`.
 
 ### 024 — 2026-10-01 — PWA-first + aligned youthful student ecosystem (standing instruction)
 - **Instruction:** "remember build first as a PWA or a web application, take note of this information and ensure all the text and components are alligned properly, make it a youthful and student ecosystem filled using all the informations i have provided to you previously"
