@@ -20,3 +20,6 @@ export function buttonClass(kind: ButtonKind): string {
 
 export { Icon, Dot } from "./icons";
 export type { IconName } from "./icons";
+export { Crumb } from "./Nav";
+export { NavLinks, MobileBar, PortalLinks } from "./Nav";
+export type { NavItem } from "./Nav";

@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
+import { Crumb } from "@edufarm/ui";
 import { api } from "@/lib/api";
 import { Icon } from "@edufarm/ui";
 
@@ -26,6 +27,7 @@ export default function CourseDetail({ params }: { params: { id: string } }) {
   if (!c) return <p>Loading…</p>;
   return (
     <div>
+      <Crumb trail={[{ href: '/', label: 'Home' }, { href: '/courses', label: 'Courses' }, { label: 'Course' }]} />
       <h2>{c.code} — {c.title}</h2>
       <div className="card">
         <h3>Materials</h3>

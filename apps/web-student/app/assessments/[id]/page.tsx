@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
+import { Crumb } from "@edufarm/ui";
 import { api } from "@/lib/api";
 
 type Q = { id: string; text: string; kind: string; options: string[]; marks: number };
@@ -49,6 +50,7 @@ export default function Attempt({ params }: { params: { id: string } }) {
   }
   return (
     <div>
+      <Crumb trail={[{ href: '/', label: 'Home' }, { label: 'Assessment' }]} />
       <h2>{title || "Assessment"}</h2>
       {qs.map((q, i) => (
         <div className="card" key={q.id}>

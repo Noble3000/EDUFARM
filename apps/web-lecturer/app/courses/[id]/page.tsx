@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
+import { Crumb } from "@edufarm/ui";
 import { api } from "@/lib/api";
 import { Icon } from "@edufarm/ui";
 
@@ -39,6 +40,7 @@ export default function ManageCourse({ params }: { params: { id: string } }) {
   }
   return (
     <div>
+      <Crumb trail={[{ href: '/', label: 'Dashboard' }, { label: 'Manage course' }]} />
       <h2>Manage course</h2>
       <div className="card"><h3>Enrollments</h3>
         {enrs.map((e) => (

@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
+import { Crumb } from "@edufarm/ui";
 import { api, getUser } from "@/lib/api";
 import { Icon } from "@edufarm/ui";
 
@@ -60,6 +61,7 @@ export default function Reader({ params }: { params: { id: string } }) {
 
   return (
     <div>
+      <Crumb trail={[{ href: '/', label: 'Home' }, { href: '/library', label: 'Library' }, { label: 'Reader' }]} />
       <h2>{meta?.title ?? "Reader"} {meta && <span className="badge b-off">Official v{meta.version}</span>}</h2>
       {err && <div className="card" style={{ borderColor: "#D92D20" }}><p>{err}</p>
         {price != null && <div>

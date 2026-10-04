@@ -1,5 +1,14 @@
 import type { Metadata, Viewport } from "next";
-import { Icon } from "@edufarm/ui";
+import { Icon, NavLinks, MobileBar, PortalLinks, type NavItem } from "@edufarm/ui";
+
+const STUDENT_NAV: NavItem[] = [
+  { href: "/", label: "Home", icon: "home" },
+  { href: "/courses", label: "Courses", icon: "book" },
+  { href: "/library", label: "Library", icon: "library" },
+  { href: "/grades", label: "CGPA", icon: "chart" },
+  { href: "/verify", label: "Verify", icon: "verify" },
+  { href: "/login", label: "Login", icon: "user" },
+];
 
 export const metadata: Metadata = {
   title: "EDUFARM — Student",
@@ -34,6 +43,9 @@ header.top nav{display:flex;gap:6px;align-items:center;max-width:1080px;margin:0
 .brand-chip .mark{width:32px;height:32px;border-radius:10px;background:rgba(255,255,255,.14);display:inline-flex;align-items:center;justify-content:center;border:1px solid rgba(255,255,255,.25)}
 header.top a.navlink{color:#E6F4EC;text-decoration:none;font-size:14px;font-weight:600;display:inline-flex;align-items:center;gap:7px;padding:9px 12px;border-radius:11px;min-height:44px;line-height:1}
 header.top a.navlink:hover{background:rgba(255,255,255,.14);color:#fff}
+header.top a.navlink[aria-current="page"]{background:rgba(255,255,255,.2);color:#fff;font-weight:800}
+header.top nav .portals{margin-left:auto;display:inline-flex;gap:2px;align-items:center}
+header.top nav .portals a{color:#C9A227;font-size:12.5px;font-weight:700;display:inline-flex;align-items:center;gap:5px;padding:9px 10px;border-radius:11px;min-height:44px;text-decoration:none}
 .wrap{max-width:1080px;margin:0 auto;padding:20px 16px 104px}
 .card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:20px;margin:0 0 14px;box-shadow:0 1px 2px rgba(16,24,40,.05);text-align:left}
 .card.tight{padding:16px}
@@ -73,6 +85,7 @@ td{padding:10px 8px;border-bottom:1px solid #F2F4F7;vertical-align:middle;text-a
   .bottomnav{display:flex;position:fixed;left:10px;right:10px;bottom:10px;z-index:40;background:#101828;color:#D0D5DD;border-radius:18px;padding:6px;gap:2px;box-shadow:0 8px 28px rgba(0,0,0,.3);border:1px solid #1D2939}
   .bottomnav a{flex:1;text-decoration:none;color:#D0D5DD;font-size:11px;font-weight:700;display:flex;flex-direction:column;align-items:center;gap:3px;padding:9px 4px;border-radius:13px;min-height:56px;justify-content:center}
   .bottomnav a.on{background:#0E5A3C;color:#fff}
+  .bottomnav a[aria-current="page"]{background:#0E5A3C;color:#fff}
 }
 @media(prefers-reduced-motion:reduce){*{scroll-behavior:auto !important;transition:none !important}}`;
 
@@ -93,21 +106,13 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <header className="top">
           <nav aria-label="Student">
             <span className="brand-chip"><span className="mark"><Icon name="grad" size={17} /></span> EDUFARM · Student</span>
-            <a className="navlink" href="/"><Icon name="home" size={14} /> Home</a>
-            <a className="navlink" href="/courses"><Icon name="book" size={14} /> Courses</a>
-            <a className="navlink" href="/library"><Icon name="library" size={14} /> Library</a>
-            <a className="navlink" href="/grades"><Icon name="chart" size={14} /> CGPA</a>
-            <a className="navlink" href="/verify"><Icon name="verify" size={14} /> Verify</a>
-            <a className="navlink" href="/login"><Icon name="user" size={14} /> Login</a>
+            <NavLinks items={STUDENT_NAV} linkClassName="navlink" />
+            <PortalLinks />
           </nav>
         </header>
         <div className="wrap"><main>{children}</main></div>
         <nav className="bottomnav" aria-label="Quick">
-          <a href="/"><Icon name="home" size={18} />Home</a>
-          <a href="/courses"><Icon name="book" size={18} />Courses</a>
-          <a href="/library"><Icon name="library" size={18} />Library</a>
-          <a href="/grades"><Icon name="chart" size={18} />CGPA</a>
-          <a href="/verify"><Icon name="verify" size={18} />Verify</a>
+          <MobileBar items={STUDENT_NAV.slice(0, 5)} />
         </nav>
         <script dangerouslySetInnerHTML={{ __html: SW }} />
       </body>

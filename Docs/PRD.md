@@ -261,3 +261,15 @@
 - **Verify:** `typecheck` clean (student/lecturer/admin); `web-student build` green (11 routes); PWA files local-only until PM2 restart serves `.next` + `public/`.
 - **Commit:** (this push)
 - **Status:** Done, local-first (no deploy per rule 023).
+
+### 025 — Easy-to-navigate ecosystem: active nav, portal switcher, breadcrumbs, mobile bars
+- **Instruction:** "make the app an easy to navigate ecosystem"
+- **Change:**
+  - New `packages/ui/src/Nav.tsx`: `NavLinks` (aria-current active highlight), `MobileBar` (phone thumb-zone bar), `PortalLinks` (one-tap Student/Lecturer/Admin/Portal jumper), `Crumb` (breadcrumbs). Framework-agnostic active state via location (no next/navigation dep — its types break pnpm-strict ui builds).
+  - All 3 layouts rewired: active link pill, gold portal cluster in header, mobile bottom bars (student existing → active-aware; lecturer/admin gained one).
+  - Breadcrumbs added: student course/material/assessment detail, lecturer manage course.
+  - Fixed collateral: admin layout `??` mojibake in brand line (restored `·`).
+  - Verified: 3 production builds green, PM2 restarted, 4/4 key pages 200.
+- **Files:** `packages/ui/{src/Nav.tsx,src/index.ts}`, 3 `app/layout.tsx`, 4 detail pages, `Docs/PRD.md` (this entry)
+- **Commit:** (to be filled on push)
+- **Status:** In progress.
