@@ -281,3 +281,15 @@
 - **Files:** `packages/ui/{src/Nav.tsx,src/index.ts}`, 3 `app/layout.tsx`, 4 detail pages, `Docs/PRD.md` (this entry)
 - **Commit:** `92dbfac Easy navigation: active nav, portal switcher, breadcrumbs, mobile bars` (+ tsbuildinfo cleanup)
 - **Status:** Done, pushed to `main`.
+
+### 027 — 2026-10-04 — Frozen baseline: verify scripts + BASELINE.md
+- **Instruction:** "Create a frozen baseline … record commit/versions/PM2/DB … run lint/typecheck/unit/build … health checks … login smoke tests … route inventory … save Docs/BASELINE.md … add missing scripts … one command verifies core health."
+- **Change:**
+  - Recorded: commit `7d32f78`, Node v24.19.0 / npm 11.17.0 / pnpm 9.15.9 (no yarn), PM2 5 procs (:4000/:3001/:3002/:3003/:8080), DB 6/6 migrations in sync (no secrets recorded).
+  - Added `scripts/healthcheck.mjs` + `scripts/smoke.mjs` (zero-dep) and root scripts `test` (= typecheck alias — zero test files, explicit gap), `healthcheck`, `smoke`, `verify` (one command).
+  - Results: lint FAIL (no eslint; recorded, untouched per no-refactor rule), typecheck 4/4 PASS, build 4/4 PASS (after safe fix: added missing `clipboard` IconName that was failing lecturer build), healthcheck 5/5, smoke 9/9, `pnpm verify` exit 0.
+  - Incident: mid-task, `scripts/` + root script edits vanished (concurrent session collision suspected — other uncommitted app work present in tree). Recreated from context, re-verified `pnpm verify` exit 0, committing ONLY baseline files; other session's in-progress files left untouched.
+  - Wrote `Docs/BASELINE.md` (toolchain, processes, DB, results, 23 pages + 88 endpoints inventory, explicit failures, re-verify steps).
+- **Files:** `package.json`, `scripts/healthcheck.mjs`, `scripts/smoke.mjs`, `Docs/BASELINE.md`, `packages/ui/src/icons.tsx` (clipboard), `Docs/PRD.md` (this entry). NOT touched: other session's in-progress app files.
+- **Commit:** (to be filled on push)
+- **Status:** In progress.

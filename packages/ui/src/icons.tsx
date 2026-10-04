@@ -7,7 +7,7 @@ export type IconName =
   | "earnings" | "insights" | "announce" | "dispute" | "mail" | "school" | "home"
   | "star" | "chart" | "bell" | "search" | "settings" | "clock" | "calendar"
   | "check" | "checkBadge" | "x" | "plus" | "trash" | "chevR" | "chevL" | "arrowR"
-  | "user" | "shield" | "wallet" | "lock" | "bulb" | "grad" | "dot" | "file";
+  | "user" | "shield" | "wallet" | "lock" | "bulb" | "grad" | "dot" | "file" | "clipboard";
 
 const PATHS: Record<IconName, React.ReactNode> = {
   dashboard: (<><rect x="3" y="3" width="7" height="7" rx="1.5" /><rect x="14" y="3" width="7" height="7" rx="1.5" /><rect x="3" y="14" width="7" height="7" rx="1.5" /><rect x="14" y="14" width="7" height="7" rx="1.5" /></>),
@@ -47,6 +47,7 @@ const PATHS: Record<IconName, React.ReactNode> = {
   bulb: (<><path d="M9 18h6M10 22h4" /><path d="M12 2a7 7 0 0 0-4 12.7c.6.5 1 1.4 1 2.3h6c0-.9.4-1.8 1-2.3A7 7 0 0 0 12 2z" /></>),
   grad: (<><path d="M2 9l10-5 10 5-10 5L2 9z" /><path d="M6 11.5V16c0 1.7 2.7 3 6 3s6-1.3 6-3v-4.5" /><path d="M22 9v5" /></>),
   dot: (<><circle cx="12" cy="12" r="5" fill="currentColor" stroke="none" /></>),
+  clipboard: (<><rect x="8" y="2" width="8" height="4" rx="1" /><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2" /></>),
   file: (<><path d="M6 2h8l4 4v16H6V2z" /><path d="M14 2v4h4" /></>),
 };
 
