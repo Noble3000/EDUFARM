@@ -291,5 +291,5 @@
   - Incident: mid-task, `scripts/` + root script edits vanished (concurrent session collision suspected — other uncommitted app work present in tree). Recreated from context, re-verified `pnpm verify` exit 0, committing ONLY baseline files; other session's in-progress files left untouched.
   - Wrote `Docs/BASELINE.md` (toolchain, processes, DB, results, 23 pages + 88 endpoints inventory, explicit failures, re-verify steps).
 - **Files:** `package.json`, `scripts/healthcheck.mjs`, `scripts/smoke.mjs`, `Docs/BASELINE.md`, `packages/ui/src/icons.tsx` (clipboard), `Docs/PRD.md` (this entry). NOT touched: other session's in-progress app files.
-- **Commit:** (to be filled on push)
-- **Status:** In progress.
+- **Commit:** `ed9b206 Frozen baseline: verify scripts, BASELINE.md, audit docs, clipboard icon fix`
+- **Status:** Done, pushed to `main`.
