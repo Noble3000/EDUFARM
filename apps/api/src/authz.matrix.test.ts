@@ -35,6 +35,9 @@ let T: Record<string, string>;
 let ids: { courseId: string; dept2CourseId: string; materialId: string; questionId: string };
 
 beforeAll(async () => {
+  // Force demo endpoints closed: whatever loads apps/api/.env locally must
+  // not leak into test assertions (gate is read per-request).
+  delete process.env.ALLOW_DEMO_LOGIN;
   app = await buildApp();
   // --- fixture hierarchy ---
   const uni = await prisma.university.create({ data: { name: `TU-${S}`, slug: `tu-${S}`, verified: true } });

@@ -24,7 +24,7 @@ import { devotionalRoutes } from "./routes/devotional.js";
 import { authLocalRoutes } from "./routes/auth-local.js";
 import { gradesRoutes } from "./routes/grades.js";
 
-const DEMO_OPEN = process.env.ALLOW_DEMO_LOGIN === "true";
+const demoOpen = () => process.env.ALLOW_DEMO_LOGIN === "true";
 
 function publicUser(u: Record<string, unknown>) {
   const { passwordHash: _drop, ...safe } = u as { passwordHash?: string };
@@ -58,7 +58,7 @@ export async function buildApp(): Promise<FastifyInstance> {
     ok: true,
     service: "edufarm-api",
     auth: "session (better-auth tables)",
-    demo: DEMO_OPEN ? "open" : "closed",
+    demo: demoOpen() ? "open" : "closed",
   }));
 
   // Demo login: passwordless convenience for LOCAL demos only.
@@ -68,7 +68,7 @@ export async function buildApp(): Promise<FastifyInstance> {
     "/api/v1/demo/login",
     { config: { rateLimit: { max: 30, timeWindow: "1 minute" } } },
     async (req, reply) => {
-      if (!DEMO_OPEN) return reply.code(403).send({ error: "forbidden:demo-closed" });
+      if (!demoOpen()) return reply.code(403).send({ error: "forbidden:demo-closed" });
       const b = (req.body ?? {}) as { email?: string };
       if (!b.email) return reply.code(400).send({ error: "auth-invalid: email required." });
       const user = await prisma.user.findUnique({
@@ -83,7 +83,7 @@ export async function buildApp(): Promise<FastifyInstance> {
   );
 
   app.get("/api/v1/demo/users", async (_req, reply) => {
-    if (!DEMO_OPEN) return reply.code(403).send({ error: "forbidden:demo-closed" });
+    if (!demoOpen()) return reply.code(403).send({ error: "forbidden:demo-closed" });
     const users = await prisma.user.findMany({ select: { email: true, name: true, role: true } });
     return users;
   });
