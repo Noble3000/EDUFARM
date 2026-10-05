@@ -417,5 +417,5 @@
 - **Change (redemption):** balance re-read inside Serializable settlement tx (`payments/orders.ts`) + in-tx grant semantics; insufficient-at-settle fails the order (no overdraft); redemption ledger rows carry source/rule; `points.redeemed` audit. Recognition: idempotency-key support (409 on replay), quotas, audit, 30/min limit.
 - **Verify:** tsc clean; vitest 53/53 (5 new: unknown-event mint blocked, concurrent double-award collapses, idempotency replay 409, provenance on all rows, opens mint nothing; overdraft race covered by serializable + idempotent checkout); live policy v1/2 events + balance provenance ✓; dist rebuilt; PM2 restarted.
 - **Files:** `points-policy.ts`, `schema.prisma` + migration, `routes/points.ts`, `payments/orders.ts` (settle hardening), `authz.matrix.test.ts` (+5), `Docs/PRD.md` (this entry).
-- **Commit:** (to be filled on push)
-- **Status:** In progress.
+- **Commit:** `def3334` (points hardening) + `ffc086a` (remove stray debug scripts)
+- **Status:** Done, pushed to `main`. Local-first (no deploy per rule 023).
