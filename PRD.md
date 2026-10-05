@@ -148,3 +148,5 @@ Next.js PWA + Fastify API self-hosted on local device (no Vercel) · Paystack/Fl
 - 030 (2026-10-05): Course-space complete — announcement lifecycle (edit/archive) + Q&A consoles + search/resolve (concurrent session).
 - 032 (2026-10-05): Student experience end-to-end — Home rewritten on live data (multi-course updates/Q&A/assessments, real trust indicators, points history, dwell-continue, error+retry); library titles/terms; reader real pageCount + buy receipt; own-chain courses list; demo content and dead buttons removed. Card E2E 14/14.
 - 033 (2026-10-06): Library as entitlement system — grant states (revoked/suspended), edition snapshots, course links, exact pre-payment terms, transactional grants, unified validity states (active/expiring/expired/archived/permanent). Entitlement E2E 24/24.
+- 034 (2026-10-06): Material lifecycle hardened end-to-end (concurrent session).
+- 035 (2026-10-06): /grades complete and hardened — student-only privacy (no lecturer/admin path), semester rename + course edit, strict validation, repeat all-in policy, degree-class server source of truth, no export. Tests: unit 10/10 + matrix privacy 6/6 (full 48/48) + live E2E 9/9.
