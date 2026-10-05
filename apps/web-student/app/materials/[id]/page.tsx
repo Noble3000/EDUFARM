@@ -20,6 +20,8 @@ export default function Reader({ params }: { params: { id: string } }) {
     priceKobo: number; accessDurationDays: number | null; permanent: boolean; alreadyHeld: boolean;
   } | null>(null);
   const [bought, setBought] = useState("");
+  const [order, setOrder] = useState<{ id: string; status: string; authorizationUrl?: string; reference?: string } | null>(null);
+  const [checking, setChecking] = useState(false);
   const user = typeof window !== "undefined" ? getUser() : null;
   const totalPages = meta?.versions?.[0]?.pageCount || 10;
 
@@ -55,9 +57,38 @@ export default function Reader({ params }: { params: { id: string } }) {
   async function buy() {
     try {
       const r = await api(`/materials/${params.id}/checkout`, { method: "POST", body: JSON.stringify({ pointsToUse: pts ? Number(pts) : 0 }) });
+      if (r.authorizationUrl) {
+        // real provider flow: pay at the provider, then confirm here (grant comes via webhook only)
+        setOrder({ id: r.order.id, status: r.order.status, authorizationUrl: r.authorizationUrl, reference: r.reference });
+        return;
+      }
       setPrice(null); setErr(""); setBought(`Unlocked — ₦${(r.amountKobo / 100).toFixed(2)}${r.accessExpiresAt ? ` · access until ${new Date(r.accessExpiresAt).toLocaleDateString()}` : ""}. It now lives in your Library.`);
       load(1);
+    } catch (e) {
+      const msg = (e as Error).message;
+      if (/moved to orders|409/.test(msg)) {
+        try {
+          const o = await api(`/materials/${params.id}/orders`, { method: "POST", body: JSON.stringify({ pointsToUse: pts ? Number(pts) : 0 }) });
+          setOrder({ id: o.order.id, status: o.order.status, authorizationUrl: o.authorizationUrl, reference: o.reference });
+          return;
+        } catch (e2) { setErr((e2 as Error).message); return; }
+      }
+      setErr(msg);
+    }
+  }
+  async function checkOrder() {
+    if (!order) return;
+    setChecking(true);
+    try {
+      const o = await api(`/payments/orders/${order.id}`);
+      setOrder({ ...order, status: o.order.status });
+      if (o.order.status === "paid") {
+        setPrice(null); setErr(""); setOrder(null);
+        setBought("Payment confirmed — your library is updated. Happy studying.");
+        load(1);
+      }
     } catch (e) { setErr((e as Error).message); }
+    finally { setChecking(false); }
   }
   const [pts, setPts] = useState("");
   const [reviews, setReviews] = useState<{ id: string; rating: number; body: string | null; replies: { body: string; isLecturer: boolean }[] }[]>([]);
@@ -110,6 +141,14 @@ export default function Reader({ params }: { params: { id: string } }) {
                 <input style={{ maxWidth: 160 }} placeholder="Points (min 5000)" value={pts} onChange={(e) => setPts(e.target.value)} inputMode="numeric" />
               </Field>
               <div className="row"><button onClick={buy}>Unlock now</button><a className="btn sec" href="/library">Open Library</a></div>
+              {order && (
+                <div className="card tight" style={{ marginTop: 12 }}>
+                  <p><strong>Order {order.id.slice(0, 8)}</strong> <span className="badge b-ed">{order.status}</span></p>
+                  {order.authorizationUrl && <p><a className="btn" href={order.authorizationUrl} target="_blank" rel="noreferrer">Continue to payment</a></p>}
+                  <p className="muted">Access is granted only after the provider confirms — never from this page alone.</p>
+                  <div className="row"><button className="sec" onClick={checkOrder} disabled={checking}>{checking ? "Checking…" : "I've paid — check status"}</button></div>
+                </div>
+              )}
             </div>
           )}
         </div>

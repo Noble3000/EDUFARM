@@ -150,3 +150,5 @@ Next.js PWA + Fastify API self-hosted on local device (no Vercel) · Paystack/Fl
 - 033 (2026-10-06): Library as entitlement system — grant states (revoked/suspended), edition snapshots, course links, exact pre-payment terms, transactional grants, unified validity states (active/expiring/expired/archived/permanent). Entitlement E2E 24/24.
 - 034 (2026-10-06): Material lifecycle hardened end-to-end (concurrent session).
 - 035 (2026-10-06): /grades complete and hardened — student-only privacy (no lecturer/admin path), semester rename + course edit, strict validation, repeat all-in policy, degree-class server source of truth, no export. Tests: unit 10/10 + matrix privacy 6/6 (full 48/48) + live E2E 9/9.
+- 036 (2026-10-06): Assessments full workflow + 037 Points hardened (concurrent sessions).
+- 038 (2026-10-06): Payment abstraction — provider interface (mock/Paystack/Flutterwave), order state machine, idempotent signed webhooks, server-to-server verify, exactly-once grant + earnings, reconciliation, test mode, `Docs/PAYMENTS.md`. E2E 20/20 (incl. real rotation bug caught).

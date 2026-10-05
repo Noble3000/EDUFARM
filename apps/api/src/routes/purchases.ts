@@ -272,14 +272,60 @@ export async function purchaseRoutes(app: FastifyInstance) {
     };
   });
 
-  // lecturer earnings snapshot (pending only in Phase 1; settlement UI in Phase 2)
+  // lecturer earnings dashboard: pending/available/settled totals,
+  // material-level sales with platform split, settlement history, next period.
   app.get("/earnings/me", async (req, reply) => {
     const user = await currentUser(req);
-    if (!user?.lecturerProfile) return reply.code(403).send({ error: "Lecturer only." });
+    if (!user?.lecturerProfile) return reply.code(403).send({ error: "forbidden:role:lecturer" });
     const entries = await prisma.eSpeesLedger.findMany({
       where: { lecturerId: user.lecturerProfile.id }, orderBy: { createdAt: "desc" },
     });
-    const pending = entries.filter((e) => e.status === "pending").reduce((s, e) => s + e.lecturerShareKobo, 0);
-    return { entries, pendingKobo: pending, note: "Settlement workflow lands in Phase 2." };
+    const sum = (s: string) => entries.filter((e) => e.status === s).reduce((t, e) => t + e.lecturerShareKobo, 0);
+    const purchaseIds = [...new Set(entries.map((e) => e.purchaseId))];
+    const purchaseRows = purchaseIds.length
+      ? await prisma.purchase.findMany({
+        where: { id: { in: purchaseIds } },
+        select: { id: true, amountKobo: true, createdAt: true, materialId: true },
+      })
+      : [];
+    const matIds = [...new Set(purchaseRows.map((p) => p.materialId).filter((v): v is string => !!v))];
+    const matRows = matIds.length
+      ? await prisma.material.findMany({
+        where: { id: { in: matIds } }, select: { id: true, title: true, version: true },
+      })
+      : [];
+    const purchaseById = new Map(purchaseRows.map((p) => [p.id, p]));
+    const matById = new Map(matRows.map((m) => [m.id, m]));
+    const byMaterial = new Map<string, { materialId: string; title: string; sales: number; grossKobo: number; lecturerKobo: number; platformKobo: number }>();
+    for (const e of entries) {
+      const p = purchaseById.get(e.purchaseId);
+      const m = p?.materialId ? matById.get(p.materialId) : undefined;
+      const key = m?.id ?? "unknown";
+      const row = byMaterial.get(key) ?? {
+        materialId: key, title: m?.title ?? "Unknown material",
+        sales: 0, grossKobo: 0, lecturerKobo: 0, platformKobo: 0,
+      };
+      row.sales += 1;
+      row.grossKobo += e.grossKobo;
+      row.lecturerKobo += e.lecturerShareKobo;
+      row.platformKobo += e.platformShareKobo;
+      byMaterial.set(key, row);
+    }
+    const batchIds = [...new Set(entries.map((e) => e.settlementBatchId).filter((v): v is string => !!v))];
+    const history = batchIds.length
+      ? await prisma.settlementBatch.findMany({ where: { id: { in: batchIds } }, orderBy: { createdAt: "desc" } })
+      : [];
+    const lastBatch = history[0]?.createdAt ?? null;
+    const { nextPeriodEstimate } = await import("../settlement-policy.js");
+    return {
+      entries,
+      pendingKobo: sum("pending"),
+      availableKobo: sum("available"),
+      settledKobo: sum("settled"),
+      byMaterial: [...byMaterial.values()],
+      history,
+      next: nextPeriodEstimate(lastBatch),
+      policy: { holdDays: 7, lecturerShareBps: 7000 },
+    };
   });
 }

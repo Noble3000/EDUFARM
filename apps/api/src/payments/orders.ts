@@ -33,6 +33,17 @@ function callbackUrl(orderId: string): string {
   return `${base}/library?order=${orderId}`;
 }
 
+// Rebuild the pay link for an already-initialized order (no provider call).
+function resolveAuthUrl(order: { provider: string; providerRef: string | null; providerData: unknown }): string | undefined {
+  if (!order.providerRef) return undefined;
+  if (order.provider === "mock") {
+    const base = (process.env.PAYMENT_CALLBACK_BASE ?? "http://localhost:4000").replace(/\/$/, "");
+    return `${base}/api/v1/payments/mock/pay/${order.providerRef}`;
+  }
+  const raw = (order.providerData ?? {}) as { data?: { authorization_url?: string; link?: string } };
+  return raw.data?.authorization_url ?? raw.data?.link;
+}
+
 // --- step 2: create a pending order (idempotent on idempotencyKey) ---
 export async function createOrder(opts: {
   studentId: string;
@@ -90,12 +101,17 @@ export async function createOrder(opts: {
 }
 
 // --- step 3: initialize with the provider (stores reference, marks processing) ---
+// Idempotent: an already-initialized order returns its EXISTING reference —
+// rotating it would orphan a pay page the student may already have open.
 export async function initializeOrder(orderId: string, email: string) {
   const order = await prisma.paymentOrder.findUnique({ where: { id: orderId } });
   if (!order) throw Object.assign(new Error("Order not found."), { statusCode: 404 });
   if (order.status === "paid") return { order, alreadyPaid: true as const };
   if (!["pending", "processing"].includes(order.status))
     throw Object.assign(new Error(`Order is ${order.status}.`), { statusCode: 400 });
+  if (order.status === "processing" && order.providerRef) {
+    return { order, authorizationUrl: resolveAuthUrl(order), reference: order.providerRef };
+  }
   const provider = providerFor(order.provider);
   const init = await provider.initialize({
     orderId: order.id, amountKobo: order.amountKobo, email,
