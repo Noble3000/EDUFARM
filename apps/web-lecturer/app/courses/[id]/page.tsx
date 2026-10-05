@@ -2,6 +2,7 @@
 import { useEffect, useState } from "react";
 import { Alert, Badge, Crumb, DataTable, EmptyState, Field, LoadingState, SuccessNote } from "@edufarm/ui";
 import { api } from "@/lib/api";
+import { AnnouncementsManager, QAConsole } from "./qa-console";
 
 type Enr = { id: string; status: string; student: { id?: string; user: { name: string; email: string } } };
 
@@ -143,6 +144,8 @@ export default function ManageCourse({ params }: { params: { id: string } }) {
         <label className="checkrow"><input type="checkbox" checked={ann.isUrgent} onChange={(e) => setAnn({ ...ann, isUrgent: e.target.checked })} /> Urgent</label>
         <div><button onClick={postAnn}>Post</button></div>
       </div>
+      <AnnouncementsManager courseId={params.id} />
+      <QAConsole courseId={params.id} />
       <div className="card"><h3>Upload material</h3>
         <Field label="Title">
           <input value={mat.title} onChange={(e) => setMat({ ...mat, title: e.target.value })} />

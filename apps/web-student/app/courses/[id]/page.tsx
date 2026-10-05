@@ -1,20 +1,30 @@
 "use client";
 import { useEffect, useState } from "react";
 import { Crumb } from "@edufarm/ui";
-import { api } from "@/lib/api";
+import { api, getUser } from "@/lib/api";
 import { Alert, EmptyState, Field, Icon, LoadingState } from "@edufarm/ui";
 
 type Course = {
   id: string; code: string; title: string;
   materials: { id: string; title: string; type: string; isFree: boolean; priceKobo: number; version: number }[];
   announcements: { id: string; title: string; body: string; isUrgent: boolean; category: string }[];
-  questions: { id: string; title: string; body: string; status: string; answers: { body: string; isLecturer: boolean }[] }[];
+  questions: { id: string; authorId: string; title: string; body: string; status: string; answers: { body: string; isLecturer: boolean }[] }[];
 };
 
 export default function CourseDetail({ params }: { params: { id: string } }) {
   const [c, setC] = useState<Course | null>(null);
   const [q, setQ] = useState({ title: "", body: "" });
   const [asmts, setAsmts] = useState<{ id: string; title: string; type: string; dueAt: string | null; attempts: { status: string; score: number | null; maxScore: number | null }[] }[]>([]);
+  const [qq, setQq] = useState("");
+  const [qstatus, setQstatus] = useState("");
+  const me = typeof window !== "undefined" ? getUser() : null;
+  async function refreshQuestions() {
+    const qs = new URLSearchParams();
+    if (qq) qs.set("q", qq);
+    if (qstatus) qs.set("status", qstatus);
+    const list = await api(`/courses/${params.id}/questions?${qs.toString()}`);
+    setC((prev) => (prev ? { ...prev, questions: list } : prev));
+  }
   useEffect(() => {
     api(`/courses/${params.id}`).then(setC).catch(() => {});
     api(`/courses/${params.id}/assessments`).then(setAsmts).catch(() => []);
@@ -70,10 +80,23 @@ export default function CourseDetail({ params }: { params: { id: string } }) {
       </div>
       <div className="card">
         <h3>Course Q&A</h3>
+        <div className="row">
+          <input style={{ maxWidth: 220 }} placeholder="Search questions…" value={qq} onChange={(e) => setQq(e.target.value)} />
+          <select style={{ maxWidth: 160 }} value={qstatus} onChange={(e) => setQstatus(e.target.value)}>
+            <option value="">All statuses</option>
+            <option value="unanswered">Unanswered</option>
+            <option value="answered">Answered</option>
+            <option value="resolved">Resolved</option>
+          </select>
+          <button className="sec" onClick={refreshQuestions}>Search</button>
+        </div>
         {c.questions.map((x) => (
           <div key={x.id} style={{ borderTop: "1px solid #eee", paddingTop: 8 }}>
             <p><strong>{x.title}</strong> <span className="badge b-ed">{x.status}</span><br /><span className="muted">{x.body}</span></p>
             {x.answers.map((a, i) => <p key={i} style={{ marginLeft: 12 }}>{a.isLecturer && <span className="badge b-off"><Icon name="check" size={12} /> Lecturer</span>}{a.body}</p>)}
+            {x.status !== "resolved" && me && x.authorId === me.id && (
+              <button className="sec" onClick={async () => { await api(`/questions/${x.id}/resolve`, { method: "POST", body: JSON.stringify({}) }); refreshQuestions(); }}>Mark resolved</button>
+            )}
           </div>
         ))}
         {!c.questions.length && (

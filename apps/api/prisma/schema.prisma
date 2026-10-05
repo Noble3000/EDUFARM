@@ -342,6 +342,7 @@ model Announcement {
   title      String
   body       String
   isUrgent   Boolean  @default(false)
+  archived   Boolean  @default(false)
   createdAt  DateTime @default(now())
 }
 

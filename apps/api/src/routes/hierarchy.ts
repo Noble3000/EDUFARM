@@ -107,7 +107,7 @@ export async function hierarchyRoutes(app: FastifyInstance) {
         level: true,
         lecturers: { include: { lecturer: { include: { user: true } } } },
         materials: { where: { status: "published" }, orderBy: { createdAt: "desc" } },
-        announcements: { orderBy: { createdAt: "desc" }, take: 20 },
+        announcements: { where: { archived: false }, orderBy: { createdAt: "desc" }, take: 20 },
         questions: { orderBy: { createdAt: "desc" }, take: 20, include: { answers: true } },
       },
     });

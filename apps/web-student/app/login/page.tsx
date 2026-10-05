@@ -4,19 +4,18 @@ import { apiUrl, setSession, logout as doLogout } from "@/lib/api";
 import { Alert, Field, LoadingState, SuccessNote } from "@edufarm/ui";
 
 export default function Login() {
-  const [email, setEmail] = useState("ada@student.demo-university.edu");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [api, setApi] = useState("");
   const [msg, setMsg] = useState("");
   const busy = msg === "…";
   const isSuccess = msg.startsWith("Logged in") || msg === "Logged out.";
-  async function login(useDemo = false) {
+  async function login() {
     if (api.trim()) localStorage.setItem("edufarm_api", api.trim().replace(/\/$/, ""));
     setMsg("…");
-    const url = useDemo ? `${apiUrl()}/demo/login` : `${apiUrl()}/auth/login`;
-    const res = await fetch(url, {
+    const res = await fetch(`${apiUrl()}/auth/login`, {
       method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(useDemo ? { email } : { email, password }),
+      body: JSON.stringify({ email, password }),
     });
     const data = await res.json();
     if (!res.ok) return setMsg(data.error ?? "Login failed");
@@ -31,7 +30,7 @@ export default function Login() {
     <div className="card">
       <h2>Student sign in</h2>
       <Field label="Email">
-        <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="email" />
+        <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="email" placeholder="you@university.edu" />
       </Field>
       <Field label="Password">
         <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="current-password" />
@@ -40,8 +39,7 @@ export default function Login() {
         <input value={api} onChange={(e) => setApi(e.target.value)} placeholder="https://api.example.com" inputMode="url" />
       </Field>
       <div className="row">
-        <button onClick={() => login(false)} disabled={busy}>Sign in</button>
-        <button className="sec" onClick={() => login(true)} disabled={busy}>Demo login</button>
+        <button onClick={() => login()} disabled={busy}>Sign in</button>
         <button className="sec" onClick={logout}>Log out</button>
       </div>
       <div style={{ marginTop: 12 }}>

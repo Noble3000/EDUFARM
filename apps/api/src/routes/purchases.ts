@@ -104,7 +104,7 @@ export async function purchaseRoutes(app: FastifyInstance) {
 
   app.get("/bundles", async () => prisma.bundle.findMany({ include: { items: true }, orderBy: { title: "asc" } }));
 
-  // library: my entitled materials with access status
+  // library: my entitled materials with access status (titles attached — no bare ids)
   app.get("/library/me", async (req, reply) => {
     const user = await currentUser(req);
     if (!user?.studentProfile) return reply.code(401).send({ error: "Student sign-in required." });
@@ -112,11 +112,28 @@ export async function purchaseRoutes(app: FastifyInstance) {
       where: { studentId: user.studentProfile.id, status: "completed" },
       orderBy: { createdAt: "desc" },
     });
+    const materialIds = [...new Set(purchases.map((p) => p.materialId).filter((v): v is string => !!v))];
+    const bundleIds = [...new Set(purchases.map((p) => p.bundleId).filter((v): v is string => !!v))];
+    const [mats, bundles] = await Promise.all([
+      materialIds.length
+        ? prisma.material.findMany({ where: { id: { in: materialIds } }, select: { id: true, title: true, version: true, accessDurationDays: true } })
+        : [],
+      bundleIds.length
+        ? prisma.bundle.findMany({ where: { id: { in: bundleIds } }, select: { id: true, title: true } })
+        : [],
+    ]);
+    const matById = new Map(mats.map((m) => [m.id, m]));
+    const bundleById = new Map(bundles.map((b) => [b.id, b]));
+    const items = purchases.map((p) => ({
+      ...p,
+      material: p.materialId ? matById.get(p.materialId) ?? null : null,
+      bundle: p.bundleId ? bundleById.get(p.bundleId) ?? null : null,
+    }));
     const enrollments = await prisma.enrollment.findMany({
       where: { studentId: user.studentProfile.id, status: "approved" },
       include: { course: { include: { materials: { where: { status: "published", isFree: true } } } } },
     });
-    return { purchases, freeMaterials: enrollments.flatMap((e) => e.course.materials) };
+    return { purchases: items, freeMaterials: enrollments.flatMap((e) => e.course.materials) };
   });
 
   // lecturer earnings snapshot (pending only in Phase 1; settlement UI in Phase 2)

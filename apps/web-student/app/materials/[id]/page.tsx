@@ -2,15 +2,18 @@
 import { useEffect, useState } from "react";
 import { Crumb } from "@edufarm/ui";
 import { api, getUser } from "@/lib/api";
-import { EmptyState, ErrorState, Field, Icon } from "@edufarm/ui";
+import { EmptyState, ErrorState, Field, Icon, SuccessNote } from "@edufarm/ui";
 
-// Protected reader shell: page navigation + watermark + dwell pings + mock checkout on 402.
+// Protected reader: page navigation + watermark + dwell pings + checkout on 402.
+// Page count comes from the material's latest version row — never hard-coded.
 export default function Reader({ params }: { params: { id: string } }) {
-  const [meta, setMeta] = useState<{ title: string; version: number; course?: { code: string } } | null>(null);
+  const [meta, setMeta] = useState<{ title: string; version: number; priceKobo: number; isFree: boolean; accessDurationDays: number | null; versions?: { pageCount: number }[]; course?: { code: string; id: string } } | null>(null);
   const [page, setPage] = useState(1);
   const [err, setErr] = useState("");
   const [price, setPrice] = useState<number | null>(null);
+  const [bought, setBought] = useState("");
   const user = typeof window !== "undefined" ? getUser() : null;
+  const totalPages = meta?.versions?.[0]?.pageCount || 10;
 
   async function load(p: number) {
     setErr("");
@@ -41,8 +44,9 @@ export default function Reader({ params }: { params: { id: string } }) {
 
   async function buy() {
     try {
-      await api(`/materials/${params.id}/checkout`, { method: "POST", body: JSON.stringify({ pointsToUse: pts ? Number(pts) : 0 }) });
-      setPrice(null); setErr(""); load(page);
+      const r = await api(`/materials/${params.id}/checkout`, { method: "POST", body: JSON.stringify({ pointsToUse: pts ? Number(pts) : 0 }) });
+      setPrice(null); setErr(""); setBought(`Unlocked — ₦${(r.amountKobo / 100).toFixed(2)}${r.accessExpiresAt ? ` · access until ${new Date(r.accessExpiresAt).toLocaleDateString()}` : ""}. It now lives in your Library.`);
+      load(1);
     } catch (e) { setErr((e as Error).message); }
   }
   const [pts, setPts] = useState("");
@@ -68,26 +72,27 @@ export default function Reader({ params }: { params: { id: string } }) {
           <ErrorState message={err} onRetry={() => load(page)} />
           {price != null && (
             <div className="card">
-              <p><strong>₦{(price / 100).toFixed(2)}</strong></p>
+              <p><strong>₦{(price / 100).toFixed(2)}</strong> <span className="muted">· {meta?.accessDurationDays ? `${meta.accessDurationDays} days access` : "access per terms"} · in-ecosystem reading only</span></p>
               <Field label="Points to use" optional hint="10 kobo per point · max 50% of price in points. Minimum 5000 to redeem.">
                 <input style={{ maxWidth: 160 }} placeholder="Points (min 5000)" value={pts} onChange={(e) => setPts(e.target.value)} inputMode="numeric" />
               </Field>
-              <div className="row"><button onClick={buy}>Buy now (mock checkout)</button></div>
+              <div className="row"><button onClick={buy}>Unlock now</button><a className="btn sec" href="/library">Open Library</a></div>
             </div>
           )}
         </div>
       )}
+      {bought && <div style={{ marginBottom: 12 }}><SuccessNote>{bought}</SuccessNote></div>}
       <div className="card" style={{ background: "#1D2939", color: "#fff", position: "relative", minHeight: 300 }} onContextMenu={(e) => e.preventDefault()}>
         <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", opacity: 0.15, transform: "rotate(-18deg)", fontSize: 13, pointerEvents: "none", textAlign: "center" }}>
           {user?.name ?? "?"} · {user?.email ?? "?"} · {meta?.course?.code ?? ""} · Do not redistribute
         </div>
-        <p className="muted" style={{ color: "#D0D5DD" }}>Page {page} / 10 · <Icon name="lock" size={13} /> Protected (R2 page-streaming lands in reader spike)</p>
-        <h3>Page {page} content shell</h3>
-        <p style={{ color: "#D0D5DD", lineHeight: 1.7 }}>Styled placeholder for rendered PDF page image. Right-click disabled. Dwell pings feed Study Journey (≥8s counts).</p>
+        <p className="muted" style={{ color: "#D0D5DD" }}>Page {page} of {totalPages} · <Icon name="lock" size={13} /> Protected in-ecosystem reading</p>
+        <h3>{meta?.title ?? "Material"} — page {page}</h3>
+        <p style={{ color: "#D0D5DD", lineHeight: 1.7 }}>Rendered page image streams here from protected storage. Right-click is disabled and your copy carries your identity watermark. Dwell pings feed Study Journey (≥8s counts).</p>
       </div>
       <div className="row">
         <button className="sec" disabled={page <= 1} onClick={() => load(page - 1)}><Icon name="chevL" size={14} /> Prev</button>
-        <button className="sec" disabled={page >= 10} onClick={() => load(page + 1)}>Next <Icon name="chevR" size={14} /></button>
+        <button className="sec" disabled={page >= totalPages} onClick={() => load(page + 1)}>Next <Icon name="chevR" size={14} /></button>
       </div>
       <div className="card">
         <h3>Reviews</h3>

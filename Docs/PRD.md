@@ -336,3 +336,19 @@
 - **Files:** `src/{authz,app,main}.ts`, all 17 routes, `authz.matrix.test.ts`, `packages/ui/src/session.ts`, 3 lib/api + 5 auth pages, portal, `infra/ecosystem.config.js` (+ALLOW_DEMO flag), root + api `package.json`, `turbo.json`, `account_status` migration, `Docs/PRD.md` (this entry). Co-built with parallel hierarchy session (029) — converged in `52287b8`; this entry covers the auth cutover + verification.
 - **Commit:** `9164ccd Auth hardening verify: dynamic demo gate, matrix determinism, turbo test task`
 - **Status:** Done, pushed to `main`. Local-first (no deploy per rule 023).
+
+### 031 — 2026-10-05 — Course-space workflow complete (announcements lifecycle + Q&A consoles)
+- **Instruction:** "Complete the course-space workflow" — student authorized courses/join/detail/announcements/Q&A-search/ask/replies/resolve; lecturer approvals, announcement publish/edit/archive + 6 categories, Q&A answer/search/filter + distinguished replies; enforce no-1-to-1-chat, lecturer-only publishing, membership permissions, audit trail.
+- **Change (API):**
+  - `Announcement.archived` + migration `20261005120000_announcement_archive` (applied to edufarm + edufarm_test).
+  - `routes/announcements.ts` rewritten: lecturer-only create/edit/archive scoped by `ownsCourse` (assignment OR same-dept), fixed 6-category validation, audit on publish/edit/archive, feed hides archived (staff opt-in via `?includeArchived=true`).
+  - Course detail feed excludes archived.
+  - QA resolve already author-or-staff (030); unchanged.
+- **Change (UI):**
+  - Student course page: Q&A search box + status filter (live API query), author-only "Mark resolved" button.
+  - Lecturer manage: new `AnnouncementsManager` (list incl. archived, inline edit, archive with audit note) + `QAConsole` (search/filter, per-question lecturer answer box, resolve; lecturer/student replies badged distinctly).
+  - Enrollments remove/suspend/reinstate buttons already present (029); untouched.
+- **Verify:** lecturer post→edit→archive with student 403 on edit ✓; student ask→lecturer answer (isLecturer=true)→author resolve ✓; search `status=resolved` hits ✓; archived hidden from student feed ✓; matrix 21/21 still green; student/lecturer builds green (fixed corrupt `.next` type cache by stopping server first — file-lock contention); dist rebuilt; PM2 restarted; course pages 200.
+- **Files:** `schema.prisma` + migration, `routes/{announcements,hierarchy}.ts`, student `courses/[id]` (search/filter/resolve), lecturer `courses/[id]/qa-console.tsx` + wiring, `Docs/PRD.md` (this entry).
+- **Commit:** (to be filled on push)
+- **Status:** In progress.
