@@ -372,5 +372,18 @@
 - **Verify:** entitlement E2E 24/24 (terms-view creates nothing, 402 pre-payment, pending grants nothing, enrollment-gated checkout, transactional grant fields, expiry→renew→2 rows, revoke/suspend→403→reinstate→200, lecturer scoping, edition bump flagged, free derivation, regression); typecheck api+student; builds api+student green; live :4000/:3001 200.
 - **Collision notes:** repaired one bug I introduced (notify with profile id); fixed verdict order so revoked reports 403; fixed concurrent session's `storage.ts` import path (blocked typecheck); carried their `Material.version DEFAULT 0` alignment. P3015 phantom on concurrent `material_versions` dir (file mid-write) worked around by diffing without the empty dir.
 - **Files (mine):** `prisma/{schema.prisma,migrations/20261006010000_*}`, `src/{hierarchy-guard.ts,routes/{purchases,materials}.ts}`, student `library/page/materials/[id]/page`, `Docs/PRD.md` (this entry). Folded-in (theirs, verified): `storage.ts` import fix, `material_versions` migration, session `lib/api` + login/signup session work my UI builds on.
-- **Commit:** (this push)
+- **Commit:** see git log (033 pushed by parallel session; hash in log)
 - **Status:** Done, pushed to `main`. Local-first (no deploy per rule 023).
+
+### 034 — 2026-10-06 — Material lifecycle hardened end-to-end (approval, versioning, R2-ready reader)
+- **Instruction:** "Audit and harden the entire material lifecycle" — Draft→Approval→Review→Published→Updated→Archived, 6 fixed types, ownership attestation, versioned editions, free/paid + durations, trust badges, pre-payment terms, protected reader (no download/offline/export, watermark, per-access entitlement+expiry, archived blocking, signed URLs not raw keys), R2 presigned-or-equivalent, screenshot boundary documented not promised.
+- **Change (API):**
+  - `Material.pendingVersion` + migration `20261005130000_material_versions` (deployed edufarm + edufarm_test).
+  - `routes/materials.ts` rewritten: upload → `pendingLecturer`; `approve`/`submit` require `attest:true` → `pendingReview`; `new-version` stages v+1 (live untouched); review approve flips live + reindexes AI, reject drops staged row and restores prior state; archive audited; fixed 6-type validation; duration 1–730d bounds; detail returns `trust{}` block and never leaks `fileKey`.
+  - `GET /lecturer/materials` (own drafts/pending/editions for management UI).
+  - New `routes/storage.ts`: HMAC page tokens (60s) + `GET /pages/:token` resolver (re-checks entitlement+expiry per access; 302 to R2 presigned when `R2_*` set, else honest 410); `@aws-sdk/client-s3` + presigner installed (dormant without keys).
+- **Change (UI):** lecturer upload with attestation checkbox + 6-type list + My-materials table (approve/new-edition per state); reader trust block + pre-payment terms card + capture boundary notice + no-select/no-print/no-copy reader lock; library already state-complete (033).
+- **Verify:** tsc clean; vitest 32/32 (21 matrix + 11 lifecycle incl. staged-version, reject-restore, archive-block, token tamper); live upload→pendingLecturer(v0)→approve→pendingReview→publish(v1)→new-edition→v2→archive ✓ with trust block; builds + PM2 restarted; course pages 200.
+- **Files:** `schema.prisma` + migration, `routes/{materials,storage}.ts`, `app.ts`, lecturer manage UI, student reader trust/terms/lock, `authz.matrix.test.ts` (+11), `Docs/PRD.md` (this entry).
+- **Commit:** (to be filled on push)
+- **Status:** In progress.
