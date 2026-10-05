@@ -1,7 +1,8 @@
 // Baseline smoke test: role logins + one entitled read per role.
 // Usage: node scripts/smoke.mjs [--json]
 // Exit 0 = all pass, 1 = any failure. Requires API on :4000 with seed data.
-// Uses passwordless demo/login (see FINAL_AUDIT P0 — gate before shared use).
+// Uses passwordless demo/login (gated by ALLOW_DEMO_LOGIN — local demos only).
+// Authenticates with opaque session tokens (x-session-token), like the apps.
 const API = "http://localhost:4000/api/v1";
 
 const results = [];
@@ -14,10 +15,10 @@ async function step(name, fn) {
   }
 }
 
-async function post(path, body, userId) {
+async function post(path, body, token) {
   const r = await fetch(API + path, {
     method: "POST",
-    headers: { "Content-Type": "application/json", ...(userId ? { "x-user-id": userId } : {}) },
+    headers: { "Content-Type": "application/json", ...(token ? { "x-session-token": token } : {}) },
     body: JSON.stringify(body),
   });
   const data = await r.json().catch(() => ({}));
@@ -25,8 +26,8 @@ async function post(path, body, userId) {
   return data;
 }
 
-async function get(path, userId) {
-  const r = await fetch(API + path, { headers: userId ? { "x-user-id": userId } : {} });
+async function get(path, token) {
+  const r = await fetch(API + path, { headers: token ? { "x-session-token": token } : {} });
   const data = await r.json().catch(() => ({}));
   if (!r.ok) throw new Error(`${r.status} ${data.error ?? ""}`.trim());
   return data;
@@ -49,24 +50,24 @@ await step("admin login", async () => {
   return admin.email;
 });
 await step("student enrollments", async () => {
-  const e = await get("/enrollments/me", student.id);
+  const e = await get("/enrollments/me", student.sessionToken);
   if (!e.length) throw new Error("no enrollments");
   return `${e.length} enrollment(s), first=${e[0].status}`;
 });
 await step("student library", async () => {
-  const l = await get("/library/me", student.id);
+  const l = await get("/library/me", student.sessionToken);
   return `purchased=${l.purchases.length} free=${l.freeMaterials.length}`;
 });
 await step("student points", async () => {
-  const p = await get("/points/me", student.id);
+  const p = await get("/points/me", student.sessionToken);
   return `balance=${p.balance}`;
 });
 await step("lecturer earnings", async () => {
-  const e = await get("/earnings/me", lecturer.id);
+  const e = await get("/earnings/me", lecturer.sessionToken);
   return `pendingKobo=${e.pendingKobo}`;
 });
 await step("admin verification queue", async () => {
-  const q = await get("/verifications/pending?type=student", admin.id);
+  const q = await get("/verifications/pending?type=student", admin.sessionToken);
   return Array.isArray(q) ? `${q.length} pending` : "unexpected shape";
 });
 await step("devotional today", async () => {

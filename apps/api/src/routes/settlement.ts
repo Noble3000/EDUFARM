@@ -4,7 +4,7 @@
 
 import type { FastifyInstance } from "fastify";
 import { prisma } from "../db.js";
-import { currentUser } from "../auth-dev.js";
+import { sessionUser as currentUser } from "../authz.js";
 
 const HOLD_DAYS = Number(process.env.SETTLEMENT_HOLD_DAYS ?? 7);
 

@@ -1,12 +1,15 @@
 "use client";
 import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
-import { Badge, DataTable, EmptyState, ErrorState, LoadingState, Pagination } from "@edufarm/ui";
+import { Badge, DataTable, EmptyState, ErrorState, Field, LoadingState, Pagination } from "@edufarm/ui";
 
 const PER = 10;
+const STATUSES = ["pending", "needsCorrection", "suspended", "rejected", "all"] as const;
 
 export default function Verifications() {
   const [type, setType] = useState("student");
+  const [status, setStatus] = useState<(typeof STATUSES)[number]>("pending");
+  const [note, setNote] = useState("");
   const [rows, setRows] = useState<{ id: string; verificationStatus: string; user: { name: string; email: string }; matricNo?: string; staffId?: string }[]>([]);
   const [loading, setLoading] = useState(true);
   const [failed, setFailed] = useState("");
@@ -15,7 +18,7 @@ export default function Verifications() {
     setLoading(true);
     setFailed("");
     try {
-      setRows(await api(`/verifications/pending?type=${type}`));
+      setRows(await api(`/verifications/pending?type=${type}&status=${status}`));
     } catch (e) {
       setRows([]);
       setFailed((e as Error).message ?? "Could not load verification queue.");
@@ -23,9 +26,9 @@ export default function Verifications() {
       setLoading(false);
     }
   }
-  useEffect(() => { setPage(1); load(); }, [type]);
+  useEffect(() => { setPage(1); load(); }, [type, status]);
   async function decide(id: string, decision: string) {
-    await api(`/verifications/${type}/${id}/decide`, { method: "POST", body: JSON.stringify({ decision }) });
+    await api(`/verifications/${type}/${id}/decide`, { method: "POST", body: JSON.stringify({ decision, note: note || undefined }) });
     load();
   }
   const pages = Math.max(1, Math.ceil(rows.length / PER));
@@ -38,18 +41,26 @@ export default function Verifications() {
         <button className={type === "student" ? "" : "sec"} aria-pressed={type === "student"} onClick={() => setType("student")}>Students</button>
         <button className={type === "lecturer" ? "" : "sec"} aria-pressed={type === "lecturer"} onClick={() => setType("lecturer")}>Lecturers</button>
       </div>
+      <div className="row" role="group" aria-label="Queue status" style={{ marginTop: 8 }}>
+        {STATUSES.map((s) => (
+          <button key={s} className={status === s ? "" : "sec"} aria-pressed={status === s} onClick={() => setStatus(s)}>{s}</button>
+        ))}
+      </div>
+      <Field label="Review note" optional hint="Sent to the requester with reject / needs-correction / suspend decisions.">
+        <input value={note} onChange={(e) => setNote(e.target.value)} placeholder="e.g. Matric photo is blurry — re-upload" />
+      </Field>
       {loading ? (
         <div style={{ marginTop: 12 }}><LoadingState label="Loading verification queue…" /></div>
       ) : failed && rows.length === 0 ? (
         <div style={{ marginTop: 12 }}><ErrorState message={failed} onRetry={load} /></div>
       ) : rows.length === 0 ? (
         <div style={{ marginTop: 12 }}>
-          <EmptyState icon="checkBadge" title="Queue clear" body="No pending verifications. Log in as admin if you expected rows here." />
+          <EmptyState icon="checkBadge" title="Queue clear" body={`No ${status} ${type} verifications. Log in as admin if you expected rows here.`} />
         </div>
       ) : (
         <>
           <div style={{ marginTop: 12 }}>
-            <DataTable caption={`${type === "student" ? "Student" : "Lecturer"} verification requests`} head={["Name", "Email", "ID", "Status", "Actions"]}>
+            <DataTable caption={`${type === "student" ? "Student" : "Lecturer"} verification requests (${status})`} head={["Name", "Email", "ID", "Status", "Actions"]}>
               {visible.map((r) => (
                 <tr key={r.id}>
                   <td>{r.user.name}</td>
@@ -59,6 +70,9 @@ export default function Verifications() {
                   <td>
                     <div className="row tight">
                       <button onClick={() => decide(r.id, "approve")}>Approve</button>
+                      <button className="sec" onClick={() => decide(r.id, "needsCorrection")}>Needs correction</button>
+                      <button className="sec" onClick={() => decide(r.id, "suspend")}>Suspend</button>
+                      <button className="sec" onClick={() => decide(r.id, "reinstate")}>Reinstate</button>
                       <button className="sec" onClick={() => decide(r.id, "reject")}>Reject</button>
                     </div>
                   </td>

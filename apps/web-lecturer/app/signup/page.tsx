@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { Alert, Field, SuccessNote } from "@edufarm/ui";
-import { API } from "@/lib/api";
+import { API, setSession } from "@/lib/api";
 
 export default function Signup() {
   const [unis, setUnis] = useState<{ id: string; name: string }[]>([]);
@@ -37,7 +37,7 @@ export default function Signup() {
         setErr(data.error ?? "Signup failed");
         return;
       }
-      localStorage.setItem("edufarm_user", JSON.stringify(data));
+      setSession(data);
       setOk(`Welcome, ${data.name}! Lecturer verification pending — platform review follows (PRD §5.1).`);
     } catch (e) {
       setErr((e as Error).message);

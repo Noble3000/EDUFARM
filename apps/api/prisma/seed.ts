@@ -145,6 +145,31 @@ async function main() {
     });
   }
 
+  // hierarchy ownership: seeded lecturer owns the seeded course (controls access)
+  await prisma.courseLecturer.upsert({
+    where: { courseId_lecturerId: { courseId: course.id, lecturerId: lect.id } },
+    update: { role: "owner" },
+    create: { courseId: course.id, lecturerId: lect.id, role: "owner" },
+  });
+
+  // verification records mirror current profile states (audit trail starts here)
+  for (const s of await prisma.studentProfile.findMany({ select: { id: true, verificationStatus: true } })) {
+    const status = s.verificationStatus === "verified" ? "approved" : s.verificationStatus === "rejected" ? "rejected" : "pending";
+    await prisma.verificationRecord.upsert({
+      where: { id: `seed-stu-${s.id}` },
+      update: {},
+      create: { id: `seed-stu-${s.id}`, profileType: "student", studentProfileId: s.id, status: status as never },
+    });
+  }
+  for (const l of await prisma.lecturerProfile.findMany({ select: { id: true, verificationStatus: true } })) {
+    const status = l.verificationStatus === "verified" ? "approved" : l.verificationStatus === "rejected" ? "rejected" : "pending";
+    await prisma.verificationRecord.upsert({
+      where: { id: `seed-lec-${l.id}` },
+      update: {},
+      create: { id: `seed-lec-${l.id}`, profileType: "lecturer", lecturerProfileId: l.id, status: status as never },
+    });
+  }
+
   console.log("Seeded:", uni.slug, course.code, "| users: bello, ada, pending, admin");
 }
 

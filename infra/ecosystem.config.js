@@ -22,6 +22,9 @@ module.exports = {
         PLATFORM_FEE_BPS: 3000,
         SETTLEMENT_HOLD_DAYS: 7,
         NODE_ENV: "production",
+        // Local demos only. NEVER enable on shared/public infrastructure:
+        // demo endpoints skip passwords (FINAL_AUDIT P0).
+        ALLOW_DEMO_LOGIN: "true",
       },
     },
     {

@@ -6,26 +6,26 @@
 
 import type { FastifyInstance } from "fastify";
 import { prisma } from "../db.js";
-import { currentUser } from "../auth-dev.js";
+import { ownsCourse, sessionUser as currentUser } from "../authz.js";
 
 const MIN_KOBO = 10000; // ₦100
 const MAX_KOBO = 200000; // ₦2,000
-
-const LECTURER_ROLES = ["lecturer", "deptAdmin", "institutionAdmin", "platformAdmin"];
 
 async function lecturerOf(userId: string) {
   return prisma.lecturerProfile.findUnique({ where: { userId } });
 }
 
 export async function materialRoutes(app: FastifyInstance) {
-  // lecturer creates draft
+  // lecturer creates draft (in own department's course only)
   app.post("/courses/:id/materials", async (req, reply) => {
     const user = await currentUser(req);
-    if (!user || !LECTURER_ROLES.includes(user.role))
-      return reply.code(403).send({ error: "Lecturer/staff only." });
-    const lecturer = await lecturerOf(user.id);
-    if (!lecturer) return reply.code(403).send({ error: "Lecturer profile required." });
+    if (!user) return reply.code(401).send({ error: "auth-required" });
     const { id } = req.params as { id: string };
+    const course = await prisma.course.findUnique({ where: { id } });
+    if (!course) return reply.code(404).send({ error: "not-found:course" });
+    if (!(await ownsCourse(user, course))) return reply.code(403).send({ error: "forbidden:course-ownership" });
+    const lecturer = await lecturerOf(user.id);
+    if (!lecturer) return reply.code(403).send({ error: "forbidden:lecturer-profile-required" });
     const b = req.body as {
       title: string; type: string; description?: string; priceKobo?: number;
       isFree?: boolean; accessDurationDays?: number; fileKey?: string; checksum?: string;
@@ -49,14 +49,14 @@ export async function materialRoutes(app: FastifyInstance) {
     return material;
   });
 
-  // lecturer confirms ownership → pendingReview
+  // lecturer confirms ownership → pendingReview (own course only)
   app.post("/materials/:id/submit", async (req, reply) => {
     const user = await currentUser(req);
-    if (!user || !LECTURER_ROLES.includes(user.role))
-      return reply.code(403).send({ error: "Lecturer/staff only." });
+    if (!user) return reply.code(401).send({ error: "auth-required" });
     const { id } = req.params as { id: string };
-    const mat = await prisma.material.findUnique({ where: { id } });
-    if (!mat) return reply.code(404).send({ error: "Not found." });
+    const mat = await prisma.material.findUnique({ where: { id }, include: { course: true } });
+    if (!mat) return reply.code(404).send({ error: "not-found:material" });
+    if (!(await ownsCourse(user, mat.course))) return reply.code(403).send({ error: "forbidden:course-ownership" });
     if (mat.status !== "draft") return reply.code(400).send({ error: `Cannot submit from ${mat.status}.` });
     const updated = await prisma.material.update({ where: { id }, data: { status: "pendingReview" } });
     await prisma.auditLog.create({
@@ -114,12 +114,17 @@ export async function materialRoutes(app: FastifyInstance) {
     return updated;
   });
 
-  // archive
+  // archive (own course only)
   app.post("/materials/:id/archive", async (req, reply) => {
     const user = await currentUser(req);
-    if (!user || !LECTURER_ROLES.includes(user.role))
-      return reply.code(403).send({ error: "Lecturer/staff only." });
+    if (!user) return reply.code(401).send({ error: "auth-required" });
     const { id } = req.params as { id: string };
+    const mat = await prisma.material.findUnique({ where: { id }, include: { course: true } });
+    if (!mat) return reply.code(404).send({ error: "not-found:material" });
+    if (!(await ownsCourse(user, mat.course))) return reply.code(403).send({ error: "forbidden:course-ownership" });
+    await prisma.auditLog.create({
+      data: { actorId: user.id, action: "material.archived", targetType: "Material", targetId: id },
+    });
     return prisma.material.update({ where: { id }, data: { status: "archived" } });
   });
 
@@ -130,34 +135,43 @@ export async function materialRoutes(app: FastifyInstance) {
     const mat = await prisma.material.findUnique({
       where: { id }, include: { versions: { orderBy: { version: "desc" } }, course: true },
     });
-    if (!mat) return reply.code(404).send({ error: "Not found." });
+    if (!mat) return reply.code(404).send({ error: "not-found:material" });
     if (mat.status !== "published") {
-      const ok = user && (LECTURER_ROLES.includes(user.role) || ["platformAdmin"].includes(user.role));
-      if (!ok) return reply.code(403).send({ error: "Not published." });
+      const ok =
+        !!user &&
+        ((await ownsCourse(user, mat.course)) ||
+          (mat.status === "pendingReview" &&
+            (user.role === "institutionAdmin" || user.role === "platformAdmin")));
+      if (!ok) return reply.code(403).send({ error: "forbidden:not-published" });
     }
     return mat;
   });
 
-  // protected page URL (Phase 1: mock shell; R2 presigned URLs in reader spike)
+  // protected page URL (entitlement + expiry enforced; R2 presigned URLs in reader spike)
   app.get("/materials/:id/pages/:n/url", async (req, reply) => {
     const user = await currentUser(req);
-    if (!user?.studentProfile && user?.role === "student")
-      return reply.code(401).send({ error: "Sign-in required." });
+    if (!user) return reply.code(401).send({ error: "auth-required" });
     const { id, n } = req.params as { id: string; n: string };
-    const mat = await prisma.material.findUnique({ where: { id } });
-    if (!mat || mat.status !== "published") return reply.code(403).send({ error: "Not published." });
-    if (user?.role === "student") {
+    const mat = await prisma.material.findUnique({ where: { id }, include: { course: true } });
+    if (!mat || mat.status !== "published") return reply.code(403).send({ error: "forbidden:not-published" });
+    if (user.role === "student") {
+      if (!user.studentProfile) return reply.code(403).send({ error: "forbidden:role:student" });
       const enrollment = await prisma.enrollment.findUnique({
-        where: { courseId_studentId: { courseId: mat.courseId, studentId: user.studentProfile!.id } },
+        where: { courseId_studentId: { courseId: mat.courseId, studentId: user.studentProfile.id } },
       });
       if (!enrollment || enrollment.status !== "approved")
-        return reply.code(403).send({ error: "Course access required." });
+        return reply.code(403).send({ error: "forbidden:course-access" });
       if (!mat.isFree) {
         const purchase = await prisma.purchase.findFirst({
-          where: { studentId: user.studentProfile!.id, materialId: id, status: "completed" },
+          where: { studentId: user.studentProfile.id, materialId: id, status: "completed" },
+          orderBy: { createdAt: "desc" },
         });
         if (!purchase) return reply.code(402).send({ error: "Purchase required.", priceKobo: mat.priceKobo });
+        if (purchase.accessExpiresAt && purchase.accessExpiresAt.getTime() < Date.now())
+          return reply.code(402).send({ error: "Access expired. Renew to continue reading.", priceKobo: mat.priceKobo });
       }
+    } else if (!(await ownsCourse(user, mat.course))) {
+      return reply.code(403).send({ error: "forbidden:course-ownership" });
     }
     const page = Number(n);
     // log study event (dwell tracked client-side on next ping)

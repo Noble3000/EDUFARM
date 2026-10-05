@@ -6,7 +6,7 @@
 
 import type { FastifyInstance } from "fastify";
 import { prisma } from "../db.js";
-import { currentUser } from "../auth-dev.js";
+import { sessionUser as currentUser } from "../authz.js";
 
 export const POINTS_PER_PASS = 10;
 export const RECOGNITION_POINTS = 5;
@@ -34,6 +34,9 @@ export async function awardPassPoints(studentId: string, assessmentId: string): 
   await prisma.pointLedger.create({
     data: { studentId, amount: POINTS_PER_PASS, reason: "assessment-pass", capKey },
   });
+  await prisma.auditLog.create({
+    data: { actorId: studentId, action: "points.awarded", targetType: "PointLedger", targetId: capKey, meta: `+${POINTS_PER_PASS} assessment-pass` },
+  }).catch(() => {});
   return true;
 }
 

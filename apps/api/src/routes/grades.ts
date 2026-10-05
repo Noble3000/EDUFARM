@@ -4,7 +4,7 @@
 
 import type { FastifyInstance } from "fastify";
 import { prisma } from "../db.js";
-import { currentUser } from "../auth-dev.js";
+import { sessionUser as currentUser } from "../authz.js";
 
 export const GRADE_POINTS: Record<string, number> = { A: 5, B: 4, C: 3, D: 2, E: 1, F: 0 };
 

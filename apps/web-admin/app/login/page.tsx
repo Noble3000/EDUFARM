@@ -1,6 +1,6 @@
 "use client";
 import { useState } from "react";
-import { apiUrl } from "@/lib/api";
+import { apiUrl, setSession } from "@/lib/api";
 import { Alert, Field, LoadingState, SuccessNote } from "@edufarm/ui";
 
 export default function Login() {
@@ -26,7 +26,7 @@ export default function Login() {
         setErr(data.error ?? "Login failed");
         return;
       }
-      localStorage.setItem("edufarm_user", JSON.stringify(data));
+      setSession(data);
       setOk(`Logged in as ${data.name} (${data.role}).`);
     } catch (e) {
       setErr((e as Error).message ?? "Login failed");

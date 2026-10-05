@@ -22,8 +22,10 @@ enum Role {
 enum VerificationStatus {
   unverified
   pending
+  needsCorrection
   verified
   rejected
+  suspended
 }
 
 enum EnrollmentStatus {
@@ -31,6 +33,7 @@ enum EnrollmentStatus {
   approved
   rejected
   removed
+  suspended
 }
 
 enum MaterialStatus {
@@ -67,6 +70,7 @@ model User {
   emailVerified   Boolean          @default(false)
   phone           String?
   passwordHash    String?
+  suspended       Boolean          @default(false)
   name            String?
   role            Role             @default(student)
   createdAt       DateTime         @default(now())
@@ -103,12 +107,17 @@ model Verification {
   expiresAt  DateTime
 }
 
-// Academic hierarchy
+// Academic hierarchy — University → Faculty → Department → Level → Course.
+// Every link is a real foreign key with Restrict deletes: no orphan faculties,
+// departments, levels, or courses. Unique names per parent. Courses always sit
+// under BOTH a department and one of that department's levels (enforced in API;
+// see hierarchy.ts). Lecturers reach courses only via CourseLecturer.
 model University {
   id        String           @id @default(cuid())
   name      String
   slug      String           @unique
   verified  Boolean          @default(false)
+  suspended Boolean          @default(false)
   logoKey   String?
   faculties Faculty[]
   students  StudentProfile[]
@@ -117,36 +126,48 @@ model University {
 model Faculty {
   id           String       @id @default(cuid())
   universityId String
-  university   University   @relation(fields: [universityId], references: [id])
+  university   University   @relation(fields: [universityId], references: [id], onDelete: Restrict)
   name         String
   departments  Department[]
+  students     StudentProfile[]
+
+  @@unique([universityId, name])
 }
 
 model Department {
   id        String            @id @default(cuid())
   facultyId String
-  faculty   Faculty           @relation(fields: [facultyId], references: [id])
+  faculty   Faculty           @relation(fields: [facultyId], references: [id], onDelete: Restrict)
   name      String
   levels    Level[]
   courses   Course[]
   lecturers LecturerProfile[]
+  students  StudentProfile[]
+
+  @@unique([facultyId, name])
 }
 
 model Level {
   id           String     @id @default(cuid())
   departmentId String
-  department   Department @relation(fields: [departmentId], references: [id])
+  department   Department @relation(fields: [departmentId], references: [id], onDelete: Restrict)
   name         String // 100, 200...
+  courses      Course[]
+  students     StudentProfile[]
+
+  @@unique([departmentId, name])
 }
 
 model Course {
   id            String         @id @default(cuid())
   departmentId  String
-  department    Department     @relation(fields: [departmentId], references: [id])
+  department    Department     @relation(fields: [departmentId], references: [id], onDelete: Restrict)
   levelId       String
+  level         Level          @relation(fields: [levelId], references: [id], onDelete: Restrict)
   code          String
   title         String
   isOfficial    Boolean        @default(false)
+  lecturers     CourseLecturer[]
   enrollments   Enrollment[]
   materials     Material[]
   announcements Announcement[]
@@ -156,15 +177,32 @@ model Course {
   @@unique([departmentId, code])
 }
 
+// Lecturer ↔ course assignment: only assigned lecturers control course access
+// (enrollment decisions, announcements, materials). Staff roles bypass.
+model CourseLecturer {
+  id         String          @id @default(cuid())
+  courseId   String
+  course     Course          @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  lecturerId String
+  lecturer   LecturerProfile @relation(fields: [lecturerId], references: [id], onDelete: Cascade)
+  role       String          @default("owner") // owner | co
+  createdAt  DateTime        @default(now())
+
+  @@unique([courseId, lecturerId])
+}
+
 model StudentProfile {
   id                 String              @id @default(cuid())
   userId             String              @unique
-  user               User                @relation(fields: [userId], references: [id])
+  user               User                @relation(fields: [userId], references: [id], onDelete: Restrict)
   universityId       String
-  university         University          @relation(fields: [universityId], references: [id])
+  university         University          @relation(fields: [universityId], references: [id], onDelete: Restrict)
   facultyId          String
+  faculty            Faculty             @relation(fields: [facultyId], references: [id], onDelete: Restrict)
   departmentId       String
+  department         Department          @relation(fields: [departmentId], references: [id], onDelete: Restrict)
   levelId            String
+  level              Level               @relation(fields: [levelId], references: [id], onDelete: Restrict)
   matricNo           String
   verificationStatus VerificationStatus  @default(unverified)
   verifiedAt         DateTime?
@@ -172,27 +210,64 @@ model StudentProfile {
   purchases          Purchase[]
   attempts           AssessmentAttempt[]
   gradeSemesters     GradeSemester[]
+  verifications      VerificationRecord[]
+
+  @@unique([universityId, matricNo])
 }
 
 model LecturerProfile {
   id                 String             @id @default(cuid())
   userId             String             @unique
-  user               User               @relation(fields: [userId], references: [id])
+  user               User               @relation(fields: [userId], references: [id], onDelete: Restrict)
   departmentId       String
-  department         Department         @relation(fields: [departmentId], references: [id])
+  department         Department         @relation(fields: [departmentId], references: [id], onDelete: Restrict)
   staffId            String
   bio                String?
   verificationStatus VerificationStatus @default(unverified)
   verifiedAt         DateTime?
   materials          Material[]
+  courses            CourseLecturer[]
+  verifications      VerificationRecord[]
+
+  @@unique([departmentId, staffId])
+}
+
+// Verification record — the state machine behind verificationStatus.
+// pending → approved | rejected | needsCorrection | suspended.
+// needsCorrection/rejected → pending (resubmit). suspended → pending (reinstate).
+// Every transition writes a record + AuditLog + Notification (see verification.ts).
+// Outcome uses its own enum: approving a request records "approved" while the
+// profile itself becomes "verified" (verified ≠ enrolled — see enrollments.ts).
+enum VerificationOutcome {
+  pending
+  approved
+  rejected
+  needsCorrection
+  suspended
+}
+
+model VerificationRecord {
+  id               String             @id @default(cuid())
+  profileType      String             // student | lecturer
+  studentProfileId String?
+  studentProfile   StudentProfile?    @relation(fields: [studentProfileId], references: [id], onDelete: Cascade)
+  lecturerProfileId String?
+  lecturerProfile  LecturerProfile?   @relation(fields: [lecturerProfileId], references: [id], onDelete: Cascade)
+  status           VerificationOutcome @default(pending)
+  note             String?
+  decidedBy        String?
+  decidedAt        DateTime?
+  createdAt        DateTime           @default(now())
+
+  @@index([status])
 }
 
 model Enrollment {
   id        String           @id @default(cuid())
   courseId  String
-  course    Course           @relation(fields: [courseId], references: [id])
+  course    Course           @relation(fields: [courseId], references: [id], onDelete: Restrict)
   studentId String
-  student   StudentProfile   @relation(fields: [studentId], references: [id])
+  student   StudentProfile   @relation(fields: [studentId], references: [id], onDelete: Restrict)
   status    EnrollmentStatus @default(requested)
   createdAt DateTime         @default(now())
 
@@ -202,9 +277,9 @@ model Enrollment {
 model Material {
   id                 String            @id @default(cuid())
   courseId           String
-  course             Course            @relation(fields: [courseId], references: [id])
+  course             Course            @relation(fields: [courseId], references: [id], onDelete: Restrict)
   lecturerId         String
-  lecturer           LecturerProfile   @relation(fields: [lecturerId], references: [id])
+  lecturer           LecturerProfile   @relation(fields: [lecturerId], references: [id], onDelete: Restrict)
   title              String
   type               String
   description        String?
@@ -261,7 +336,7 @@ model Purchase {
 model Announcement {
   id         String   @id @default(cuid())
   courseId   String
-  course     Course   @relation(fields: [courseId], references: [id])
+  course     Course   @relation(fields: [courseId], references: [id], onDelete: Restrict)
   lecturerId String
   category   String
   title      String
@@ -273,7 +348,7 @@ model Announcement {
 model Question {
   id        String         @id @default(cuid())
   courseId  String
-  course    Course         @relation(fields: [courseId], references: [id])
+  course    Course         @relation(fields: [courseId], references: [id], onDelete: Restrict)
   authorId  String
   title     String
   body      String
@@ -399,7 +474,7 @@ model AuditLog {
 model Assessment {
   id           String               @id @default(cuid())
   courseId     String
-  course       Course               @relation(fields: [courseId], references: [id])
+  course       Course               @relation(fields: [courseId], references: [id], onDelete: Restrict)
   title        String
   type         String               @default("quiz") // quiz | test | assignment
   instructions String?

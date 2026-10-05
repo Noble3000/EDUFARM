@@ -203,7 +203,7 @@ async function login(r) {
   ME[r] = await res.json();
 }
 async function api(r, path, opts = {}) {
-  const res = await fetch(API + path, { ...opts, headers: { "Content-Type": "application/json", "x-user-id": ME[r].id, ...(opts.headers || {}) } });
+  const res = await fetch(API + path, { ...opts, headers: { "Content-Type": "application/json", "x-session-token": ME[r].sessionToken, ...(opts.headers || {}) } });
   const data = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error(data.error || res.status);
   return data;

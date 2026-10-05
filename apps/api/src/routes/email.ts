@@ -4,7 +4,7 @@
 
 import type { FastifyInstance } from "fastify";
 import { prisma } from "../db.js";
-import { currentUser } from "../auth-dev.js";
+import { sessionUser as currentUser } from "../authz.js";
 
 export async function logEmail(toUserId: string, subject: string, body: string): Promise<void> {
   try {

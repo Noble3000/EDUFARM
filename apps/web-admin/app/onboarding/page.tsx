@@ -7,6 +7,8 @@ const PER = 10;
 
 export default function Onboarding() {
   const [rows, setRows] = useState<{ id: string; name: string; slug: string }[]>([]);
+  const [queue, setQueue] = useState("pending");
+  const [note, setNote] = useState("");
   const [form, setForm] = useState({ name: "", slug: "", contactEmail: "" });
   const [ok, setOk] = useState("");
   const [err, setErr] = useState("");
@@ -17,7 +19,7 @@ export default function Onboarding() {
     setLoading(true);
     setFailed("");
     try {
-      setRows(await api("/onboarding/pending"));
+      setRows(await api(`/onboarding/pending?status=${queue}`));
     } catch (e) {
       setRows([]);
       setFailed((e as Error).message ?? "Could not load pending approvals.");
@@ -25,7 +27,11 @@ export default function Onboarding() {
       setLoading(false);
     }
   }
-  useEffect(() => { load(); }, []);
+  useEffect(() => { load(); }, [queue]);
+  async function decide(id: string, decision: string) {
+    await api(`/onboarding/${id}/decide`, { method: "POST", body: JSON.stringify({ decision, note: note || undefined }) });
+    load();
+  }
   async function request() {
     setOk("");
     setErr("");
@@ -57,6 +63,13 @@ export default function Onboarding() {
       </div>
       <div className="card">
         <h2>Pending approvals</h2>
+        <div className="row" role="group" aria-label="Institution queue" style={{ marginBottom: 8 }}>
+          <button className={queue === "pending" ? "" : "sec"} aria-pressed={queue === "pending"} onClick={() => { setQueue("pending"); setPage(1); }}>Pending</button>
+          <button className={queue === "suspended" ? "" : "sec"} aria-pressed={queue === "suspended"} onClick={() => { setQueue("suspended"); setPage(1); }}>Suspended</button>
+        </div>
+        <Field label="Review note" optional hint="Sent with reject / suspend decisions.">
+          <input value={note} onChange={(e) => setNote(e.target.value)} placeholder="Reason for this decision" />
+        </Field>
         {loading ? (
           <LoadingState label="Loading pending approvals…" />
         ) : failed && rows.length === 0 ? (
@@ -65,16 +78,21 @@ export default function Onboarding() {
           <EmptyState icon="school" title="Queue clear" body="No institutions pending. Log in as platform admin if you expected rows here." />
         ) : (
           <>
-            <DataTable caption="Institutions awaiting approval" head={["Name", "Slug", "Actions"]}>
+            <DataTable caption={`Institutions (${queue})`} head={["Name", "Slug", "Actions"]}>
               {visible.map((u) => (
                 <tr key={u.id}>
                   <td><strong>{u.name}</strong></td>
                   <td>{u.slug}</td>
                   <td>
-                    <button onClick={async () => {
-                      await api(`/onboarding/${u.id}/approve`, { method: "POST", body: JSON.stringify({}) });
-                      load();
-                    }}>Approve</button>
+                    <div className="row tight">
+                      <button onClick={async () => {
+                        await api(`/onboarding/${u.id}/approve`, { method: "POST", body: JSON.stringify({}) });
+                        load();
+                      }}>Approve</button>
+                      <button className="sec" onClick={() => decide(u.id, "suspend")}>Suspend</button>
+                      <button className="sec" onClick={() => decide(u.id, "reinstate")}>Reinstate</button>
+                      <button className="sec" onClick={() => decide(u.id, "reject")}>Reject</button>
+                    </div>
                   </td>
                 </tr>
               ))}

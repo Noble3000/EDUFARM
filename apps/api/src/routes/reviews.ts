@@ -5,7 +5,7 @@
 
 import type { FastifyInstance } from "fastify";
 import { prisma } from "../db.js";
-import { currentUser } from "../auth-dev.js";
+import { sessionUser as currentUser } from "../authz.js";
 
 async function hasMeaningfulAccess(studentId: string, materialId: string): Promise<boolean> {
   const purchase = await prisma.purchase.findFirst({ where: { studentId, materialId, status: "completed" } });

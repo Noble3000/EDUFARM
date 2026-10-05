@@ -1,6 +1,6 @@
 "use client";
 import { useState } from "react";
-import { apiUrl } from "@/lib/api";
+import { apiUrl, setSession, logout as doLogout } from "@/lib/api";
 import { Alert, Field, LoadingState, SuccessNote } from "@edufarm/ui";
 
 export default function Login() {
@@ -20,11 +20,11 @@ export default function Login() {
     });
     const data = await res.json();
     if (!res.ok) return setMsg(data.error ?? "Login failed");
-    localStorage.setItem("edufarm_user", JSON.stringify(data));
+    setSession(data);
     setMsg(`Logged in as ${data.name} (${data.role}). Go to Home.`);
   }
-  function logout() {
-    localStorage.removeItem("edufarm_user");
+  async function logout() {
+    await doLogout();
     setMsg("Logged out.");
   }
   return (

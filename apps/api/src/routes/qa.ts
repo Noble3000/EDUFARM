@@ -3,7 +3,7 @@
 
 import type { FastifyInstance } from "fastify";
 import { prisma } from "../db.js";
-import { currentUser } from "../auth-dev.js";
+import { sessionUser as currentUser } from "../authz.js";
 
 export async function qaRoutes(app: FastifyInstance) {
   app.post("/courses/:id/questions", async (req, reply) => {
@@ -48,8 +48,13 @@ export async function qaRoutes(app: FastifyInstance) {
 
   app.post("/questions/:id/resolve", async (req, reply) => {
     const user = await currentUser(req);
-    if (!user) return reply.code(401).send({ error: "Sign-in required." });
+    if (!user) return reply.code(401).send({ error: "auth-required" });
     const { id } = req.params as { id: string };
+    const q = await prisma.question.findUnique({ where: { id } });
+    if (!q) return reply.code(404).send({ error: "not-found:question" });
+    const staffish = ["lecturer", "deptAdmin", "institutionAdmin", "platformAdmin"].includes(user.role);
+    if (q.authorId !== user.id && !staffish)
+      return reply.code(403).send({ error: "forbidden:not-author" });
     return prisma.question.update({ where: { id }, data: { status: "resolved" } });
   });
 }

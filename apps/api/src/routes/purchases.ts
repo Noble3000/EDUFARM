@@ -4,7 +4,7 @@
 
 import type { FastifyInstance } from "fastify";
 import { prisma } from "../db.js";
-import { currentUser } from "../auth-dev.js";
+import { sessionUser as currentUser } from "../authz.js";
 import { balanceOf, KOBO_PER_POINT, MIN_REDEEM_POINTS } from "./points.js";
 import { logEmail } from "./email.js";
 
@@ -68,6 +68,12 @@ export async function purchaseRoutes(app: FastifyInstance) {
         data: {
           userId: user.id, type: "purchase",
           title: `Purchased: ${mat.title}`, body: `Receipt #${purchase.id.slice(0, 8)} · ₦${(mat.priceKobo / 100).toFixed(2)}`,
+        },
+      });
+      await tx.auditLog.create({
+        data: {
+          actorId: user.id, action: "purchase.completed", targetType: "Purchase", targetId: purchase.id,
+          meta: `material=${id} amount=${mat.priceKobo - discountKobo} redeemed=${pointsToUse}`,
         },
       });
       return purchase;

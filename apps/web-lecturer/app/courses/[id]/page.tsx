@@ -52,7 +52,7 @@ export default function ManageCourse({ params }: { params: { id: string } }) {
     setErr("");
     try {
       await api(`/enrollments/${id}/decide`, { method: "POST", body: JSON.stringify({ decision }) });
-      setOk(decision === "approve" ? "Enrollment approved." : "Enrollment rejected.");
+      setOk(`Enrollment ${decision}d.`);
       refresh();
     } catch (e) {
       setErr((e as Error).message);
@@ -110,6 +110,9 @@ export default function ManageCourse({ params }: { params: { id: string } }) {
                   <div className="row tight">
                     <button className="sec" onClick={() => decide(e.id, "approve")} aria-label={`Approve ${e.student.user.name}`}>Approve</button>
                     <button className="sec" onClick={() => decide(e.id, "reject")} aria-label={`Reject ${e.student.user.name}`}>Reject</button>
+                    <button className="sec" onClick={() => decide(e.id, "suspend")} aria-label={`Suspend ${e.student.user.name}`}>Suspend</button>
+                    <button className="sec" onClick={() => decide(e.id, "reinstate")} aria-label={`Reinstate ${e.student.user.name}`}>Reinstate</button>
+                    <button className="sec" onClick={() => decide(e.id, "remove")} aria-label={`Remove ${e.student.user.name}`}>Remove</button>
                     <button className="sec" onClick={async () => {
                       setOk("");
                       setErr("");

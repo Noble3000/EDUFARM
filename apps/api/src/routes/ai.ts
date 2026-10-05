@@ -8,7 +8,7 @@
 
 import type { FastifyInstance } from "fastify";
 import { prisma } from "../db.js";
-import { currentUser } from "../auth-dev.js";
+import { sessionUser as currentUser } from "../authz.js";
 
 const LECTURER_ROLES = ["lecturer", "deptAdmin", "institutionAdmin", "platformAdmin"];
 
@@ -66,7 +66,7 @@ export async function aiRoutes(app: FastifyInstance) {
   });
 
   // student ask (optionally scoped to one material: Ask This Material)
-  app.post("/ai/ask", async (req, reply) => {
+  app.post("/ai/ask", { config: { rateLimit: { max: 30, timeWindow: "1 minute" } } }, async (req, reply) => {
     const user = await currentUser(req);
     if (!user?.studentProfile) return reply.code(401).send({ error: "Student sign-in required." });
     const b = req.body as { courseId: string; question: string; materialId?: string };
