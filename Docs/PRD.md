@@ -350,5 +350,16 @@
   - Enrollments remove/suspend/reinstate buttons already present (029); untouched.
 - **Verify:** lecturer post→edit→archive with student 403 on edit ✓; student ask→lecturer answer (isLecturer=true)→author resolve ✓; search `status=resolved` hits ✓; archived hidden from student feed ✓; matrix 21/21 still green; student/lecturer builds green (fixed corrupt `.next` type cache by stopping server first — file-lock contention); dist rebuilt; PM2 restarted; course pages 200.
 - **Files:** `schema.prisma` + migration, `routes/{announcements,hierarchy}.ts`, student `courses/[id]` (search/filter/resolve), lecturer `courses/[id]/qa-console.tsx` + wiring, `Docs/PRD.md` (this entry).
-- **Commit:** (to be filled on push)
-- **Status:** In progress.
+- **Commit:** `c69c511 Course-space complete: announcement lifecycle + Q&A consoles + search/resolve`
+- **Status:** Done, pushed to `main`. Local-first (no deploy per rule 023).
+
+### 031 — 2026-10-05 — Student experience end-to-end (every card live, no dead UI)
+- **Instruction:** "Complete the student experience end-to-end. Do not redesign away from the approved hierarchy. Every student-facing feature on real persisted data. Home shows: Word, priorities, continue, My Courses+progress, lecturer updates, Q&A, points, AI, Library, CGPA, trust indicators. Every card a real destination. No dead buttons/counters/demo content. Complete empty/loading/error/success states."
+- **Change (API):** `/library/me` attaches material/bundle titles + terms (no more bare ids); `/points/me` history consumed (already shipped).
+- **Change (Home rewrite):** multi-course aggregation (announcements + Q&A + assessments across ALL approved courses, each item deep-linked); hero badge + trust card from live `/verifications/me` (status, matricNo, real uni/faculty/department names); priorities = urgent anns (linked) + pending attempts (deep-linked `/assessments/:id`) + awaiting-approval enrollments + real avg; points card shows last-3 ledger entries + Library redemption link; continue gets an `EmptyState` when idle; date-rotated study tip (labeled tip, no fake streak); full loading + error+retry states; removed hardcoded demo emails and the "streak" claim.
+- **Change (surfaces):** Library titles/expiry/error state; reader uses version `pageCount` (no hard-coded /10), honest protected-reading copy, buy success note with terms; courses list loads MY department chain + inline success/error (no `alert()`); login drops demo prefill + dead demo-login button (demo gate closed).
+- **Verify:** typecheck api+student clean; builds api/student/lecturer/admin green (flaky Next trace ENOENT beaten by cache-clear + retry); card E2E 14/14 (word, chain signup, trust, urgent, QA, dwell-continue, progress, points+history, AI grounded-or-refusal, library titles, checkout terms, grades, assessments); live :4000/:3001/:3002/:3003 + signup/verify/verifications 200; student-app grep: 0 demo/alert/mock-shell/streak remnants.
+- **Collision note:** concurrent session committed my uncommitted files mid-task as `c69c511` (verified all pieces intact); my remaining delta is this PRD entry + root line. Their `archived` announcement work needed only a client regen on my side.
+- **Files (mine this entry):** `routes/purchases.ts`, student `page/signup/verify/library/courses/materials/[id]/login`, admin `verifications/onboarding`, lecturer manage decisions, `Docs/PRD.md` (this entry).
+- **Commit:** (this push)
+- **Status:** Done, pushed to `main`. Local-first (no deploy per rule 023).
