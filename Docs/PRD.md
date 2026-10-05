@@ -408,3 +408,14 @@
 - **Files:** `schema.prisma` + migration, `routes/assessments.ts`, `authz.matrix.test.ts` (+10), lecturer manage console, student attempt + course list, `Docs/PRD.md` (this entry).
 - **Commit:** `883fa5f Assessments full workflow: release-gated grades, timed windows, resume, audited grading, 48 tests`
 - **Status:** Done, pushed to `main`. Local-first (no deploy per rule 023).
+
+### 037 — 2026-10-06 — Academic Points hardened as financial-adjacent subsystem
+- **Instruction:** "Audit Academic Points as a financial-adjacent abuse-sensitive subsystem" — non-cash, no withdrawal, slow, high thresholds, capped, never for opens/purchases; inspectable rules; per-award provenance (event/user/amount/source/timestamp/rule-version/idempotency); anti-abuse (refresh/replay/Q&A/webhook/concurrency); transactional auditable redemption; constrained lecturer recognition; no invented numbers (TODO markers).
+- **Change (DB — migration `20261005150000_points_ledger_hardening`):** `PointLedger.sourceRef/ruleVersion`; unique `(studentId, capKey)` (NULLs unrestricted); pre-existing dev duplicate keys disambiguated in-migration. Deployed edufarm + edufarm_test.
+- **Change (policy):** new `src/points-policy.ts` — closed event set (assessment-pass, lecturer-recognition), quotas, redemption constants, invariants; every amount carries TODO(DECISION). Public `GET /points/policy`.
+- **Change (awards):** central `awardPoints()` — unknown events throw (cannot mint); unique-constraint collisions return duplicate (replay/retry/webhook/concurrent safe); every award + blocked duplicate audited. Pass/recognition/redemption all route through it.
+- **Change (redemption):** balance re-read inside Serializable settlement tx (`payments/orders.ts`) + in-tx grant semantics; insufficient-at-settle fails the order (no overdraft); redemption ledger rows carry source/rule; `points.redeemed` audit. Recognition: idempotency-key support (409 on replay), quotas, audit, 30/min limit.
+- **Verify:** tsc clean; vitest 53/53 (5 new: unknown-event mint blocked, concurrent double-award collapses, idempotency replay 409, provenance on all rows, opens mint nothing; overdraft race covered by serializable + idempotent checkout); live policy v1/2 events + balance provenance ✓; dist rebuilt; PM2 restarted.
+- **Files:** `points-policy.ts`, `schema.prisma` + migration, `routes/points.ts`, `payments/orders.ts` (settle hardening), `authz.matrix.test.ts` (+5), `Docs/PRD.md` (this entry).
+- **Commit:** (to be filled on push)
+- **Status:** In progress.

@@ -172,6 +172,7 @@ model Course {
   lecturers     CourseLecturer[]
   enrollments   Enrollment[]
   purchases     Purchase[]
+  orders        PaymentOrder[]
   materials     Material[]
   announcements Announcement[]
   questions     Question[]
@@ -211,6 +212,7 @@ model StudentProfile {
   verifiedAt         DateTime?
   enrollments        Enrollment[]
   purchases          Purchase[]
+  orders             PaymentOrder[]
   attempts           AssessmentAttempt[]
   gradeSemesters     GradeSemester[]
   verifications      VerificationRecord[]
@@ -334,6 +336,9 @@ model Purchase {
   course          Course?        @relation(fields: [courseId], references: [id], onDelete: Restrict)
   versionGranted  Int?
   accessType      String         @default("purchase") // purchase | bundle | free
+  orderId         String?        @unique
+  order           PaymentOrder?  @relation(fields: [orderId], references: [id], onDelete: Restrict)
+  providerRef     String?
   amountKobo      Int
   pointsUsed      Int            @default(0)
   status          PurchaseStatus @default(pending)
@@ -387,6 +392,64 @@ model StudyEvent {
   createdAt   DateTime @default(now())
 }
 
+// Payments (§13): provider-agnostic orders. Business logic NEVER touches a
+// provider SDK directly — see src/payments/providers.ts. Sequence per order:
+// pending → (initialize) → user pays at provider → webhook → signature check →
+// server-to-server verify → paid exactly once → grant + earnings exactly once.
+// `providerRef` is the provider's transaction reference (reconciliation key).
+// `idempotencyKey` is client-supplied-or-generated (safe order retries).
+enum PaymentOrderStatus {
+  pending
+  processing
+  paid
+  failed
+  expired
+  cancelled
+}
+
+model PaymentOrder {
+  id             String             @id @default(cuid())
+  studentId      String
+  student        StudentProfile     @relation(fields: [studentId], references: [id], onDelete: Restrict)
+  materialId     String?
+  bundleId       String?
+  courseId       String?
+  course         Course?            @relation(fields: [courseId], references: [id], onDelete: Restrict)
+  versionGranted Int?
+  amountKobo     Int
+  pointsUsed     Int                @default(0)
+  status         PaymentOrderStatus @default(pending)
+  provider       String             @default("mock")
+  providerRef    String?            @unique
+  idempotencyKey String             @unique
+  providerData   Json?
+  paidAt         DateTime?
+  failureReason  String?
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
+  purchase       Purchase?
+  webhooks       WebhookEvent[]
+}
+
+// Raw provider webhook events. `eventId` is the provider's unique event id
+// (charge id / event token) — the idempotency key for replays. `raw` keeps the
+// full payload for forensics/reconciliation (no card PANs ever arrive in these
+// webhooks; card data stays at the provider).
+model WebhookEvent {
+  id              String        @id @default(cuid())
+  provider        String
+  eventId         String
+  eventType       String
+  orderId         String?
+  order           PaymentOrder? @relation(fields: [orderId], references: [id], onDelete: SetNull)
+  raw             Json
+  signatureValid  Boolean       @default(false)
+  processed       Boolean       @default(false)
+  createdAt       DateTime      @default(now())
+
+  @@unique([provider, eventId])
+}
+
 model ESpeesLedger {
   id                String       @id @default(cuid())
   lecturerId        String
@@ -399,12 +462,16 @@ model ESpeesLedger {
 }
 
 model PointLedger {
-  id        String   @id @default(cuid())
-  studentId String
-  amount    Int
-  reason    String
-  capKey    String?
-  createdAt DateTime @default(now())
+  id          String   @id @default(cuid())
+  studentId   String
+  amount      Int
+  reason      String
+  capKey      String?
+  sourceRef   String?
+  ruleVersion String   @default("v1")
+  createdAt   DateTime @default(now())
+
+  @@unique([studentId, capKey])
 }
 
 model Review {

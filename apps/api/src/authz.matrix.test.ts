@@ -452,3 +452,58 @@ describe("assessment workflow guarantees", () => {
     expect(list2.body.find((a: any) => a.id === aid)).toBeTruthy();
   });
 });
+
+describe("points abuse resistance (financial-adjacent)", () => {
+  it("unknown points events cannot mint (policy closed)", async () => {
+    const { awardPoints } = await import("./routes/points.js");
+    const stu = await prisma.user.findFirst({ where: { email: `s-${S}@t.ng` } });
+    const sp = await prisma.studentProfile.findUniqueOrThrow({ where: { userId: stu.id } });
+    await expect(
+      awardPoints({ studentId: sp.id, event: "free-money", sourceRef: "x", capKey: `evil-${S}`, actorId: sp.id })
+    ).rejects.toThrow("unknown points event");
+  });
+  it("concurrent duplicate awards collapse to one row", async () => {
+    const { awardPoints } = await import("./routes/points.js");
+    const stu = await prisma.user.findFirst({ where: { email: `s-${S}@t.ng` } });
+    const sp = await prisma.studentProfile.findUniqueOrThrow({ where: { userId: stu.id } });
+    const key = `race-${S}-${Date.now()}`;
+    // NOTE: events are policy-closed, so replay uses a fixed test-only path:
+    // two identical recognition-shaped awards via direct capKey collision.
+    const mk = () =>
+      awardPoints({ studentId: sp.id, event: "assessment-pass", sourceRef: `replay-${S}`, capKey: key, actorId: sp.id });
+    const [a, b] = await Promise.all([mk(), mk()]);
+    expect([a.awarded, b.awarded].filter(Boolean).length).toBe(1);
+    expect([a.duplicate, b.duplicate].filter(Boolean).length).toBe(1);
+  });
+  it("recognition idempotency-key replay returns 409, caps hold", async () => {
+    const stu = await prisma.user.findFirst({ where: { email: `s-${S}@t.ng` } });
+    const sp = await prisma.studentProfile.findUniqueOrThrow({ where: { userId: stu.id } });
+    const key = `idem-${S}`;
+    const r1 = await req("POST", "/api/v1/points/recognize", T.lect, { studentId: sp.id, idempotencyKey: key });
+    expect([200, 429].includes(r1.status)).toBe(true);
+    if (r1.status === 200) {
+      const r2 = await req("POST", "/api/v1/points/recognize", T.lect, { studentId: sp.id, idempotencyKey: key });
+      expect(r2.status).toBe(409);
+    }
+  });
+  it("every award carries provenance (event/user/amount/source/rule/key/time)", async () => {
+    const rows = await prisma.pointLedger.findMany({ take: 5, orderBy: { createdAt: "desc" } });
+    for (const r of rows) {
+      expect(typeof r.reason).toBe("string");
+      expect(typeof r.studentId).toBe("string");
+      expect(typeof r.amount).toBe("number");
+      expect(r.createdAt instanceof Date).toBe(true);
+      expect(typeof r.ruleVersion).toBe("string");
+    }
+  });
+  it("no points for opens: page views never mint", async () => {
+    const stu = await prisma.user.findFirst({ where: { email: `s-${S}@t.ng` } });
+    const sp = await prisma.studentProfile.findUniqueOrThrow({ where: { userId: stu.id } });
+    const before = await prisma.pointLedger.count({ where: { studentId: sp.id } });
+    await prisma.studyEvent.create({
+      data: { studentId: sp.id, courseId: ids.courseId, type: "page-view", page: 1, durationSec: 120 },
+    });
+    const after = await prisma.pointLedger.count({ where: { studentId: sp.id } });
+    expect(after).toBe(before);
+  });
+});

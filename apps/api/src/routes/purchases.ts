@@ -5,7 +5,7 @@
 import type { FastifyInstance } from "fastify";
 import { prisma } from "../db.js";
 import { sessionUser as currentUser } from "../authz.js";
-import { balanceOf, KOBO_PER_POINT, MIN_REDEEM_POINTS } from "./points.js";
+import { KOBO_PER_POINT, MIN_REDEEM_POINTS, POINTS_RULE_VERSION } from "./points.js";
 import { logEmail } from "./email.js";
 import { canControlCourse, notifyUser, usableGrant } from "../hierarchy-guard.js";
 
@@ -18,83 +18,45 @@ async function grantStudentUserId(studentId: string): Promise<string> {
 }
 
 export async function purchaseRoutes(app: FastifyInstance) {
-  // checkout: approved enrollment required; grant persisted transactionally.
-  // No access exists before this transaction commits (see assertGrant).
-  // Expired/revoked/suspended grants do NOT block renewal — a new grant is issued.
+  // Legacy instant checkout — REPLACED by the order pipeline (routes/payments.ts).
+  // In test mode with the mock provider it runs the FULL pipeline server-side
+  // (order → initialize → mock user payment → webhook → verify → grant), so the
+  // student reader keeps working locally with zero shortcuts: no grant is ever
+  // created from a client assertion. With a real provider configured it returns
+  // 409 directing the client to create an order and follow the provider flow.
   app.post("/materials/:id/checkout", async (req, reply) => {
     const user = await currentUser(req);
     if (!user?.studentProfile) return reply.code(401).send({ error: "Student sign-in required." });
+    if (!user.email) return reply.code(400).send({ error: "Account email required for receipts." });
     const { id } = req.params as { id: string };
-    const mat = await prisma.material.findUnique({ where: { id }, include: { course: true } });
-    if (!mat || mat.status !== "published") return reply.code(404).send({ error: "Material unavailable." });
-    if (mat.isFree) return reply.code(400).send({ error: "Material is free — no purchase needed." });
-    const enrollment = await prisma.enrollment.findUnique({
-      where: { courseId_studentId: { courseId: mat.courseId, studentId: user.studentProfile.id } },
-    });
-    if (!enrollment || enrollment.status !== "approved")
-      return reply.code(403).send({ error: "Enrolment required — your lecturer must approve course access before purchase." });
-    const current = await usableGrant(user.studentProfile.id, id);
-    if (current) return current;
-    // points redemption (optional): {pointsToUse} → kobo discount, capped at 50% of price
-    const body = (req.body ?? {}) as { pointsToUse?: number };
-    let pointsToUse = Math.floor(Number(body.pointsToUse ?? 0));
-    if (pointsToUse > 0) {
-      const balance = await balanceOf(user.studentProfile.id);
-      if (pointsToUse > balance) return reply.code(400).send({ error: `Insufficient points (balance ${balance}).` });
-      if (pointsToUse < MIN_REDEEM_POINTS)
-        return reply.code(400).send({ error: `Minimum redemption is ${MIN_REDEEM_POINTS} points.` });
-      const maxDiscount = Math.floor(mat.priceKobo / 2);
-      const discount = Math.min(pointsToUse * KOBO_PER_POINT, maxDiscount);
-      pointsToUse = Math.floor(discount / KOBO_PER_POINT);
-      if (pointsToUse <= 0) return reply.code(400).send({ error: "Points discount too small for this price." });
+    const body = (req.body ?? {}) as { pointsToUse?: number; provider?: string; idempotencyKey?: string };
+    const { createOrder, initializeOrder, mockComplete } = await import("../payments/orders.js");
+    const { isTestMode, defaultProvider } = await import("../payments/providers.js");
+    const provider = (body.provider ?? defaultProvider()).toLowerCase();
+    if (provider !== "mock" || !isTestMode()) {
+      return reply.code(409).send({
+        error: "Checkout moved to orders — create an order, complete the provider flow, and wait for webhook confirmation.",
+        next: `/materials/${id}/orders`,
+      });
     }
-    const discountKobo = pointsToUse * KOBO_PER_POINT;
-    const result = await prisma.$transaction(async (tx) => {
-      const accessExpiresAt = mat.accessDurationDays
-        ? new Date(Date.now() + mat.accessDurationDays * 86400_000)
-        : null;
-      const purchase = await tx.purchase.create({
-        data: {
-          studentId: user.studentProfile!.id, materialId: id, courseId: mat.courseId,
-          versionGranted: mat.version, accessType: "purchase",
-          amountKobo: mat.priceKobo - discountKobo, pointsUsed: discountKobo, status: "completed", accessExpiresAt,
-        },
+    try {
+      const order = await createOrder({
+        studentId: user.studentProfile.id, userId: user.id, email: user.email,
+        materialId: id, pointsToUse: body.pointsToUse, provider: "mock",
+        idempotencyKey: body.idempotencyKey,
       });
-      if (pointsToUse > 0) {
-        await tx.pointLedger.create({
-          data: {
-            studentId: user.studentProfile!.id, amount: -pointsToUse,
-            reason: "redemption", capKey: `redeem:${purchase.id}`,
-          },
-        });
+      const init = await initializeOrder(order.id, user.email);
+      if (init.alreadyPaid) {
+        return prisma.purchase.findUnique({ where: { orderId: order.id } });
       }
-      const platformShare = Math.round((mat.priceKobo * PLATFORM_FEE_BPS) / 10000);
-      await tx.eSpeesLedger.create({
-        data: {
-          lecturerId: mat.lecturerId, purchaseId: purchase.id,
-          grossKobo: mat.priceKobo, lecturerShareKobo: mat.priceKobo - platformShare,
-          platformShareKobo: platformShare, status: HOLD_NOTE,
-        },
-      });
-      await tx.notification.create({
-        data: {
-          userId: user.id, type: "purchase",
-          title: `Purchased: ${mat.title}`, body: `Receipt #${purchase.id.slice(0, 8)} · ₦${(mat.priceKobo / 100).toFixed(2)}`,
-        },
-      });
-      await tx.auditLog.create({
-        data: {
-          actorId: user.id, action: "purchase.completed", targetType: "Purchase", targetId: purchase.id,
-          meta: `material=${id} amount=${mat.priceKobo - discountKobo} redeemed=${pointsToUse}`,
-        },
-      });
-      return purchase;
-    });
-    await logEmail(
-      user.id, `Receipt: ${mat.title}`,
-      `You paid ₦${((mat.priceKobo - discountKobo) / 100).toFixed(2)}${discountKobo ? ` (${pointsToUse} points redeemed)` : ""}. Access: ${mat.accessDurationDays ?? "ongoing"}.`,
-    );
-    return { ...result, paystack: "mock — wire keys + webhook in payments spike" };
+      const done = await mockComplete(init.reference);
+      if (!done.ok || !done.paid)
+        return reply.code(402).send({ error: done.error ?? "Mock payment did not complete." });
+      return prisma.purchase.findUnique({ where: { orderId: order.id } });
+    } catch (e) {
+      const err = e as { statusCode?: number; message?: string };
+      return reply.code(err.statusCode ?? 500).send({ error: err.message ?? "Checkout failed." });
+    }
   });
 
   // exact access terms BEFORE payment — the reader buy card renders this verbatim.
