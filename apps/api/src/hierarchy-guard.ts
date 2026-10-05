@@ -67,3 +67,49 @@ export async function notifyUser(userId: string, type: string, title: string, bo
 export async function audit(actorId: string, action: string, targetType: string, targetId: string, meta?: string) {
   await prisma.auditLog.create({ data: { actorId, action, targetType, targetId, meta: meta ?? null } });
 }
+
+// Library entitlement verdict — the single gate for paid access.
+// A student NEVER receives access before successful payment confirmation:
+// only a `completed` purchase row (written transactionally at checkout)
+// grants; `pending`/`failed` rows grant nothing. Free materials grant via
+// approved enrollment alone (no purchase row needed).
+// Returns the usable purchase (if any) so callers can expose edition info.
+export type GrantVerdict =
+  | { ok: true; via: "purchase" | "free"; purchaseId?: string; versionGranted?: number | null }
+  | { ok: false; code: 402 | 403; error: string; priceKobo?: number };
+
+export async function assertGrant(
+  studentId: string,
+  mat: { id: string; courseId: string; isFree: boolean; priceKobo: number }
+): Promise<GrantVerdict> {
+  const enrollment = await prisma.enrollment.findUnique({
+    where: { courseId_studentId: { courseId: mat.courseId, studentId } },
+  });
+  if (!enrollment || enrollment.status !== "approved")
+    return { ok: false, code: 403, error: "forbidden:course-access" };
+  if (mat.isFree) return { ok: true, via: "free" };
+  const purchase = await prisma.purchase.findFirst({
+    where: { studentId, materialId: mat.id, status: { in: ["completed", "revoked", "suspended"] } },
+    orderBy: { createdAt: "desc" },
+  });
+  if (!purchase) return { ok: false, code: 402, error: "Purchase required.", priceKobo: mat.priceKobo };
+  if (purchase.status === "revoked")
+    return { ok: false, code: 403, error: "Access revoked. Contact the course lecturer." };
+  if (purchase.status === "suspended")
+    return { ok: false, code: 403, error: "Access suspended. Contact the course lecturer." };
+  if (purchase.accessExpiresAt && purchase.accessExpiresAt.getTime() < Date.now())
+    return { ok: false, code: 402, error: "Access expired. Renew to continue reading.", priceKobo: mat.priceKobo };
+  return { ok: true, via: "purchase", purchaseId: purchase.id, versionGranted: purchase.versionGranted ?? null };
+}
+
+// Usability for renewal: only a currently-usable grant blocks a new purchase.
+export async function usableGrant(studentId: string, materialId: string) {
+  const purchase = await prisma.purchase.findFirst({
+    where: { studentId, materialId, status: "completed" },
+    orderBy: { createdAt: "desc" },
+  });
+  if (!purchase) return null;
+  if (["revoked", "suspended"].includes(purchase.status)) return null;
+  if (purchase.accessExpiresAt && purchase.accessExpiresAt.getTime() < Date.now()) return null;
+  return purchase;
+}

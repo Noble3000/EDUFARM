@@ -1,22 +1,48 @@
-// Materials lifecycle (§8.4): draft → pendingLecturer → pendingReview → published → archived.
-// Phase 1: metadata + state machine + version rows (file bytes → R2 in spike follow-up;
-// fileKey stored as provided, pages endpoint serves mock page shells until render lands).
-// Pricing bounds enforced: paid materials within platform rules (defaults: ₦100–₦2,000,
-// bundles ≤ ₦5,000 — finalize per §21).
+// Materials lifecycle (§8.4), hardened:
+//   draft → pendingLecturer → pendingReview → published → archived
+//   published →(new-version)→ pendingReview → published (new edition) | published (old kept)
+// Rules: lecturer ownership attestation before review; platform review gates
+// every publish; editions are rows (never mutated once live); version flips
+// only on approval; rejects restore prior state; everything audited.
+// Types (§8.1, fixed set): lecture-notes | course-pack | revision-guide |
+// practice-questions | exam-prep | study-guide.
 
 import type { FastifyInstance } from "fastify";
 import { prisma } from "../db.js";
-import { ownsCourse, sessionUser as currentUser } from "../authz.js";
+import { audit, ownsCourse, sessionUser as currentUser } from "../authz.js";
+import { assertGrant } from "../hierarchy-guard.js";
 
 const MIN_KOBO = 10000; // ₦100
 const MAX_KOBO = 200000; // ₦2,000
+
+export const MATERIAL_TYPES = [
+  "lecture-notes",
+  "course-pack",
+  "revision-guide",
+  "practice-questions",
+  "exam-prep",
+  "study-guide",
+] as const;
 
 async function lecturerOf(userId: string) {
   return prisma.lecturerProfile.findUnique({ where: { userId } });
 }
 
 export async function materialRoutes(app: FastifyInstance) {
-  // lecturer creates draft (in own department's course only)
+  // lecturer's own materials across courses (all statuses, for lifecycle management)
+  app.get("/lecturer/materials", async (req, reply) => {
+    const user = await currentUser(req);
+    if (!user) return reply.code(401).send({ error: "auth-required" });
+    const lect = await lecturerOf(user.id);
+    if (!lect) return reply.code(403).send({ error: "forbidden:lecturer-profile-required" });
+    return prisma.material.findMany({
+      where: { lecturerId: lect.id },
+      include: { course: { select: { code: true } } },
+      orderBy: { createdAt: "desc" },
+    });
+  });
+
+  // lecturer uploads → pendingLecturer (awaiting their own ownership approval)
   app.post("/courses/:id/materials", async (req, reply) => {
     const user = await currentUser(req);
     if (!user) return reply.code(401).send({ error: "auth-required" });
@@ -30,38 +56,88 @@ export async function materialRoutes(app: FastifyInstance) {
       title: string; type: string; description?: string; priceKobo?: number;
       isFree?: boolean; accessDurationDays?: number; fileKey?: string; checksum?: string;
     };
-    if (!b.title || !b.type) return reply.code(400).send({ error: "title + type required." });
+    if (!b.title) return reply.code(400).send({ error: "auth-invalid: title required." });
+    if (!MATERIAL_TYPES.includes(b.type as never))
+      return reply.code(400).send({ error: `auth-invalid: type must be one of ${MATERIAL_TYPES.join(", ")}` });
     if (!b.isFree && b.priceKobo != null && (b.priceKobo < MIN_KOBO || b.priceKobo > MAX_KOBO))
-      return reply.code(400).send({ error: `priceKobo must be ${MIN_KOBO}–${MAX_KOBO} (platform bounds).` });
+      return reply.code(400).send({ error: `auth-invalid: priceKobo must be ${MIN_KOBO}–${MAX_KOBO} (platform bounds).` });
+    if (b.accessDurationDays != null && (!Number.isInteger(b.accessDurationDays) || b.accessDurationDays < 1 || b.accessDurationDays > 730))
+      return reply.code(400).send({ error: "auth-invalid: accessDurationDays must be 1–730." });
     const material = await prisma.material.create({
       data: {
         courseId: id, lecturerId: lecturer.id, title: b.title, type: b.type,
         description: b.description, priceKobo: b.isFree ? 0 : (b.priceKobo ?? 0),
         isFree: b.isFree ?? true, accessDurationDays: b.accessDurationDays ?? null,
-        status: "draft", version: 1,
+        status: "pendingLecturer", version: 0,
       },
     });
     if (b.fileKey) {
       await prisma.materialVersion.create({
         data: { materialId: material.id, version: 1, fileKey: b.fileKey, checksum: b.checksum ?? "dev-mock", pageCount: 10 },
       });
+      await prisma.material.update({ where: { id: material.id }, data: { pendingVersion: 1 } });
     }
+    await audit(user.id, "material.uploaded", "Material", material.id, `${b.type} v1-staged`);
     return material;
   });
 
-  // lecturer confirms ownership → pendingReview (own course only)
+  // lecturer ownership approval → pendingReview (explicit attestation, audited).
+  // Also serves as the legacy /submit path.
+  app.post("/materials/:id/approve", async (req, reply) => {
+    const user = await currentUser(req);
+    if (!user) return reply.code(401).send({ error: "auth-required" });
+    const { id } = req.params as { id: string };
+    const b = (req.body ?? {}) as { attest?: boolean };
+    if (b.attest !== true)
+      return reply.code(400).send({ error: "auth-invalid: attest:true required — confirm you own and authorize this material." });
+    const mat = await prisma.material.findUnique({ where: { id }, include: { course: true } });
+    if (!mat) return reply.code(404).send({ error: "not-found:material" });
+    if (!(await ownsCourse(user, mat.course))) return reply.code(403).send({ error: "forbidden:course-ownership" });
+    if (mat.status !== "draft" && mat.status !== "pendingLecturer")
+      return reply.code(400).send({ error: `auth-invalid: cannot approve from ${mat.status}.` });
+    const updated = await prisma.material.update({ where: { id }, data: { status: "pendingReview" } });
+    await audit(user.id, "material.approved", "Material", id, "ownership-attested");
+    return updated;
+  });
+
   app.post("/materials/:id/submit", async (req, reply) => {
     const user = await currentUser(req);
     if (!user) return reply.code(401).send({ error: "auth-required" });
     const { id } = req.params as { id: string };
+    const b = (req.body ?? {}) as { attest?: boolean };
+    if (b.attest !== true)
+      return reply.code(400).send({ error: "auth-invalid: attest:true required — confirm you own and authorize this material." });
     const mat = await prisma.material.findUnique({ where: { id }, include: { course: true } });
     if (!mat) return reply.code(404).send({ error: "not-found:material" });
     if (!(await ownsCourse(user, mat.course))) return reply.code(403).send({ error: "forbidden:course-ownership" });
-    if (mat.status !== "draft") return reply.code(400).send({ error: `Cannot submit from ${mat.status}.` });
+    if (mat.status !== "draft" && mat.status !== "pendingLecturer")
+      return reply.code(400).send({ error: `auth-invalid: cannot submit from ${mat.status}.` });
     const updated = await prisma.material.update({ where: { id }, data: { status: "pendingReview" } });
-    await prisma.auditLog.create({
-      data: { actorId: user.id, action: "material.submitted", targetType: "Material", targetId: id },
+    await audit(user.id, "material.submitted", "Material", id, "ownership-attested");
+    return updated;
+  });
+
+  // new edition of a PUBLISHED material → staged row + back to review.
+  // Live edition untouched until approval (never silently replaced).
+  app.post("/materials/:id/new-version", async (req, reply) => {
+    const user = await currentUser(req);
+    if (!user) return reply.code(401).send({ error: "auth-required" });
+    const { id } = req.params as { id: string };
+    const b = (req.body ?? {}) as { fileKey?: string; checksum?: string; pageCount?: number };
+    const mat = await prisma.material.findUnique({ where: { id }, include: { course: true } });
+    if (!mat) return reply.code(404).send({ error: "not-found:material" });
+    if (!(await ownsCourse(user, mat.course))) return reply.code(403).send({ error: "forbidden:course-ownership" });
+    if (mat.status !== "published")
+      return reply.code(400).send({ error: `auth-invalid: new versions branch from published (now ${mat.status}).` });
+    if (!b.fileKey) return reply.code(400).send({ error: "auth-invalid: fileKey required (R2 key after upload-url step)." });
+    const next = mat.version + 1;
+    await prisma.materialVersion.create({
+      data: { materialId: id, version: next, fileKey: b.fileKey, checksum: b.checksum ?? "dev-mock", pageCount: b.pageCount ?? 10 },
     });
+    const updated = await prisma.material.update({
+      where: { id }, data: { pendingVersion: next, status: "pendingReview" },
+    });
+    await audit(user.id, "material.version.staged", "Material", id, `v${next}-staged`);
     return updated;
   });
 
@@ -69,7 +145,7 @@ export async function materialRoutes(app: FastifyInstance) {
   app.get("/reviews/queue", async (req, reply) => {
     const user = await currentUser(req);
     if (!user || !["platformAdmin", "institutionAdmin"].includes(user.role))
-      return reply.code(403).send({ error: "Reviewers only." });
+      return reply.code(403).send({ error: "forbidden:role:reviewer" });
     return prisma.material.findMany({
       where: { status: "pendingReview" },
       include: { course: true },
@@ -77,25 +153,25 @@ export async function materialRoutes(app: FastifyInstance) {
     });
   });
 
-  // approve → published | reject → draft
+  // approve → published (flip staged edition live) | reject → prior state, staged row dropped
   app.post("/materials/:id/review", async (req, reply) => {
     const user = await currentUser(req);
     if (!user || !["platformAdmin", "institutionAdmin"].includes(user.role))
-      return reply.code(403).send({ error: "Reviewers only." });
+      return reply.code(403).send({ error: "forbidden:role:reviewer" });
     const { id } = req.params as { id: string };
     const b = req.body as { decision: "approve" | "reject"; reason?: string };
-    const updated = await prisma.material.update({
-      where: { id },
-      data: { status: b.decision === "approve" ? "published" : "draft" },
-    });
-    await prisma.auditLog.create({
-      data: {
-        actorId: user.id, action: `material.review.${b.decision}d`,
-        targetType: "Material", targetId: id, meta: b.reason ?? null,
-      },
-    });
-    // notify approved enrollments of new official material
+    if (!["approve", "reject"].includes(b?.decision))
+      return reply.code(400).send({ error: "auth-invalid: decision must be approve|reject." });
+    const mat = await prisma.material.findUnique({ where: { id } });
+    if (!mat) return reply.code(404).send({ error: "not-found:material" });
+    if (mat.status !== "pendingReview")
+      return reply.code(400).send({ error: `auth-invalid: nothing under review (now ${mat.status}).` });
     if (b.decision === "approve") {
+      const staged = mat.pendingVersion ?? mat.version + 1;
+      const updated = await prisma.material.update({
+        where: { id }, data: { status: "published", version: staged, pendingVersion: null },
+      });
+      await audit(user.id, "material.review.approved", "Material", id, `v${staged}-live`);
       const { indexMaterial } = await import("./ai.js");
       await indexMaterial(id);
       const enrollments = await prisma.enrollment.findMany({
@@ -110,11 +186,21 @@ export async function materialRoutes(app: FastifyInstance) {
           })),
         });
       }
+      return updated;
     }
+    // reject: drop staged row, restore prior live state (published stays live; new items go to draft)
+    if (mat.pendingVersion != null) {
+      await prisma.materialVersion.deleteMany({ where: { materialId: id, version: mat.pendingVersion } });
+    }
+    const restoreTo = mat.version > 0 ? "published" : "draft";
+    const updated = await prisma.material.update({
+      where: { id }, data: { status: restoreTo, pendingVersion: null },
+    });
+    await audit(user.id, "material.review.rejected", "Material", id, b.reason ?? null);
     return updated;
   });
 
-  // archive (own course only)
+  // archive (own course only, audited; purchases retained, reading blocked)
   app.post("/materials/:id/archive", async (req, reply) => {
     const user = await currentUser(req);
     if (!user) return reply.code(401).send({ error: "auth-required" });
@@ -122,18 +208,22 @@ export async function materialRoutes(app: FastifyInstance) {
     const mat = await prisma.material.findUnique({ where: { id }, include: { course: true } });
     if (!mat) return reply.code(404).send({ error: "not-found:material" });
     if (!(await ownsCourse(user, mat.course))) return reply.code(403).send({ error: "forbidden:course-ownership" });
-    await prisma.auditLog.create({
-      data: { actorId: user.id, action: "material.archived", targetType: "Material", targetId: id },
-    });
-    return prisma.material.update({ where: { id }, data: { status: "archived" } });
+    if (mat.status === "archived") return reply.code(400).send({ error: "auth-invalid: already archived." });
+    await audit(user.id, "material.archived", "Material", id, `was:${mat.status}`);
+    return prisma.material.update({ where: { id }, data: { status: "archived", pendingVersion: null } });
   });
 
-  // material detail (entitlement-aware: unpublished visible to lecturer/staff only)
+  // material detail with ownership/trust block (never leaks fileKey)
   app.get("/materials/:id", async (req, reply) => {
     const user = await currentUser(req);
     const { id } = req.params as { id: string };
     const mat = await prisma.material.findUnique({
-      where: { id }, include: { versions: { orderBy: { version: "desc" } }, course: true },
+      where: { id },
+      include: {
+        versions: { select: { version: true, pageCount: true, createdAt: true }, orderBy: { version: "desc" } },
+        course: true,
+        lecturer: { include: { user: { select: { name: true } } } },
+      },
     });
     if (!mat) return reply.code(404).send({ error: "not-found:material" });
     if (mat.status !== "published") {
@@ -144,10 +234,22 @@ export async function materialRoutes(app: FastifyInstance) {
             (user.role === "institutionAdmin" || user.role === "platformAdmin")));
       if (!ok) return reply.code(403).send({ error: "forbidden:not-published" });
     }
-    return mat;
+    const { lecturer, ...rest } = mat as typeof mat & { lecturer: { user: { name: string | null } } };
+    return {
+      ...rest,
+      trust: {
+        lecturerName: lecturer?.user?.name ?? "Unknown",
+        lecturerVerified: true,
+        official: mat.status === "published",
+        edition: `v${mat.version}`,
+        access: mat.isFree
+          ? "Free official material"
+          : `₦${(mat.priceKobo / 100).toFixed(2)} · ${mat.accessDurationDays ?? "ongoing"}-day access`,
+      },
+    };
   });
 
-  // protected page URL (entitlement + expiry enforced; R2 presigned URLs in reader spike)
+  // protected page token (entitlement + expiry enforced; resolves via /pages/:token)
   app.get("/materials/:id/pages/:n/url", async (req, reply) => {
     const user = await currentUser(req);
     if (!user) return reply.code(401).send({ error: "auth-required" });
@@ -156,35 +258,27 @@ export async function materialRoutes(app: FastifyInstance) {
     if (!mat || mat.status !== "published") return reply.code(403).send({ error: "forbidden:not-published" });
     if (user.role === "student") {
       if (!user.studentProfile) return reply.code(403).send({ error: "forbidden:role:student" });
-      const enrollment = await prisma.enrollment.findUnique({
-        where: { courseId_studentId: { courseId: mat.courseId, studentId: user.studentProfile.id } },
-      });
-      if (!enrollment || enrollment.status !== "approved")
-        return reply.code(403).send({ error: "forbidden:course-access" });
-      if (!mat.isFree) {
-        const purchase = await prisma.purchase.findFirst({
-          where: { studentId: user.studentProfile.id, materialId: id, status: "completed" },
-          orderBy: { createdAt: "desc" },
-        });
-        if (!purchase) return reply.code(402).send({ error: "Purchase required.", priceKobo: mat.priceKobo });
-        if (purchase.accessExpiresAt && purchase.accessExpiresAt.getTime() < Date.now())
-          return reply.code(402).send({ error: "Access expired. Renew to continue reading.", priceKobo: mat.priceKobo });
+      const grant = await assertGrant(user.studentProfile.id, mat);
+      if (!grant.ok) {
+        const res = reply.code(grant.code).send({ error: grant.error, ...(grant.priceKobo != null ? { priceKobo: grant.priceKobo } : {}) });
+        return res;
       }
     } else if (!(await ownsCourse(user, mat.course))) {
       return reply.code(403).send({ error: "forbidden:course-ownership" });
     }
     const page = Number(n);
-    // log study event (dwell tracked client-side on next ping)
+    if (!Number.isInteger(page) || page < 1) return reply.code(400).send({ error: "auth-invalid: page must be ≥ 1." });
     if (user?.role === "student") {
       await prisma.studyEvent.create({
         data: { studentId: user.studentProfile!.id, courseId: mat.courseId, materialId: id, type: "page-view", page },
       });
     }
+    const { mintPageToken } = await import("./storage.js");
+    const { token, expiresAt } = mintPageToken(id, mat.version, page);
     return {
       page, materialId: id, version: mat.version,
-      url: `mock://pages/${id}/v${mat.version}/p${page}`,
-      expiresAt: new Date(Date.now() + 60_000).toISOString(),
-      note: "R2 presigned URL lands in reader spike; shell renders styled page + watermark meanwhile.",
+      url: `/api/v1/pages/${token}`,
+      expiresAt: expiresAt.toISOString(),
     };
   });
 }

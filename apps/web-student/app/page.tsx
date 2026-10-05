@@ -82,8 +82,10 @@ export default function Home() {
       setEnroll(enr);
       setProgress(Array.isArray(prog) ? prog : []);
       setPoints(pts);
-      setLibraryCount(lib && Array.isArray(lib.purchases) && Array.isArray(lib.freeMaterials)
-        ? lib.purchases.length + lib.freeMaterials.length : null);
+      setLibraryCount(lib && Array.isArray(lib.items)
+        ? lib.items.length
+        : lib && Array.isArray(lib.purchases) && Array.isArray(lib.freeMaterials)
+          ? lib.purchases.length + lib.freeMaterials.length : null);
       setCgpa(grades?.cgpa ?? null);
       setCont(contData);
       setNotes(Array.isArray(notif) ? notif : []);

@@ -78,12 +78,21 @@ export default function ManageCourse({ params }: { params: { id: string } }) {
         method: "POST",
         body: JSON.stringify({ ...mat, priceKobo: Number(mat.priceKobo), accessDurationDays: Number(mat.accessDurationDays), fileKey: "dev/mock.pdf", checksum: "dev" }),
       });
-      if (submit) await api(`/materials/${created.id}/submit`, { method: "POST" });
-      setOk(submit ? "Submitted for platform review." : "Draft saved.");
+      if (submit) {
+        await api(`/materials/${created.id}/approve`, { method: "POST", body: JSON.stringify({ attest: attestOwn }) });
+      }
+      setOk(submit ? "Ownership approved — sent to platform review." : "Uploaded — approve ownership to send for review.");
+      loadMyMaterials();
     } catch (e) {
       setErr((e as Error).message);
     }
   }
+  const [attestOwn, setAttestOwn] = useState(false);
+  const [mine, setMine] = useState<{ id: string; title: string; status: string; version: number; pendingVersion: number | null; course: { code: string } }[]>([]);
+  async function loadMyMaterials() {
+    setMine(await api("/lecturer/materials").catch(() => []));
+  }
+  useEffect(() => { loadMyMaterials(); }, []);
   return (
     <div>
       <Crumb trail={[{ href: '/', label: 'Dashboard' }, { label: 'Manage course' }]} />
@@ -152,7 +161,7 @@ export default function ManageCourse({ params }: { params: { id: string } }) {
         </Field>
         <Field label="Type">
           <select value={mat.type} onChange={(e) => setMat({ ...mat, type: e.target.value })}>
-            {["lecture-notes", "course-pack", "revision-guide", "practice-questions", "exam-prep"].map((t) => <option key={t} value={t}>{t}</option>)}
+            {["lecture-notes", "course-pack", "revision-guide", "practice-questions", "exam-prep", "study-guide"].map((t) => <option key={t} value={t}>{t}</option>)}
           </select>
         </Field>
         <label className="checkrow"><input type="checkbox" checked={mat.isFree} onChange={(e) => setMat({ ...mat, isFree: e.target.checked })} /> Free</label>
@@ -161,11 +170,34 @@ export default function ManageCourse({ params }: { params: { id: string } }) {
             <input type="number" min={0} value={mat.priceKobo} onChange={(e) => setMat({ ...mat, priceKobo: Number(e.target.value) })} />
           </Field>
         )}
+        <label className="checkrow"><input type="checkbox" checked={attestOwn} onChange={(e) => setAttestOwn(e.target.checked)} /> I confirm I own and authorize this material</label>
         <div className="row">
-          <button className="sec" onClick={() => upload(false)}>Save draft</button>
-          <button onClick={() => upload(true)}>Submit for review</button>
+          <button className="sec" onClick={() => upload(false)}>Upload (awaiting my approval)</button>
+          <button onClick={() => upload(true)}>Approve & send for review</button>
         </div>
-        <p className="muted" style={{ marginTop: 8 }}>File bytes → R2 in reader spike; metadata + lifecycle live now. Answer Q&amp;A from the student course page data via API.</p>
+        <p className="muted" style={{ marginTop: 8 }}>Lifecycle: upload → your ownership approval → platform review → published. New editions re-enter review; live editions are never silently replaced.</p>
+      </div>
+      <div className="card"><h3>My materials</h3>
+        {mine.map((m) => (
+          <div key={m.id} className="row" style={{ justifyContent: "space-between", borderTop: "1px solid #eee", paddingTop: 8 }}>
+            <span><strong>{m.title}</strong> <span className="muted">[{m.course.code}]</span> <Badge kind={m.status === "published" ? "ok" : "edition"}>{m.status} v{m.version}{m.pendingVersion != null ? ` → v${m.pendingVersion} in review` : ""}</Badge></span>
+            <span className="row tight">
+              {(m.status === "draft" || m.status === "pendingLecturer") && (
+                <button className="sec" onClick={async () => {
+                  await api(`/materials/${m.id}/approve`, { method: "POST", body: JSON.stringify({ attest: true }) });
+                  setOk("Approved — sent to platform review."); loadMyMaterials();
+                }}>Approve</button>
+              )}
+              {m.status === "published" && (
+                <button className="sec" onClick={async () => {
+                  await api(`/materials/${m.id}/new-version`, { method: "POST", body: JSON.stringify({ fileKey: "dev/mock.pdf", checksum: "dev" }) });
+                  setOk("New edition staged — sent back to platform review. Live edition unchanged."); loadMyMaterials();
+                }}>New edition</button>
+              )}
+            </span>
+          </div>
+        ))}
+        {!mine.length && <p className="muted">Nothing uploaded yet.</p>}
       </div>
       <div className="card"><h3>Assessments</h3>
         <Field label="New assessment title" htmlFor="asmt-title" hint="Creates a quiz draft. Add questions below, then publish.">

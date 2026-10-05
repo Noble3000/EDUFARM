@@ -7,10 +7,18 @@ import { EmptyState, ErrorState, Field, Icon, SuccessNote } from "@edufarm/ui";
 // Protected reader: page navigation + watermark + dwell pings + checkout on 402.
 // Page count comes from the material's latest version row — never hard-coded.
 export default function Reader({ params }: { params: { id: string } }) {
-  const [meta, setMeta] = useState<{ title: string; version: number; priceKobo: number; isFree: boolean; accessDurationDays: number | null; versions?: { pageCount: number }[]; course?: { code: string; id: string } } | null>(null);
+  const [meta, setMeta] = useState<{
+    title: string; version: number; priceKobo: number; isFree: boolean; accessDurationDays: number | null;
+    versions?: { pageCount: number }[]; course?: { code: string; id: string };
+    trust?: { lecturerName: string; lecturerVerified: boolean; official: boolean; edition: string; access: string };
+  } | null>(null);
   const [page, setPage] = useState(1);
   const [err, setErr] = useState("");
   const [price, setPrice] = useState<number | null>(null);
+  const [terms, setTerms] = useState<{
+    title: string; edition: number; course: { code: string; title: string }; lecturer: string;
+    priceKobo: number; accessDurationDays: number | null; permanent: boolean; alreadyHeld: boolean;
+  } | null>(null);
   const [bought, setBought] = useState("");
   const user = typeof window !== "undefined" ? getUser() : null;
   const totalPages = meta?.versions?.[0]?.pageCount || 10;
@@ -29,10 +37,12 @@ export default function Reader({ params }: { params: { id: string } }) {
     } catch (e) {
       const msg = (e as Error).message;
       setErr(msg);
-      const m = msg.match(/402|Purchase required/);
+      const m = msg.match(/402|Purchase required|expired/i);
       if (m) {
         const det = await api(`/materials/${params.id}`).catch(() => null);
         if (det) setPrice(det.priceKobo);
+        // exact pre-payment terms — nothing is charged or granted from this view
+        setTerms(await api(`/materials/${params.id}/terms`).catch(() => null));
       }
     }
   }
@@ -67,12 +77,35 @@ export default function Reader({ params }: { params: { id: string } }) {
     <div>
       <Crumb trail={[{ href: '/', label: 'Home' }, { href: '/library', label: 'Library' }, { label: 'Reader' }]} />
       <h2>{meta?.title ?? "Reader"} {meta && <span className="badge b-off">Official v{meta.version}</span>}</h2>
+      {meta?.trust && (
+        <p className="muted">
+          <Icon name="user" size={13} /> {meta.trust.lecturerName}
+          {meta.trust.lecturerVerified && <span className="badge b-ver">Verified Lecturer</span>}
+          <span className="badge b-ed">{meta.trust.edition}</span>
+        </p>
+      )}
+      {meta && (
+        <div className="card tight">
+          <strong>Access terms (before payment):</strong>{" "}
+          <span className="muted">{meta.trust?.access ?? (meta.isFree ? "Free official material" : `₦${(meta.priceKobo / 100).toFixed(2)}`)}</span>
+          <br /><span className="muted">In-ecosystem reading only — no download, offline, export, or platform capture. Photos of screens by external devices cannot be prevented; redistribution is prohibited and watermarked.</span>
+        </div>
+      )}
       {err && (
         <div style={{ marginBottom: 12 }}>
           <ErrorState message={err} onRetry={() => load(page)} />
           {price != null && (
             <div className="card">
-              <p><strong>₦{(price / 100).toFixed(2)}</strong> <span className="muted">· {meta?.accessDurationDays ? `${meta.accessDurationDays} days access` : "access per terms"} · in-ecosystem reading only</span></p>
+              <h3>Access terms — exact, before you pay</h3>
+              {terms ? (
+                <>
+                  <p><strong>{terms.title}</strong> <span className="badge b-off">Edition v{terms.edition}</span></p>
+                  <p className="muted">{terms.course.code} — {terms.course.title} · by {terms.lecturer}</p>
+                  <p><strong>₦{(terms.priceKobo / 100).toFixed(2)}</strong> <span className="muted">· {terms.permanent ? "permanent / long-term access, no expiry" : `${terms.accessDurationDays} days access from payment`} · in-ecosystem reading only · {terms.alreadyHeld ? "you already hold a usable grant" : "no grant yet — nothing is unlocked until payment confirms"}</span></p>
+                </>
+              ) : (
+                <p><strong>₦{(price / 100).toFixed(2)}</strong> <span className="muted">· {meta?.accessDurationDays ? `${meta.accessDurationDays} days access` : "access per terms"} · in-ecosystem reading only</span></p>
+              )}
               <Field label="Points to use" optional hint="10 kobo per point · max 50% of price in points. Minimum 5000 to redeem.">
                 <input style={{ maxWidth: 160 }} placeholder="Points (min 5000)" value={pts} onChange={(e) => setPts(e.target.value)} inputMode="numeric" />
               </Field>
@@ -82,7 +115,8 @@ export default function Reader({ params }: { params: { id: string } }) {
         </div>
       )}
       {bought && <div style={{ marginBottom: 12 }}><SuccessNote>{bought}</SuccessNote></div>}
-      <div className="card" style={{ background: "#1D2939", color: "#fff", position: "relative", minHeight: 300 }} onContextMenu={(e) => e.preventDefault()}>
+      <style>{`.reader-lock{user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}.reader-lock img{-webkit-user-drag:none;pointer-events:none}@media print{.reader-lock{display:none !important}}`}</style>
+      <div className="card reader-lock" style={{ background: "#1D2939", color: "#fff", position: "relative", minHeight: 300 }} onContextMenu={(e) => e.preventDefault()} onDragStart={(e) => e.preventDefault()} onCopy={(e) => e.preventDefault()}>
         <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", opacity: 0.15, transform: "rotate(-18deg)", fontSize: 13, pointerEvents: "none", textAlign: "center" }}>
           {user?.name ?? "?"} · {user?.email ?? "?"} · {meta?.course?.code ?? ""} · Do not redistribute
         </div>

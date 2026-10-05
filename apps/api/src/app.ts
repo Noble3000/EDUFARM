@@ -23,6 +23,7 @@ import { aiRoutes } from "./routes/ai.js";
 import { devotionalRoutes } from "./routes/devotional.js";
 import { authLocalRoutes } from "./routes/auth-local.js";
 import { gradesRoutes } from "./routes/grades.js";
+import { storageRoutes } from "./routes/storage.js";
 
 const demoOpen = () => process.env.ALLOW_DEMO_LOGIN === "true";
 
@@ -105,6 +106,7 @@ export async function buildApp(): Promise<FastifyInstance> {
   await app.register(devotionalRoutes, { prefix: "/api/v1" });
   await app.register(authLocalRoutes, { prefix: "/api/v1" });
   await app.register(gradesRoutes, { prefix: "/api/v1" });
+  await app.register(storageRoutes, { prefix: "/api/v1" });
 
   return app;
 }

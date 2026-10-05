@@ -55,6 +55,8 @@ enum PurchaseStatus {
   completed
   failed
   refunded
+  revoked
+  suspended
 }
 
 enum LedgerStatus {
@@ -169,6 +171,7 @@ model Course {
   isOfficial    Boolean        @default(false)
   lecturers     CourseLecturer[]
   enrollments   Enrollment[]
+  purchases     Purchase[]
   materials     Material[]
   announcements Announcement[]
   questions     Question[]
@@ -284,10 +287,11 @@ model Material {
   type               String
   description        String?
   priceKobo          Int               @default(0)
-  isFree             Boolean           @default(true)
+  isFree             Boolean        @default(true)
   accessDurationDays Int?
-  version            Int               @default(1)
-  status             MaterialStatus    @default(draft)
+  version            Int            @default(0)
+  pendingVersion     Int?
+  status             MaterialStatus @default(draft)
   versions           MaterialVersion[]
   chunks             MaterialChunk[]
   createdAt          DateTime          @default(now())
@@ -326,6 +330,10 @@ model Purchase {
   student         StudentProfile @relation(fields: [studentId], references: [id])
   materialId      String?
   bundleId        String?
+  courseId        String?
+  course          Course?        @relation(fields: [courseId], references: [id], onDelete: Restrict)
+  versionGranted  Int?
+  accessType      String         @default("purchase") // purchase | bundle | free
   amountKobo      Int
   pointsUsed      Int            @default(0)
   status          PurchaseStatus @default(pending)

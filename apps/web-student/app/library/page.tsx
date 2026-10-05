@@ -1,28 +1,78 @@
 "use client";
 import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
-import { EmptyState, ErrorState, LoadingState } from "@edufarm/ui";
+import { Badge, EmptyState, ErrorState, LoadingState } from "@edufarm/ui";
 
-type Purchase = {
-  id: string; materialId: string | null; bundleId: string | null;
-  amountKobo: number; pointsUsed: number; accessExpiresAt: string | null;
-  material?: { id: string; title: string; version: number; accessDurationDays: number | null } | null;
-  bundle?: { id: string; title: string } | null;
+type Item = {
+  kind: "paid" | "free";
+  purchaseId: string | null; studentId: string;
+  materialId: string | null; materialTitle: string | null;
+  versionGranted: number | null; versionCurrent: number | null;
+  editionReplaced: boolean;
+  courseId: string | null; courseCode: string | null; courseTitle: string | null;
+  accessType: string; accessStart: string;
+  accessEnd: string | null; permanent: boolean;
+  orderRef: string | null; classification: "paid" | "free";
+  amountKobo: number; pointsUsed: number;
+  state: "active" | "expiring" | "expired" | "archived" | "revoked" | "suspended";
+  stateReason: string | null;
 };
-type FreeMat = { id: string; title: string };
-type Lib = { purchases: Purchase[]; freeMaterials: FreeMat[] };
+type Lib = {
+  items: Item[];
+  summary: { active: number; expiring: number; expired: number; archived: number; revoked: number; suspended: number; permanent: number };
+  purchases: unknown[]; freeMaterials: { id: string; title: string }[];
+};
 
-function expiryLabel(iso: string | null): string {
-  if (!iso) return "no expiry set";
-  const ms = new Date(iso).getTime() - Date.now();
-  if (ms <= 0) return "expired";
-  const days = Math.floor(ms / 86400000);
-  return days === 0 ? "expires today" : `expires in ${days} day${days === 1 ? "" : "s"}`;
+const STATE_BADGE: Record<Item["state"], string> = {
+  active: "b-off", expiring: "b-warn", expired: "b-bad",
+  archived: "b-ed", revoked: "b-bad", suspended: "b-warn",
+};
+const STATE_LABEL: Record<Item["state"], string> = {
+  active: "Active", expiring: "Expiring soon", expired: "Expired",
+  archived: "Archived edition", revoked: "Revoked", suspended: "Suspended",
+};
+
+function fmtDate(iso: string): string {
+  return new Date(iso).toLocaleDateString();
+}
+
+function ItemCard({ it }: { it: Item }) {
+  return (
+    <div style={{ borderTop: "1px solid #F2F4F7", paddingTop: 10, marginTop: 6 }}>
+      <p style={{ marginBottom: 4 }}>
+        {it.materialId ? (
+          <a href={`/materials/${it.materialId}`}><strong>{it.materialTitle ?? it.materialId}</strong></a>
+        ) : (
+          <strong>{it.materialTitle ?? "Item"}</strong>
+        )}{" "}
+        <span className={`badge ${STATE_BADGE[it.state]}`}>{STATE_LABEL[it.state]}</span>
+        <span className="badge b-ed">{it.classification === "paid" ? "Paid" : "Free"}</span>
+        {it.permanent && (it.state === "active" || it.state === "expiring") && <span className="badge b-off">Permanent access</span>}
+      </p>
+      <p className="muted" style={{ marginBottom: 4 }}>
+        {it.courseCode && <>{it.courseCode} · </>}
+        {it.versionGranted != null && <>edition v{it.versionGranted}{it.versionCurrent != null && it.versionCurrent !== it.versionGranted && <> (latest v{it.versionCurrent})</>} · </>}
+        {it.accessType} access · since {fmtDate(it.accessStart)} ·{" "}
+        {it.permanent ? "no expiry" : it.accessEnd ? `until ${fmtDate(it.accessEnd)}` : "ends if enrollment ends"}
+        {it.orderRef && <> · order <strong>{it.orderRef}</strong></>}
+        {it.pointsUsed > 0 && <> · {it.pointsUsed} pts used</>}
+      </p>
+      {it.editionReplaced && <p className="muted">A newer edition exists — your granted edition stays readable. <a href={it.materialId ? `/materials/${it.materialId}` : "/library"}>Open latest</a>.</p>}
+      {it.stateReason && it.state !== "active" && <p className="muted">{it.stateReason}</p>}
+      {(it.state === "expired") && it.materialId && (
+        <p><a className="btn sec" href={`/materials/${it.materialId}`}>Renew access</a></p>
+      )}
+      {(it.state === "revoked" || it.state === "suspended") && (
+        <p className="muted">Contact your course lecturer about this grant.</p>
+      )}
+    </div>
+  );
 }
 
 export default function Library() {
   const [lib, setLib] = useState<Lib | null>(null);
   const [failed, setFailed] = useState("");
+  const [filter, setFilter] = useState<"all" | Item["state"] | "permanent">("all");
   async function load() {
     setFailed("");
     try {
@@ -34,43 +84,32 @@ export default function Library() {
   useEffect(() => { load(); }, []);
   if (!lib && !failed) return <LoadingState label="Loading your library…" />;
   if (failed && !lib) return <ErrorState message={failed} onRetry={load} />;
+  const items = lib?.items ?? [];
+  const visible = items.filter((i) =>
+    filter === "all" ? true : filter === "permanent" ? i.permanent : i.state === filter
+  );
+  const s = lib?.summary;
   return (
     <div>
       <h2>My Academic Library</h2>
-      <p className="muted">In-ecosystem access only — every item shows its access terms before and after purchase.</p>
+      <p className="muted">Every item is an entitlement: edition, course, type, start, end, order and validity — not just a file.</p>
       <div className="card">
-        <h3>Purchased</h3>
-        {(lib?.purchases ?? []).map((p) => (
-          <p key={p.id}>
-            {p.material ? (
-              <a href={`/materials/${p.material.id}`}><strong>{p.material.title}</strong></a>
-            ) : p.bundle ? (
-              <strong>{p.bundle.title}</strong>
-            ) : p.materialId ? (
-              <a href={`/materials/${p.materialId}`}>{p.materialId}</a>
-            ) : (
-              <span className="muted">Purchase {p.id.slice(0, 8)}</span>
-            )}{" "}
-            <span className="muted">— ₦{(p.amountKobo / 100).toFixed(2)}{p.pointsUsed ? ` (${p.pointsUsed} pts used)` : ""} · {expiryLabel(p.accessExpiresAt)}</span>
-          </p>
-        ))}
-        {!lib?.purchases.length && (
-          <EmptyState
-            icon="library"
-            title="Nothing purchased yet"
-            body="Paid lecturer materials you unlock will live here, with their access terms."
-            action={<a className="btn sec" href="/courses">Browse courses</a>}
-          />
-        )}
+        <div className="row" role="group" aria-label="Filter by access state">
+          {(["all", "active", "expiring", "expired", "archived", "permanent"] as const).map((f) => (
+            <button key={f} className={filter === f ? "" : "sec"} aria-pressed={filter === f} onClick={() => setFilter(f)}>{f === "all" ? `All (${items.length})` : f === "permanent" ? `Permanent (${s?.permanent ?? 0})` : `${f} (${s?.[f as keyof typeof s] ?? 0})`}</button>
+          ))}
+        </div>
       </div>
       <div className="card">
-        <h3>Free official materials</h3>
-        {(lib?.freeMaterials ?? []).map((m) => <p key={m.id}><a href={`/materials/${m.id}`}>{m.title}</a></p>)}
-        {!lib?.freeMaterials.length && (
+        <h3>{filter === "all" ? "Everything" : filter === "permanent" ? "Permanent / long-term access" : STATE_LABEL[filter as Item["state"]]}</h3>
+        {visible.map((it) => <ItemCard key={`${it.kind}-${it.purchaseId ?? it.materialId}`} it={it} />)}
+        {!visible.length && (
           <EmptyState
-            icon="book"
-            title="No free materials yet"
-            body="Once your lecturer publishes free official notes, they will appear here."
+            icon="library"
+            title={filter === "all" ? "Library empty" : `Nothing ${filter}`}
+            body={filter === "all"
+              ? "Paid materials you unlock and free official notes from approved courses will live here with full access terms."
+              : "No items in this state right now."}
             action={<a className="btn sec" href="/courses">Browse courses</a>}
           />
         )}

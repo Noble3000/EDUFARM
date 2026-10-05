@@ -199,3 +199,71 @@ describe("verification enforced at API", () => {
     expect(me.body.studentProfile.verificationStatus).toBe("pending");
   });
 });
+
+describe("material lifecycle", () => {
+  let mid: string;
+  it("lecturer upload lands in pendingLecturer (not published)", async () => {
+    const r = await req("POST", `/api/v1/courses/${ids.courseId}/materials`, T.lect, {
+      title: `LC-${Date.now()}`, type: "lecture-notes",
+    });
+    expect(r.status).toBe(200);
+    expect(r.body.status).toBe("pendingLecturer");
+    expect(r.body.version).toBe(0);
+    mid = r.body.id;
+  });
+  it("invalid type rejected", async () => {
+    const r = await req("POST", `/api/v1/courses/${ids.courseId}/materials`, T.lect, {
+      title: "Bad type", type: "podcast",
+    });
+    expect(r.status).toBe(400);
+  });
+  it("approval requires attestation", async () => {
+    expect((await req("POST", `/api/v1/materials/${mid}/approve`, T.lect, {})).status).toBe(400);
+  });
+  it("student cannot approve", async () => {
+    expect((await req("POST", `/api/v1/materials/${mid}/approve`, T.stu, { attest: true })).status).toBe(403);
+  });
+  it("approve → pendingReview, review approve → published v1", async () => {
+    expect((await req("POST", `/api/v1/materials/${mid}/approve`, T.lect, { attest: true })).status).toBe(200);
+    const rev = await req("POST", `/api/v1/materials/${mid}/review`, T.plat, { decision: "approve" });
+    expect(rev.status).toBe(200);
+    expect(rev.body.status).toBe("published");
+  });
+  it("double approve rejected", async () => {
+    expect((await req("POST", `/api/v1/materials/${mid}/approve`, T.lect, { attest: true })).status).toBe(400);
+  });
+  it("new version stages v2, live stays v1", async () => {
+    const nv = await req("POST", `/api/v1/materials/${mid}/new-version`, T.lect, { fileKey: "t.pdf" });
+    expect(nv.status).toBe(200);
+    expect(nv.body.status).toBe("pendingReview");
+    expect(nv.body.version).toBe(1);
+    expect(nv.body.pendingVersion).toBe(2);
+  });
+  it("reject restores published v1 and drops staged row", async () => {
+    const rej = await req("POST", `/api/v1/materials/${mid}/review`, T.plat, { decision: "reject", reason: "typo" });
+    expect(rej.status).toBe(200);
+    expect(rej.body.status).toBe("published");
+    expect(rej.body.version).toBe(1);
+    expect(rej.body.pendingVersion).toBeNull();
+  });
+  it("approve v2 goes live", async () => {
+    await req("POST", `/api/v1/materials/${mid}/new-version`, T.lect, { fileKey: "t2.pdf" });
+    const rev = await req("POST", `/api/v1/materials/${mid}/review`, T.plat, { decision: "approve" });
+    expect(rev.body.version).toBe(2);
+  });
+  it("archived editions block reading", async () => {
+    expect((await req("POST", `/api/v1/materials/${mid}/archive`, T.lect, {})).status).toBe(200);
+    expect((await req("GET", `/api/v1/materials/${mid}/pages/1/url`, T.lect)).status).toBe(403);
+  });
+  it("signed page tokens verify and expire", async () => {
+    const { mintPageToken, verifyPageToken } = await import("./routes/storage.js");
+    const { token } = mintPageToken("m", 1, 1);
+    const ok = verifyPageToken(token);
+    expect(ok?.materialId).toBe("m");
+    // tamper a middle character (trailing junk is ignored by base64 decoding)
+    const mid = Math.floor(token.length / 2);
+    const bad = token.slice(0, mid) + (token[mid] === "A" ? "B" : "A") + token.slice(mid + 1);
+    expect(verifyPageToken(bad)).toBeNull();
+    expect(verifyPageToken("garbage")).toBeNull();
+  });
+});
