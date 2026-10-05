@@ -21,10 +21,22 @@ export default function ManageCourse({ params }: { params: { id: string } }) {
   const [mat, setMat] = useState({ title: "", type: "lecture-notes", isFree: true, priceKobo: 50000, accessDurationDays: 90 });
   const [ok, setOk] = useState("");
   const [err, setErr] = useState("");
-  const [asmts, setAsmts] = useState<{ id: string; title: string; status: string }[]>([]);
+  const [asmts, setAsmts] = useState<{ id: string; title: string; status: string; gradesReleased: boolean }[]>([]);
   const [asmtLoading, setAsmtLoading] = useState(true);
   const [atitle, setAtitle] = useState("");
-  const [grade, setGrade] = useState<{ attempts: { id: string; status: string; score: number | null }[] } | null>(null);
+  const [atype, setAtype] = useState("quiz");
+  const [ainstructions, setAinstructions] = useState("");
+  const [atimelimit, setAtimelimit] = useState("");
+  const [amaxattempts, setAmaxattempts] = useState("");
+  const [adue, setAdue] = useState("");
+  const [grade, setGrade] = useState<{
+    attempts: {
+      id: string; status: string; score: number | null; maxScore: number | null;
+      feedback: string | null; gradedBy: string | null; gradedAt: string | null;
+      student: { user: { name: string | null; email: string } };
+      answers: { questionId: string; selectedIndex: number | null; body: string | null; isCorrect: boolean | null; marksAwarded: number; question: { text: string; kind: string; options: string[]; marks: number } }[];
+    }[];
+  } | null>(null);
   const [attemptsLoading, setAttemptsLoading] = useState(false);
   const [gradeId, setGradeId] = useState("");
   async function loadAttempts(id: string) {
@@ -200,16 +212,47 @@ export default function ManageCourse({ params }: { params: { id: string } }) {
         {!mine.length && <p className="muted">Nothing uploaded yet.</p>}
       </div>
       <div className="card"><h3>Assessments</h3>
-        <Field label="New assessment title" htmlFor="asmt-title" hint="Creates a quiz draft. Add questions below, then publish.">
-          <input id="asmt-title" placeholder="e.g. Week 3 quiz" value={atitle} onChange={(e) => setAtitle(e.target.value)} />
+        <div className="grid2">
+          <Field label="New assessment title" htmlFor="asmt-title" hint="Creates a draft. Add questions below, then publish.">
+            <input id="asmt-title" placeholder="e.g. Week 3 quiz" value={atitle} onChange={(e) => setAtitle(e.target.value)} />
+          </Field>
+          <Field label="Type">
+            <select value={atype} onChange={(e) => setAtype(e.target.value)}>
+              <option value="quiz">quiz</option>
+              <option value="test">test</option>
+              <option value="assignment">assignment</option>
+            </select>
+          </Field>
+        </div>
+        <Field label="Instructions (shown to students)">
+          <textarea value={ainstructions} onChange={(e) => setAinstructions(e.target.value)} rows={2} placeholder="Read each question carefully…" />
+        </Field>
+        <div className="grid2">
+          <Field label="Time limit (minutes, optional)" hint="1–600. Empty = untimed.">
+            <input type="number" min={1} max={600} value={atimelimit} onChange={(e) => setAtimelimit(e.target.value)} placeholder="e.g. 30" />
+          </Field>
+          <Field label="Max attempts" hint="1–10.">
+            <input type="number" min={1} max={10} value={amaxattempts} onChange={(e) => setAmaxattempts(e.target.value)} placeholder="1" />
+          </Field>
+        </div>
+        <Field label="Due date (optional)" hint="Students cannot start new attempts after this.">
+          <input type="datetime-local" value={adue} onChange={(e) => setAdue(e.target.value)} />
         </Field>
         <div className="row">
           <button onClick={async () => {
             setOk("");
             setErr("");
             try {
-              const a = await api(`/courses/${params.id}/assessments`, { method: "POST", body: JSON.stringify({ title: atitle, type: "quiz" }) });
-              setAtitle("");
+              const a = await api(`/courses/${params.id}/assessments`, {
+                method: "POST",
+                body: JSON.stringify({
+                  title: atitle, type: atype, instructions: ainstructions || undefined,
+                  timeLimitMin: atimelimit ? Number(atimelimit) : undefined,
+                  maxAttempts: amaxattempts ? Number(amaxattempts) : undefined,
+                  dueAt: adue ? new Date(adue).toISOString() : undefined,
+                }),
+              });
+              setAtitle(""); setAinstructions(""); setAtimelimit(""); setAmaxattempts(""); setAdue("");
               setGradeId(a.id);
               setOk(`Created ${a.title} — add questions below, then publish.`);
               setAsmts([...asmts, a]);
@@ -239,24 +282,51 @@ export default function ManageCourse({ params }: { params: { id: string } }) {
         )}
         {!asmtLoading && asmts.length > 0 && (
           <div style={{ marginTop: 12 }}>
-            <DataTable caption="Course assessments" head={["Title", "Status", "Actions"]}>
+            <DataTable caption="Course assessments" head={["Title", "Status", "Released", "Actions"]}>
               {asmts.map((a) => (
                 <tr key={a.id}>
                   <td><strong>{a.title}</strong></td>
                   <td><Badge kind={statusKind(a.status)}>{a.status}</Badge></td>
+                  <td>{a.gradesReleased ? "yes" : "no"}</td>
                   <td>
                     <div className="row tight">
                       <button className="sec" onClick={() => setGradeId(a.id)} aria-label={`Open ${a.title}`}>Open</button>
-                      <button onClick={async () => {
-                        setOk("");
-                        setErr("");
-                        try {
-                          await api(`/assessments/${a.id}/publish`, { method: "POST", body: JSON.stringify({}) });
-                          setOk(`Published ${a.title} — students notified.`);
-                        } catch (e) {
-                          setErr((e as Error).message);
-                        }
-                      }} aria-label={`Publish ${a.title}`}>Publish</button>
+                      {a.status === "draft" && (
+                        <button onClick={async () => {
+                          setOk(""); setErr("");
+                          try {
+                            await api(`/assessments/${a.id}/publish`, { method: "POST", body: JSON.stringify({}) });
+                            setOk(`Published ${a.title} — students notified.`);
+                          } catch (e) { setErr((e as Error).message); }
+                        }} aria-label={`Publish ${a.title}`}>Publish</button>
+                      )}
+                      {a.status === "published" && (
+                        <button className="sec" onClick={async () => {
+                          setOk(""); setErr("");
+                          try {
+                            await api(`/assessments/${a.id}/close`, { method: "POST", body: JSON.stringify({}) });
+                            setOk(`Closed ${a.title} — hidden from students.`);
+                          } catch (e) { setErr((e as Error).message); }
+                        }}>Unpublish</button>
+                      )}
+                      {a.status === "closed" && (
+                        <button className="sec" onClick={async () => {
+                          setOk(""); setErr("");
+                          try {
+                            await api(`/assessments/${a.id}/reopen`, { method: "POST", body: JSON.stringify({}) });
+                            setOk(`Reopened ${a.title}.`);
+                          } catch (e) { setErr((e as Error).message); }
+                        }}>Reopen</button>
+                      )}
+                      {!a.gradesReleased && (
+                        <button className="sec" onClick={async () => {
+                          setOk(""); setErr("");
+                          try {
+                            await api(`/assessments/${a.id}/release`, { method: "POST", body: JSON.stringify({}) });
+                            setOk(`Grades released for ${a.title} — students notified.`);
+                          } catch (e) { setErr((e as Error).message); }
+                        }} aria-label={`Release grades ${a.title}`}>Release grades</button>
+                      )}
                     </div>
                   </td>
                 </tr>
@@ -265,33 +335,27 @@ export default function ManageCourse({ params }: { params: { id: string } }) {
           </div>
         )}
         {gradeId && <div style={{ marginTop: 12 }}>
-          <h4>Add MCQ question</h4>
-          <p className="muted">Assessment {gradeId.slice(0, 8)}… — questions save immediately to the draft.</p>
+          <h4>Add question (draft only)</h4>
+          <p className="muted">Assessment {gradeId.slice(0, 8)}… — questions save immediately. Published items lock.</p>
           <QuestionForm assessmentId={gradeId} onDone={(m) => { setOk(m); setErr(""); }} onError={(m) => { setErr(m); setOk(""); }} />
-          <h4 style={{ marginTop: 12 }}>Attempts</h4>
-          <button className="sec" onClick={() => loadAttempts(gradeId)}>Load attempts</button>
-          {attemptsLoading && <div style={{ marginTop: 8 }}><LoadingState label="Loading attempts…" lines={2} /></div>}
+          <h4 style={{ marginTop: 12 }}>Submissions</h4>
+          <button className="sec" onClick={() => loadAttempts(gradeId)}>Load submissions</button>
+          {attemptsLoading && <div style={{ marginTop: 8 }}><LoadingState label="Loading submissions…" lines={2} /></div>}
           {!attemptsLoading && grade && grade.attempts.length === 0 && (
             <div style={{ marginTop: 8 }}>
               <EmptyState
                 icon="search"
-                title="No attempts yet"
+                title="No submissions yet"
                 body="Students have not attempted this assessment."
-                action={<button className="sec" onClick={() => loadAttempts(gradeId)}>Reload attempts</button>}
+                action={<button className="sec" onClick={() => loadAttempts(gradeId)}>Reload submissions</button>}
               />
             </div>
           )}
           {!attemptsLoading && grade && grade.attempts.length > 0 && (
             <div style={{ marginTop: 8 }}>
-              <DataTable caption="Student attempts" head={["Attempt", "Status", "Score"]}>
-                {grade.attempts.map((t) => (
-                  <tr key={t.id}>
-                    <td>{t.id.slice(0, 8)}</td>
-                    <td><Badge kind={statusKind(t.status)}>{t.status}</Badge></td>
-                    <td>{t.score != null ? String(t.score) : "—"}</td>
-                  </tr>
-                ))}
-              </DataTable>
+              {grade.attempts.map((t) => (
+                <GradeAttempt key={t.id} attempt={t} onDone={(m) => { setOk(m); loadAttempts(gradeId); }} onError={(m) => setErr(m)} />
+              ))}
             </div>
           )}
         </div>}
@@ -377,24 +441,43 @@ function Insights({ courseId }: { courseId: string }) {
 
 function QuestionForm({ assessmentId, onDone, onError }: { assessmentId: string; onDone: (m: string) => void; onError: (m: string) => void }) {
   const [text, setText] = useState("");
+  const [kind, setKind] = useState("mcq");
   const [options, setOptions] = useState("A,B,C,D");
   const [correctIndex, setCorrectIndex] = useState(0);
+  const [marks, setMarks] = useState(1);
   return (
     <div>
       <Field label="Question text">
         <input value={text} onChange={(e) => setText(e.target.value)} />
       </Field>
-      <Field label="Options" hint="Comma-separated, e.g. A,B,C,D.">
-        <input value={options} onChange={(e) => setOptions(e.target.value)} />
-      </Field>
-      <Field label="Correct option index" hint="0 = first option.">
-        <input type="number" min={0} value={correctIndex} onChange={(e) => setCorrectIndex(Number(e.target.value))} />
-      </Field>
+      <div className="grid2">
+        <Field label="Kind">
+          <select value={kind} onChange={(e) => setKind(e.target.value)}>
+            <option value="mcq">Objective (auto-graded)</option>
+            <option value="theory">Subjective (you grade)</option>
+          </select>
+        </Field>
+        <Field label="Marks" hint="1–100.">
+          <input type="number" min={1} max={100} value={marks} onChange={(e) => setMarks(Number(e.target.value))} />
+        </Field>
+      </div>
+      {kind === "mcq" && (
+        <>
+          <Field label="Options" hint="Comma-separated, e.g. A,B,C,D.">
+            <input value={options} onChange={(e) => setOptions(e.target.value)} />
+          </Field>
+          <Field label="Correct option index" hint="0 = first option.">
+            <input type="number" min={0} value={correctIndex} onChange={(e) => setCorrectIndex(Number(e.target.value))} />
+          </Field>
+        </>
+      )}
       <button onClick={async () => {
         try {
           await api(`/assessments/${assessmentId}/questions`, {
             method: "POST",
-            body: JSON.stringify({ text, kind: "mcq", options: options.split(",").map((s) => s.trim()), correctIndex }),
+            body: JSON.stringify(kind === "mcq"
+              ? { text, kind, options: options.split(",").map((s) => s.trim()), correctIndex, marks }
+              : { text, kind, marks }),
           });
           setText("");
           onDone("Question added.");
@@ -402,6 +485,65 @@ function QuestionForm({ assessmentId, onDone, onError }: { assessmentId: string;
           onError((e as Error).message);
         }
       }}>Add question</button>
+    </div>
+  );
+}
+
+function GradeAttempt({ attempt, onDone, onError }: {
+  attempt: {
+    id: string; status: string; score: number | null; maxScore: number | null;
+    feedback: string | null; gradedBy: string | null; gradedAt: string | null;
+    student: { user: { name: string | null; email: string } };
+    answers: { questionId: string; selectedIndex: number | null; body: string | null; isCorrect: boolean | null; marksAwarded: number; question: { text: string; kind: string; options: string[]; marks: number } }[];
+  };
+  onDone: (m: string) => void; onError: (m: string) => void;
+}) {
+  const [marks, setMarks] = useState<Record<string, number>>(() =>
+    Object.fromEntries(attempt.answers.map((a) => [a.questionId, a.marksAwarded])));
+  const [feedback, setFeedback] = useState(attempt.feedback ?? "");
+  async function grade() {
+    try {
+      await api(`/attempts/${attempt.id}/grade`, {
+        method: "POST",
+        body: JSON.stringify({
+          marks: Object.entries(marks).map(([questionId, marksAwarded]) => ({ questionId, marksAwarded })),
+          feedback,
+        }),
+      });
+      onDone(`Graded ${attempt.student.user.name ?? attempt.student.user.email} — recorded with your identity and time.`);
+    } catch (e) {
+      onError((e as Error).message);
+    }
+  }
+  return (
+    <div style={{ borderTop: "1px solid #eee", paddingTop: 8, marginTop: 8 }}>
+      <p><strong>{attempt.student.user.name ?? attempt.student.user.email}</strong>{" "}
+        <span className="muted">{attempt.student.user.email}</span>{" "}
+        <Badge kind={statusKind(attempt.status)}>{attempt.status}</Badge>{" "}
+        {attempt.score != null && <strong>{attempt.score}/{attempt.maxScore}</strong>}{" "}
+        {attempt.gradedAt && <span className="muted">graded {new Date(attempt.gradedAt).toLocaleString()}</span>}</p>
+      {attempt.answers.map((a) => (
+        <div key={a.questionId} style={{ marginLeft: 12, marginBottom: 8 }}>
+          <p style={{ marginBottom: 4 }}><strong>Q:</strong> {a.question.text} <span className="muted">({a.question.kind}, {a.question.marks} mk{a.question.marks > 1 ? "s" : ""})</span></p>
+          {a.question.kind === "mcq" ? (
+            <p className="muted" style={{ margin: "2px 0" }}>
+              Chose: <strong>{a.selectedIndex != null ? a.question.options[a.selectedIndex] ?? `#${a.selectedIndex}` : "—"}</strong>{" "}
+              {a.isCorrect == null ? "" : a.isCorrect ? <Badge kind="ok">auto-correct</Badge> : <Badge kind="bad">auto-wrong</Badge>}
+            </p>
+          ) : (
+            <p style={{ margin: "2px 0", whiteSpace: "pre-wrap" }}>{a.body || <span className="muted">No answer written.</span>}</p>
+          )}
+          <Field label={`Marks (max ${a.question.marks})`}>
+            <input type="number" min={0} max={a.question.marks} style={{ maxWidth: 120 }}
+              value={marks[a.questionId] ?? 0}
+              onChange={(e) => setMarks({ ...marks, [a.questionId]: Number(e.target.value) })} />
+          </Field>
+        </div>
+      ))}
+      <Field label="Feedback to student (visible after release)">
+        <textarea rows={2} value={feedback} onChange={(e) => setFeedback(e.target.value)} placeholder="What went well, what to improve…" />
+      </Field>
+      <button className="sec" onClick={grade}>Save grade + feedback</button>
     </div>
   );
 }

@@ -11,8 +11,9 @@ export default function Attempt({ params }: { params: { id: string } }) {
   const [title, setTitle] = useState("");
   const [attemptId, setAttemptId] = useState<string | null>(null);
   const [ans, setAns] = useState<Record<string, { selectedIndex?: number; body?: string }>>({});
-  const [result, setResult] = useState<{ status: string; score: number | null; maxScore: number | null } | null>(null);
+  const [result, setResult] = useState<{ status: string; score: number | null; maxScore: number | null; feedback?: string | null } | null>(null);
   const [msg, setMsg] = useState("");
+  const [resumed, setResumed] = useState(false);
   const busy = msg === "…";
 
   async function start() {
@@ -22,6 +23,12 @@ export default function Attempt({ params }: { params: { id: string } }) {
       setAttemptId(r.attempt.id);
       setTitle(r.assessment.title);
       setQs(r.assessment.questions);
+      setResumed(!!r.resumed);
+      const prefill: Record<string, { selectedIndex?: number; body?: string }> = {};
+      for (const a of r.answers ?? []) {
+        prefill[a.questionId] = a.selectedIndex != null ? { selectedIndex: a.selectedIndex } : { body: a.body ?? "" };
+      }
+      if (Object.keys(prefill).length) setAns(prefill);
       setMsg("");
     } catch (e) { setMsg((e as Error).message); }
   }
@@ -35,17 +42,21 @@ export default function Attempt({ params }: { params: { id: string } }) {
           answers: Object.entries(ans).map(([questionId, a]) => ({ questionId, ...a })),
         }),
       });
-      setResult({ status: r.status, score: r.score, maxScore: r.maxScore });
+      setResult({ status: r.status, score: r.score ?? null, maxScore: r.maxScore ?? null, feedback: r.feedback ?? null });
     } catch (e) { setMsg((e as Error).message); }
   }
 
   if (result) {
     return (
       <div className="card">
+        <Crumb trail={[{ href: '/', label: 'Home' }, { label: 'Assessment' }]} />
         <h2>{title} — {result.status}</h2>
         {result.score != null
-          ? <SuccessNote>Score: <strong>{result.score}/{result.maxScore}</strong> (auto-graded)</SuccessNote>
-          : <SuccessNote>Submitted — theory answers await lecturer grading.</SuccessNote>}
+          ? <SuccessNote>Score: <strong>{result.score}/{result.maxScore}</strong></SuccessNote>
+          : result.status === "graded"
+            ? <SuccessNote>Graded — your lecturer has not released results yet. Check back soon.</SuccessNote>
+            : <SuccessNote>Submitted — theory answers await lecturer grading.</SuccessNote>}
+        {result.feedback && <p><strong>Lecturer feedback:</strong> {result.feedback}</p>}
         <p><a href="/">Back home</a></p>
       </div>
     );
@@ -55,6 +66,7 @@ export default function Attempt({ params }: { params: { id: string } }) {
       <Crumb trail={[{ href: '/', label: 'Home' }, { label: 'Assessment' }]} />
       <h2>{title || "Assessment"}</h2>
       {!attemptId && busy && <LoadingState label="Starting assessment…" />}
+      {resumed && <SuccessNote>Resumed your in-progress attempt — previous answers restored.</SuccessNote>}
       {qs.map((q, i) => (
         <div className="card" key={q.id}>
           <p><strong>Q{i + 1} ({q.marks} mk{q.marks > 1 ? "s" : ""})</strong> — {q.text}</p>

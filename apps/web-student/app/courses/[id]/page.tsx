@@ -14,7 +14,7 @@ type Course = {
 export default function CourseDetail({ params }: { params: { id: string } }) {
   const [c, setC] = useState<Course | null>(null);
   const [q, setQ] = useState({ title: "", body: "" });
-  const [asmts, setAsmts] = useState<{ id: string; title: string; type: string; dueAt: string | null; attempts: { status: string; score: number | null; maxScore: number | null }[] }[]>([]);
+  const [asmts, setAsmts] = useState<{ id: string; title: string; type: string; dueAt: string | null; gradesReleased: boolean; attempts: { status: string; score: number | null; maxScore: number | null }[] }[]>([]);
   const [qq, setQq] = useState("");
   const [qstatus, setQstatus] = useState("");
   const me = typeof window !== "undefined" ? getUser() : null;
@@ -70,7 +70,7 @@ export default function CourseDetail({ params }: { params: { id: string } }) {
         {asmts.map((a) => (
           <p key={a.id}>
             <a href={`/assessments/${a.id}`}>{a.title}</a> <span className="badge b-ed">{a.type}</span>{" "}
-            {a.attempts[0] && <span className="badge b-off">{a.attempts[0].status}{a.attempts[0].score != null ? ` ${a.attempts[0].score}/${a.attempts[0].maxScore}` : ""}</span>}
+            {a.attempts[0] && <span className="badge b-off">{a.attempts[0].status}{a.attempts[0].score != null ? ` ${a.attempts[0].score}/${a.attempts[0].maxScore}` : " (results unreleased)"}</span>}
             {a.dueAt && <span className="muted"> due {new Date(a.dueAt).toLocaleDateString()}</span>}
           </p>
         ))}

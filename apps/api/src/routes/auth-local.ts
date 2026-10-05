@@ -50,7 +50,8 @@ async function withSession(userId: string) {
 
 export async function authLocalRoutes(app: FastifyInstance) {
   // --- sign up (student | lecturer) ---
-  app.post("/auth/signup", { config: { rateLimit: { max: 10, timeWindow: "1 minute" } } }, async (req, reply) => {
+  // Brute-force budget is env-tunable (default 10/min); tests raise it.
+  app.post("/auth/signup", { config: { rateLimit: { max: Number(process.env.AUTH_LOGIN_MAX ?? 10), timeWindow: "1 minute" } } }, async (req, reply) => {
     const b = req.body as {
       name: string; email: string; password: string; role: string;
       universityId?: string; facultyId?: string; departmentId?: string; levelId?: string; matricNo?: string;
@@ -119,7 +120,7 @@ export async function authLocalRoutes(app: FastifyInstance) {
   });
 
   // --- sign in ---
-  app.post("/auth/login", { config: { rateLimit: { max: 10, timeWindow: "1 minute" } } }, async (req, reply) => {
+  app.post("/auth/login", { config: { rateLimit: { max: Number(process.env.AUTH_LOGIN_MAX ?? 10), timeWindow: "1 minute" } } }, async (req, reply) => {
     const b = (req.body ?? {}) as { email?: string; password?: string };
     if (!b.email || !b.password) return reply.code(400).send({ error: "auth-invalid: email + password required." });
     const user = await prisma.user.findUnique({
