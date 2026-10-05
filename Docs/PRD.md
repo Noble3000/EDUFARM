@@ -334,5 +334,5 @@
   - Clients: 3 `lib/api.ts` send session tokens (+ auto-clear on 401, `logout()` helper); 3 logins + 2 signups persist tokens; portal uses session tokens.
 - **Verify:** tsc clean; vitest 21/21; `pnpm verify` exit 0; dist rebuilt; PM2 restarted; 6/6 pages 200; session login + legacy rejection + demo issuance spot-checked live.
 - **Files:** `src/{authz,app,main}.ts`, all 17 routes, `authz.matrix.test.ts`, `packages/ui/src/session.ts`, 3 lib/api + 5 auth pages, portal, `infra/ecosystem.config.js` (+ALLOW_DEMO flag), root + api `package.json`, `turbo.json`, `account_status` migration, `Docs/PRD.md` (this entry). Co-built with parallel hierarchy session (029) — converged in `52287b8`; this entry covers the auth cutover + verification.
-- **Commit:** (to be filled on push)
-- **Status:** In progress.
+- **Commit:** `9164ccd Auth hardening verify: dynamic demo gate, matrix determinism, turbo test task`
+- **Status:** Done, pushed to `main`. Local-first (no deploy per rule 023).
