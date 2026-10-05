@@ -427,5 +427,16 @@
 - **Verify:** payments E2E 20/20 (terms create nothing, 402 pre-payment, pending grants nothing, enrollment-gated, transactional grant, replay ×3 absorbed with 1 grant + 1 ledger, tamper 400, paid-flag ignored, unknown provider/order fenced, legacy compat, reconcile clean + staff-only); typecheck api+student; builds api+student green; live :4000/:3001 200.
 - **Collision notes:** concurrent session committed my payments work-in-progress as `def3334` (+ their points hardening touching `orders.ts` settle path — verified compatible) and deleted my E2E tmp files as "stray" (`ffc086a`) — E2E rewritten from scratch; all assertions re-proven. Left untouched: their settlement/points/schema lanes.
 - **Files (mine):** `payments/{providers.ts,orders.ts}`, `routes/{payments.ts,purchases.ts}`, `.env.example`, student reader, `Docs/{PAYMENTS.md (new),PRD.md}` (this entry).
-- **Commit:** (this push)
+- **Commit:** (parallel session's push; hash in git log)
 - **Status:** Done, pushed to `main`. Local-first (no deploy per rule 023).
+
+### 039 — 2026-10-06 — eSpees as internal accounting ledger with settlement periods
+- **Instruction:** "Complete eSpees as an internal accounting/settlement ledger, not as a second payment provider" — track gross/platform/lecturer/pending/available/settled/period/reference/status; explicit pending→available→settled; no client-side balance edits; idempotent runs; immutable audit per movement; lecturer UI (pending/available/settled/material sales/split/history/next period); splits/conversion configurable with TODOs.
+- **Change (DB — migration `20261005160000_settlement_batches`):** `SettlementBatch` (period window, status open/paid, reference, gross/lecturer/platform totals, entry count, unique idempotencyKey) + `ESpeesLedger.settlementBatchId`. Deployed edufarm + edufarm_test.
+- **Change (policy):** new `src/settlement-policy.ts` — hold days, 70/30 split, min payout, schedule, 1:1 conversion, all with TODO(DECISION); `nextPeriodEstimate()` drives the UI.
+- **Change (API):** `routes/settlement.ts` rewritten — overview (+policy/next/batches), run closes a period batch atomically (matured only, replay-safe), pay settles exactly one batch or auto-batches available (idempotency keys, per-batch audit + lecturer notifications, min-payout gate); new `GET /batches`, `GET /lecturer/settlements`. Earnings endpoint upgraded: totals by state, material-level sales with split, batch history, next period, live policy (fixed invalid `material` include en route).
+- **Change (UI):** lecturer dashboard full earnings panel (3 balances, split policy line, per-material table, history with refs, next period); admin settlements page (policy line, batches table, idempotent run/pay confirmations).
+- **Verify:** tsc clean (after Prisma regen); vitest 59/59 (6 new: staff blocked, no edit surface, batch replay, batch pay idempotency, own history + next, student blocked); live overview policy + lecturer earnings + pages 200.
+- **Files:** `schema.prisma` + migration, `settlement-policy.ts`, `routes/{settlement,purchases}.ts`, `authz.matrix.test.ts` (+6), lecturer dashboard, admin settlements, `Docs/PRD.md` (this entry).
+- **Commit:** (to be filled on push)
+- **Status:** In progress.

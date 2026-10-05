@@ -507,3 +507,68 @@ describe("points abuse resistance (financial-adjacent)", () => {
     expect(after).toBe(before);
   });
 });
+
+describe("eSpees settlement periods (accounting, not payments)", () => {
+  it("lecturer cannot run or pay settlements", async () => {
+    expect((await req("POST", "/api/v1/settlement/run", T.lect, {})).status).toBe(403);
+    expect((await req("POST", "/api/v1/settlement/pay", T.lect, {})).status).toBe(403);
+  });
+  it("no client balance-edit surface exists", async () => {
+    for (const m of ["PUT", "PATCH"]) {
+      const r = await req(m, "/api/v1/settlement/overview", T.plat, {});
+      expect([403, 404, 405]).toContain(r.status);
+    }
+    expect((await req("PUT", "/api/v1/earnings/me", T.lect, { pendingKobo: 999 })).status).toBe(404);
+  });
+  it("run groups a period batch; replay returns same batch", async () => {
+    // seed one matured pending entry (8 days old) so the run has work to do
+    const lect = await prisma.user.findFirst({ where: { email: `l-${S}@t.ng` }, include: { lecturerProfile: true } });
+    await prisma.eSpeesLedger.create({
+      data: {
+        lecturerId: lect!.lecturerProfile!.id, purchaseId: `settle-seed-${S}`, grossKobo: 1000,
+        lecturerShareKobo: 700, platformShareKobo: 300, status: "pending",
+        createdAt: new Date(Date.now() - 8 * 86400_000),
+      },
+    });
+    const key = `batch-${S}`;
+    const r1 = await req("POST", "/api/v1/settlement/run", T.plat, { idempotencyKey: key });
+    expect(r1.status).toBe(200);
+    expect(r1.body.batch?.status).toBe("open");
+    expect(r1.body.batch?.entryCount).toBe(1);
+    const r2 = await req("POST", "/api/v1/settlement/run", T.plat, { idempotencyKey: key });
+    expect(r2.status).toBe(200);
+    expect(r2.body.replay).toBe(true);
+    expect(r2.body.batch?.id ?? null).toBe(r1.body.batch?.id ?? null);
+  });
+  it("pay is idempotent per batch; double-pay never double-settles", async () => {
+    const batches = await req("GET", "/api/v1/settlement/batches", T.plat);
+    expect(batches.status).toBe(200);
+    const open = batches.body.find((b) => b.status === "open");
+    if (!open) return; // nothing matured in test DB — run covered batching above
+    const key = `pay-${S}-${open.id.slice(0, 6)}`;
+    const p1 = await req("POST", "/api/v1/settlement/pay", T.plat, { batchId: open.id, reference: "TEST-REF", idempotencyKey: key });
+    expect(p1.status).toBe(200);
+    expect(p1.body.replay).toBe(false);
+    const p2 = await req("POST", "/api/v1/settlement/pay", T.plat, { batchId: open.id, reference: "TEST-REF", idempotencyKey: key });
+    expect(p2.status).toBe(200);
+    expect(p2.body.replay).toBe(true);
+    const p3 = await req("POST", "/api/v1/settlement/pay", T.plat, { batchId: open.id, reference: "TEST-REF2" });
+    expect(p3.status).toBe(200);
+    expect(p3.body.replay).toBe(true);
+  });
+  it("lecturer sees own settlement history + next period", async () => {
+    const h = await req("GET", "/api/v1/lecturer/settlements", T.lect);
+    expect(h.status).toBe(200);
+    expect(Array.isArray(h.body)).toBe(true);
+    const e = await req("GET", "/api/v1/earnings/me", T.lect);
+    expect(e.status).toBe(200);
+    expect(typeof e.body.availableKobo).toBe("number");
+    expect(typeof e.body.settledKobo).toBe("number");
+    expect(Array.isArray(e.body.byMaterial)).toBe(true);
+    expect(typeof e.body.next?.nextRun).toBe("string");
+  });
+  it("student cannot touch settlement or lecturer earnings", async () => {
+    expect((await req("GET", "/api/v1/settlement/batches", T.stu)).status).toBe(403);
+    expect((await req("GET", "/api/v1/lecturer/settlements", T.stu)).status).toBe(403);
+  });
+});

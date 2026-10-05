@@ -8,6 +8,7 @@ import { sessionUser as currentUser } from "../authz.js";
 import { KOBO_PER_POINT, MIN_REDEEM_POINTS, POINTS_RULE_VERSION } from "./points.js";
 import { logEmail } from "./email.js";
 import { canControlCourse, notifyUser, usableGrant } from "../hierarchy-guard.js";
+import { SETTLEMENT_POLICY, nextPeriodEstimate } from "../settlement-policy.js";
 
 const PLATFORM_FEE_BPS = Number(process.env.PLATFORM_FEE_BPS ?? 3000);
 const HOLD_NOTE = "pending";
@@ -316,7 +317,6 @@ export async function purchaseRoutes(app: FastifyInstance) {
       ? await prisma.settlementBatch.findMany({ where: { id: { in: batchIds } }, orderBy: { createdAt: "desc" } })
       : [];
     const lastBatch = history[0]?.createdAt ?? null;
-    const { nextPeriodEstimate } = await import("../settlement-policy.js");
     return {
       entries,
       pendingKobo: sum("pending"),
@@ -325,7 +325,7 @@ export async function purchaseRoutes(app: FastifyInstance) {
       byMaterial: [...byMaterial.values()],
       history,
       next: nextPeriodEstimate(lastBatch),
-      policy: { holdDays: 7, lecturerShareBps: 7000 },
+      policy: { holdDays: SETTLEMENT_POLICY.holdDays, lecturerShareBps: SETTLEMENT_POLICY.lecturerShareBps, ruleVersion: SETTLEMENT_POLICY.ruleVersion },
     };
   });
 }

@@ -451,14 +451,34 @@ model WebhookEvent {
 }
 
 model ESpeesLedger {
-  id                String       @id @default(cuid())
+  id                String           @id @default(cuid())
   lecturerId        String
-  purchaseId        String       @unique
+  purchaseId        String           @unique
   grossKobo         Int
   lecturerShareKobo Int
   platformShareKobo Int
-  status            LedgerStatus @default(pending)
-  createdAt         DateTime     @default(now())
+  status            LedgerStatus     @default(pending)
+  settlementBatchId String?
+  settlementBatch   SettlementBatch? @relation(fields: [settlementBatchId], references: [id])
+  createdAt         DateTime         @default(now())
+}
+
+// Settlement period batch (§13.3): a run groups matured entries into a period;
+// pay settles exactly one batch (idempotent by key). Ledger rows are
+// append-only — amounts are never edited, only transitioned with batch links.
+model SettlementBatch {
+  id               String   @id @default(cuid())
+  periodStart      DateTime
+  periodEnd        DateTime
+  status           String   @default("open") // open | paid | failed
+  reference        String?
+  totalGrossKobo   Int      @default(0)
+  totalLecturerKobo Int     @default(0)
+  totalPlatformKobo Int     @default(0)
+  entryCount       Int      @default(0)
+  idempotencyKey   String   @unique
+  createdAt        DateTime @default(now())
+  entries          ESpeesLedger[]
 }
 
 model PointLedger {
