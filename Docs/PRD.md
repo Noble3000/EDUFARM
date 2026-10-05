@@ -385,5 +385,5 @@
 - **Change (UI):** lecturer upload with attestation checkbox + 6-type list + My-materials table (approve/new-edition per state); reader trust block + pre-payment terms card + capture boundary notice + no-select/no-print/no-copy reader lock; library already state-complete (033).
 - **Verify:** tsc clean; vitest 32/32 (21 matrix + 11 lifecycle incl. staged-version, reject-restore, archive-block, token tamper); live upload→pendingLecturer(v0)→approve→pendingReview→publish(v1)→new-edition→v2→archive ✓ with trust block; builds + PM2 restarted; course pages 200.
 - **Files:** `schema.prisma` + migration, `routes/{materials,storage}.ts`, `app.ts`, lecturer manage UI, student reader trust/terms/lock, `authz.matrix.test.ts` (+11), `Docs/PRD.md` (this entry).
-- **Commit:** (to be filled on push)
-- **Status:** In progress.
+- **Commit:** `20dbf5a` (code: lifecycle, storage, UI, tests) + `b2fd98f` (this entry)
+- **Status:** Done, pushed to `main`. Local-first (no deploy per rule 023).
