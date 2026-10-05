@@ -406,5 +406,5 @@
 - **Change (UI):** lecturer console — full create form (type/instructions/time/attempts/due), theory+marks question builder, publish/unpublish(reopen)/release actions, submissions with student names, per-answer grading with marks inputs + feedback box; student attempt — resume notice with restored answers, release-gated result panel, feedback display; course list shows unreleased state.
 - **Verify:** tsc clean; vitest 48/48 (incl. 10 new workflow cases: invalid create, lock-on-publish, student publish blocked, resume-no-fork, double-submit, masked-then-released 6/7 incl. feedback, cross-course lecturer block, cross-student 404, close/reopen visibility); live create→theory→publish→submit→grade(audited)→masked→release→4/5+feedback ✓; builds + dist + PM2 restarted; pages 200.
 - **Files:** `schema.prisma` + migration, `routes/assessments.ts`, `authz.matrix.test.ts` (+10), lecturer manage console, student attempt + course list, `Docs/PRD.md` (this entry).
-- **Commit:** (to be filled on push)
-- **Status:** In progress.
+- **Commit:** `883fa5f Assessments full workflow: release-gated grades, timed windows, resume, audited grading, 48 tests`
+- **Status:** Done, pushed to `main`. Local-first (no deploy per rule 023).
