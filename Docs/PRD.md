@@ -353,7 +353,7 @@
 - **Commit:** `c69c511 Course-space complete: announcement lifecycle + Q&A consoles + search/resolve`
 - **Status:** Done, pushed to `main`. Local-first (no deploy per rule 023).
 
-### 031 — 2026-10-05 — Student experience end-to-end (every card live, no dead UI)
+### 032 — 2026-10-05 — Student experience end-to-end (every card live, no dead UI)
 - **Instruction:** "Complete the student experience end-to-end. Do not redesign away from the approved hierarchy. Every student-facing feature on real persisted data. Home shows: Word, priorities, continue, My Courses+progress, lecturer updates, Q&A, points, AI, Library, CGPA, trust indicators. Every card a real destination. No dead buttons/counters/demo content. Complete empty/loading/error/success states."
 - **Change (API):** `/library/me` attaches material/bundle titles + terms (no more bare ids); `/points/me` history consumed (already shipped).
 - **Change (Home rewrite):** multi-course aggregation (announcements + Q&A + assessments across ALL approved courses, each item deep-linked); hero badge + trust card from live `/verifications/me` (status, matricNo, real uni/faculty/department names); priorities = urgent anns (linked) + pending attempts (deep-linked `/assessments/:id`) + awaiting-approval enrollments + real avg; points card shows last-3 ledger entries + Library redemption link; continue gets an `EmptyState` when idle; date-rotated study tip (labeled tip, no fake streak); full loading + error+retry states; removed hardcoded demo emails and the "streak" claim.
