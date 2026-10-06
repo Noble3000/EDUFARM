@@ -501,5 +501,5 @@
 - **Change (UI):** student course page — gated-preview banner, entitled material search with loading/no-results/clear states; lecturer enrollments search with no-match state; admin disputes search (Enter/button).
 - **Verify:** tsc clean; vitest 83/83 (11 new: anon/unenrolled catalog-only, Q&A 401/403, entitled-only titles, unpurchased hidden, no storage keys, staff-only disputes search, lecturer-scoped enrollment search, zero passwordHash in payloads); builds + dist + PM2 restarted; pages 200.
 - **Files:** `routes/{hierarchy,qa,materials,reviews,enrollments}.ts`, student course page, lecturer manage enrollments, admin disputes, `authz.matrix.test.ts` (+11 with self-sufficient paid fixture), `Docs/PRD.md` (this entry).
-- **Commit:** (to be filled on push)
-- **Status:** In progress.
+- **Commit:** `9b8cac7 Search authorized: gated catalog, entitled search, hash-leak strip, filters, 83 tests` (code converged with parallel session; this commit carries tests + log)
+- **Status:** Done, pushed to `main`. Local-first (no deploy per rule 023).
