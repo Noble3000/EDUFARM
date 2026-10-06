@@ -513,5 +513,5 @@
   - Open items: committed DB password (`ecosystem.config.js` + `run-api.ps1` + test comment); mock payment mode default-on; demo auth open locally; `Secure` cookie pending HTTPS; signup email-enumeration nuance.
 - **Change (this entry):** `Docs/SECURITY.md` (vector-by-vector verdicts + pre-shared-use checklist). No code changed — deliberate (dependency majors + secret rotation are owner-decision gates).
 - **Files:** `Docs/SECURITY.md`, `Docs/PRD.md` (this entry)
-- **Commit:** (to be filled on push)
-- **Status:** In progress.
+- **Commit:** `5a7913d Security review: 20 vectors probed, dep audit, pre-shared checklist`
+- **Status:** Done, pushed to `main`. Local-first (no deploy per rule 023).
