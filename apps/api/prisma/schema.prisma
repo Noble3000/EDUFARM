@@ -216,6 +216,7 @@ model StudentProfile {
   attempts           AssessmentAttempt[]
   gradeSemesters     GradeSemester[]
   verifications      VerificationRecord[]
+  aiQueries          AiQueryLog[]
 
   @@unique([universityId, matricNo])
 }
@@ -698,4 +699,21 @@ model GradeCourse {
   grade      String        // A | B | C | D | E | F
 
   @@unique([semesterId, code])
+}
+
+// AI usage log (§11): every assistant call recorded for safety review,
+// budgets, and quality eval. Questions stored truncated (200 chars) —
+// full text never persisted. No LLM keys ever touch this table or clients.
+model AiQueryLog {
+  id             String   @id @default(cuid())
+  studentId      String
+  student        StudentProfile @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  courseId       String
+  questionHash   String
+  grounded       Boolean  @default(false)
+  refusalCode    String?
+  citationsCount Int      @default(0)
+  latencyMs      Int      @default(0)
+  provider       String   @default("mock")
+  createdAt      DateTime @default(now())
 }

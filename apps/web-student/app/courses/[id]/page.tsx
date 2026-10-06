@@ -118,7 +118,11 @@ export default function CourseDetail({ params }: { params: { id: string } }) {
 
 function AskAI({ courseId }: { courseId: string }) {
   const [question, setQuestion] = useState("");
-  const [res, setRes] = useState<{ grounded: boolean; answer: string; citations: { title: string; version: number }[]; additionalContext: string | null } | null>(null);
+  const [res, setRes] = useState<{
+    grounded: boolean; answer: string;
+    citations: { materialTitle: string; edition: string; chunk: string; sourceType: string }[];
+    additionalContext: string | null; refusalCode?: string | null;
+  } | null>(null);
   const [msg, setMsg] = useState("");
   const busy = msg === "…";
   async function askAI() {
@@ -141,12 +145,17 @@ function AskAI({ courseId }: { courseId: string }) {
       </div>
       {res && (
         <div>
+          <p><span className={`badge ${res.grounded ? "b-off" : "b-ed"}`}>
+            {res.grounded ? "Course Material Answer" : `Not answered${res.refusalCode ? ` (${res.refusalCode})` : ""}`}
+          </span></p>
           <p>{res.answer}</p>
           {!!res.citations.length && (
-            <p className="muted">Sources: {res.citations.map((c, i) => <span key={i}>[{c.title} v{c.version}] </span>)}</p>
+            <p className="muted">Sources: {res.citations.map((c, i) => (
+              <span key={i}>[{c.materialTitle} {c.edition} · {c.chunk} · {c.sourceType === "lecturer-answer" ? "lecturer answer" : "material"}] </span>
+            ))}</p>
           )}
-          {res.additionalContext && <p className="muted">Additional context (not lecturer material): {res.additionalContext}</p>}
-          {!res.grounded && <p className="muted">Grounded: no — answer refused from general knowledge per policy.</p>}
+          {res.additionalContext && <p className="muted"><strong>Additional Academic Context</strong> (not lecturer material): {res.additionalContext}</p>}
+          {!res.grounded && <p className="muted">No general answer is fabricated — see Course Q&A for lecturer help.</p>}
         </div>
       )}
     </div>

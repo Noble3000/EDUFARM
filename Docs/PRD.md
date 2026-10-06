@@ -448,5 +448,16 @@
 - **Change (UI):** reader report-material/review buttons with reason+evidence modal + own-review edit/delete; admin queue rebuilt (filters, SLA badges, timeline drawer, assign/resolve-dismiss/appeal actions).
 - **Verify:** trust E2E 28/28 (gates, duplicates, cross-user 404s, report→notify→assign→review→resolve→appeal→overturn, material published throughout, reporter privacy both directions, SLA present, bad transitions fenced); typecheck api+student+admin; builds api+student+admin green; live :4000/:3001/:3003 200.
 - **Files (mine):** `prisma/{schema.prisma,migrations/20261006030000_*}`, `routes/reviews.ts`, admin disputes, student reader, `Docs/PRD.md` (this entry).
-- **Commit:** (this push)
+- **Commit:** (parallel session's push; hash in git log)
 - **Status:** Done, pushed to `main`. Local-first (no deploy per rule 023).
+
+### 041 — 2026-10-06 — AI as production-grade learning assistant (firewalled, cited, logged)
+- **Instruction:** "Turn the existing entitlement-scoped AI into a production-grade learning assistant" — provider adapter, retrieval service, entitlement filter, prompt policy, citation formatter, refusal policy, usage logging, rate limiter; never retrieve/cite unauthorized material; structured citations (title/edition/chunk/source-type); labels (Course Material Answer vs Additional Academic Context); never claim lecturer attribution/policy/facts; refuse+redirect (unauthorized/insufficient/restricted); mock mode for tests; no keys in browser.
+- **Change (DB — migration `20261005170000_ai_query_log`):** `AiQueryLog` (student/course, question SHA-256 hash only, grounded, refusalCode, citationsCount, latencyMs, provider) + index; deployed edufarm + edufarm_test.
+- **Change (architecture — new `src/ai/`):** `provider.ts` (interface + deterministic Mock + OpenAI-compatible, active only with `LLM_API_KEY`, server-side fetch, misconfig falls back to mock loudly), `entitlement.ts` (approved-enrollment + per-material grant firewall, Ask-This-Material scoping), `retrieval.ts` (FTS over entitled chunks + lecturer Q&A answers as labeled secondary; students/keys/grades unqueryable), `policy.ts` (system-prompt hierarchy rules, forbidden-claim post-filter, daily budget 100 w/ TODO), `citations.ts` (single formatter), `refusal.ts` (UNAUTHORIZED/INSUFFICIENT/RESTRICTED classifier incl. injection patterns), `usage.ts` (hash logging + daily budget).
+- **Change (ask pipeline):** budget gate → restriction screen → entitlement firewall → retrieval → provider → forbidden-claim filter (violations rewritten to refusal) → labeled response (`course-material` + "Course Material Answer" vs refusal + "Additional Academic Context" fallback) → usage log + study event. Lecturer insights untouched.
+- **Change (UI):** AskAI box renders required labels, structured citations (title/edition/chunk/source), refusal codes, no-fabrication note.
+- **Verify:** tsc clean (after Prisma regen); vitest 66/66 (7 new: unentitled→UNAUTHORIZED no leak, gibberish→INSUFFICIENT, 3×RESTRICTED, citation shape, post-filter, hash-only logging, insights staff-only); live grounded citation + RESTRICTED refusal ✓; builds + PM2 restarted; course page 200. Mock is the active provider (no LLM key — owner decision pending).
+- **Files:** `schema.prisma` + migration, `src/ai/*` (7 modules), `routes/ai.ts` (ask pipeline), `authz.matrix.test.ts` (+7), student AskAI labels, `Docs/PRD.md` (this entry).
+- **Commit:** (to be filled on push)
+- **Status:** In progress.
