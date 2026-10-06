@@ -469,5 +469,16 @@
 - **Verify:** insights E2E 16/17 live (enrolled +4 exact, readers +3 exact with recomputed %, topics/difficulty/unresolved deltas exact, all 4 privacy scans clean, unassigned-lecturer + student fenced 403, bad window 400; single miss: active-student absolute count on the shared demo course absorbed concurrent sessions' live traffic — direction correct, metric verified). Typecheck api+lecturer; lecturer build green (below).
 - **Collision notes:** concurrent session rewrote `routes/ai.ts` around this work (production-grade AI modules) and preserved the insights engine — verified present; they committed my tmp E2E scripts then deleted them as stray — E2E rewritten, proven, cleaned immediately.
 - **Files (mine):** `routes/ai.ts` (insights engine), lecturer manage Insights card, `Docs/PRD.md` (this entry).
-- **Commit:** (this push)
+- **Commit:** (parallel session's push; hash in git log)
 - **Status:** Done, pushed to `main`. Local-first (no deploy per rule 023).
+
+### 043 — 2026-10-06 — Daily Word production-ready (canonical, sourced, fallback-safe)
+- **Instruction:** "Make the daily Word system production-ready" — one canonical entry per Lagos day, same for all students, cached/stored consistently, rights-aware archive, devotional vs reflection separated, urgent priorities outrank on conflict; server-side source with auth validation + caching + attribution (never browser-called); graceful fallback to last-authorized/admin entry, never fabricated; manual admin publishing as fallback.
+- **Change (DB — migration `20261005180000_devotional_provenance`):** `Devotional.origin` (manual|feed|fallback) + `fetchedAt` + `rightsNote`; deployed edufarm + edufarm_test.
+- **Change (architecture — new `src/word/`):** `source.ts` (Bearer-authed server fetch, 8s timeout, shape validation, coded errors, never browser-called) + `service.ts` (`resolveToday`: 5-min day cache + single-flight → DB today → source pull → last-authorized ≤ today → honest `{empty:true}`; future rows never served as today).
+- **Change (API):** `/devotional/today` via service (provenance + `isFallback` + `canonicalFor` in every response); archive unchanged + provenance; admin publish accepts rights (audited, clears cache); new `/devotional/refresh` (force pull) + `/devotional/source-status`.
+- **Change (UI):** urgent "Needs you now" banner renders ABOVE the Word card when urgents exist; Word card shows provenance (source vs fallback vs platform-published); reflection stays a separate card; new admin Word manager (publish form, pull-now, archive table with origin/rights).
+- **Verify:** tsc clean (after Prisma regen); vitest 72/72 (6 new: same-for-all, provenance shape, student-publish 403, labeled fallback, honest-empty, unreachable-source graceful, archive provenance); live today `manual`/non-fallback ✓; builds + PM2 restarted; home + devotionals pages 200.
+- **Files:** `schema.prisma` + migration, `src/word/*`, `routes/devotional.ts`, `authz.matrix.test.ts` (+6), student home (urgent banner + provenance), admin devotionals page + nav, `Docs/PRD.md` (this entry).
+- **Commit:** (to be filled on push)
+- **Status:** In progress.

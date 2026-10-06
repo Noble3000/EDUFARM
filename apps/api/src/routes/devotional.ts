@@ -6,46 +6,55 @@
 import type { FastifyInstance } from "fastify";
 import { prisma } from "../db.js";
 import { sessionUser as currentUser } from "../authz.js";
-
-// Lagos (UTC+1, no DST) calendar day as UTC range
-export function lagosDayRange(now = new Date()): { start: Date; end: Date; key: string } {
-  const lagos = new Date(now.getTime() + 60 * 60 * 1000);
-  const y = lagos.getUTCFullYear();
-  const m = String(lagos.getUTCMonth() + 1).padStart(2, "0");
-  const d = String(lagos.getUTCDate()).padStart(2, "0");
-  const start = new Date(`${y}-${m}-${d}T00:00:00.000+01:00`);
-  const end = new Date(start.getTime() + 86400_000);
-  return { start, end, key: `${y}-${m}-${d}` };
-}
+import { audit } from "../authz.js";
+import { clearWordCache, resolveToday } from "../word/service.js";
+import { feedConfigured } from "../word/source.js";
 
 export async function devotionalRoutes(app: FastifyInstance) {
-  // today's Word — identical for every student
-  app.get("/devotional/today", async () => {
-    const { start, end } = lagosDayRange();
-    const entry =
-      (await prisma.devotional.findFirst({ where: { date: { gte: start, lt: end } } })) ??
-      (await prisma.devotional.findFirst({ orderBy: { date: "desc" } }));
-    if (!entry) return { empty: true };
-    return entry;
-  });
+  // today's Word — canonical per Lagos day, identical for every student.
+  // Served from day cache → DB → authorized source → last-authorized fallback.
+  // Never fabricated: empty database yields { empty: true }.
+  app.get("/devotional/today", async () => resolveToday());
 
   app.get("/devotional/archive", async () => {
     return prisma.devotional.findMany({ orderBy: { date: "desc" }, take: 30 });
   });
 
-  // platform admin curates devotionals
+  app.get("/devotional/source-status", async (req, reply) => {
+    const user = await currentUser(req);
+    if (!user || user.role !== "platformAdmin")
+      return reply.code(403).send({ error: "forbidden:role:platformAdmin" });
+    return { configured: feedConfigured(), note: "Set WORD_FEED_URL + WORD_FEED_KEY to enable server-side pulls." };
+  });
+
+  // platform admin curates devotionals (manual fallback channel, audited)
   app.post("/devotionals", async (req, reply) => {
     const user = await currentUser(req);
     if (!user || !["platformAdmin"].includes(user.role))
-      return reply.code(403).send({ error: "Platform admin only." });
-    const b = req.body as { date: string; title: string; verse: string; body: string; sourceRef?: string };
+      return reply.code(403).send({ error: "forbidden:role:platformAdmin" });
+    const b = req.body as { date: string; title: string; verse: string; body: string; sourceRef?: string; rightsNote?: string };
     if (!b.date || !b.title || !b.verse || !b.body)
-      return reply.code(400).send({ error: "date + title + verse + body required." });
-    return prisma.devotional.upsert({
+      return reply.code(400).send({ error: "auth-invalid: date + title + verse + body required." });
+    const row = await prisma.devotional.upsert({
       where: { date: new Date(b.date) },
-      update: { title: b.title, verse: b.verse, body: b.body, sourceRef: b.sourceRef },
-      create: { date: new Date(b.date), title: b.title, verse: b.verse, body: b.body, sourceRef: b.sourceRef },
+      update: { title: b.title, verse: b.verse, body: b.body, sourceRef: b.sourceRef, rightsNote: b.rightsNote, origin: "manual" },
+      create: { date: new Date(b.date), title: b.title, verse: b.verse, body: b.body, sourceRef: b.sourceRef, rightsNote: b.rightsNote, origin: "manual" },
     });
+    clearWordCache();
+    await audit(user.id, "devotional.published", "Devotional", row.id, `${b.date} manual`);
+    return row;
+  });
+
+  // force a source pull now (admin; no-op + report when unconfigured)
+  app.post("/devotional/refresh", async (req, reply) => {
+    const user = await currentUser(req);
+    if (!user || !["platformAdmin"].includes(user.role))
+      return reply.code(403).send({ error: "forbidden:role:platformAdmin" });
+    if (!feedConfigured()) return { refreshed: false, reason: "source-unconfigured" };
+    clearWordCache();
+    const out = await resolveToday();
+    await audit(user.id, "devotional.refreshed", "Devotional", out.id ?? "none", `origin=${out.origin ?? "?"}`);
+    return { refreshed: !out.empty, origin: out.origin ?? null };
   });
 
   // public institution onboarding request → unverified university + audit

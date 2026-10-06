@@ -9,6 +9,7 @@ const ADMIN_NAV: NavItem[] = [
   { href: "/disputes", label: "Disputes", icon: "dispute" },
   { href: "/email", label: "Email", icon: "mail" },
   { href: "/onboarding", label: "Onboarding", icon: "school" },
+  { href: "/devotionals", label: "Word", icon: "star" },
   { href: "/login", label: "Login", icon: "user" },
 ];
 export const metadata: Metadata = {

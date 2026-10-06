@@ -627,3 +627,57 @@ describe("AI assistant safety (entitlement firewall + refusal + citations)", () 
     expect((await req("GET", `/api/v1/courses/${ids.courseId}/insights`, T.stu)).status).toBe(403);
   });
 });
+
+describe("daily Word canonical service (production-grade)", () => {
+  it("same Word for every student (two sessions, identical entry)", async () => {
+    const a = await req("GET", "/api/v1/devotional/today", T.stu);
+    const b = await req("GET", "/api/v1/devotional/today", T.stu2);
+    expect(a.status).toBe(200);
+    expect(b.body.id).toBe(a.body.id);
+    expect(a.body.canonicalFor).toBe(b.body.canonicalFor);
+  });
+  it("response carries provenance (origin, fallback flag, canonical day)", async () => {
+    const r = await req("GET", "/api/v1/devotional/today", T.stu);
+    expect(typeof r.body.origin).toBe("string");
+    expect(typeof r.body.canonicalFor).toBe("string");
+    expect(typeof r.body.isFallback === "boolean" || r.body.isFallback === undefined).toBe(true);
+  });
+  it("students cannot publish; admins can (audited manual fallback)", async () => {
+    expect((await req("POST", "/api/v1/devotionals", T.stu, { date: "2020-01-01", title: "X", verse: "Y", body: "Z" })).status).toBe(403);
+    const r = await req("POST", "/api/v1/devotionals", T.plat, {
+      date: "2020-01-01", title: "Seed Archive", verse: "Ps 1:1", body: "Planted.", rightsNote: "test-only",
+    });
+    expect(r.status).toBe(200);
+    expect(r.body.origin).toBe("manual");
+  });
+  it("fallback chain: future day serves last-authorized labeled; ancient day is honestly empty", async () => {
+    const { resolveToday, clearWordCache } = await import("./word/service.js");
+    clearWordCache();
+    const future = await resolveToday(new Date("2030-06-15T12:00:00Z"));
+    expect(future.empty ?? false).toBe(false);
+    expect(future.isFallback).toBe(true);
+    clearWordCache();
+    const ancient = await resolveToday(new Date("1990-01-02T12:00:00Z"));
+    expect(ancient.empty).toBe(true);
+    expect(ancient.title).toBeUndefined();
+  });
+  it("unreachable source degrades gracefully (never fabricates)", async () => {
+    process.env.WORD_FEED_URL = "http://127.0.0.1:9/unreachable";
+    process.env.WORD_FEED_KEY = "bogus";
+    const { resolveToday, clearWordCache } = await import("./word/service.js");
+    clearWordCache();
+    const out = await resolveToday(new Date("2031-03-04T12:00:00Z"));
+    expect(out.empty ?? false).toBe(false);
+    expect(out.isFallback).toBe(true);
+    expect(out.origin).not.toBe("feed");
+    delete process.env.WORD_FEED_URL;
+    delete process.env.WORD_FEED_KEY;
+    clearWordCache();
+  });
+  it("archive is newest-first with provenance", async () => {
+    const r = await req("GET", "/api/v1/devotional/archive", T.stu);
+    expect(r.status).toBe(200);
+    expect(r.body.length).toBeGreaterThan(0);
+    expect(typeof r.body[0].origin).toBe("string");
+  });
+});

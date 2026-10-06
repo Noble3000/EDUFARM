@@ -584,6 +584,11 @@ model Devotional {
   verse     String
   body      String
   sourceRef String?
+  // Provenance: manual (admin-published) | feed (authorized source pull) |
+  // fallback (last-authorized reuse, explicitly labeled in responses).
+  origin      String    @default("manual")
+  fetchedAt   DateTime?
+  rightsNote  String?
 }
 
 model AuditLog {

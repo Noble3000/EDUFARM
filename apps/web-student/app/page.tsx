@@ -9,7 +9,7 @@ import { Alert, Badge, EmptyState, ErrorState, Icon, LoadingState, SuccessNote }
 type Note = { id: string; title: string; body: string };
 type Enr = { courseId: string; course: { code: string; title: string }; status: string };
 type Prog = { courseId: string; code: string; percent: number };
-type Word = { title: string; verse: string; body: string };
+type Word = { title: string; verse: string; body: string; origin?: string; isFallback?: boolean; sourceRef?: string | null };
 type Ann = { id: string; title: string; body: string; category: string; isUrgent: boolean };
 type Q = { id: string; title: string; body: string; status: string };
 type CourseDetail = { code: string; title: string; announcements: Ann[]; questions: Q[] };
@@ -222,10 +222,28 @@ export default function Home() {
 
       <div className="grid2">
         <div>
+          {(urgentAnns.length > 0 || urgentNotes.length > 0) && (
+            <section className="card" style={{ borderLeft: "6px solid #D92D20" }} aria-label="Urgent now">
+              <span className="badge b-urg"><Icon name="bell" size={13} /> Needs you now</span>
+              <div style={{ marginTop: 8 }}>
+                {urgentAnns.slice(0, 3).map((a) => (
+                  <p key={a.id}><a href={`/courses/${a.courseId}`}><strong>{a.title}</strong></a> <span className="muted">· {a.code}</span></p>
+                ))}
+                {urgentNotes.slice(0, 3).map((n) => <p key={n.id}>{n.title}</p>)}
+              </div>
+            </section>
+          )}
           <section id="word" className="card" style={{ borderLeft: "6px solid #C9A227" }} aria-label="Today's Word">
             <span className="badge b-ed"><Icon name="star" size={13} /> Today&apos;s Word · same for every student</span>
             {word ? (
-              <><h2 style={{ marginTop: 6 }}>“{word.title}” — {word.verse}</h2><p>{word.body}</p></>
+              <><h2 style={{ marginTop: 6 }}>“{word.title}” — {word.verse}</h2><p>{word.body}</p>
+              <p className="muted" style={{ marginTop: 6 }}>
+                {word.isFallback
+                  ? "Showing the last authorized entry — today's source is unavailable."
+                  : word.origin === "feed"
+                    ? `From the authorized source${word.sourceRef ? ` · ${word.sourceRef}` : ""}.`
+                    : "Published by the platform team."}
+              </p></>
             ) : wordFailed ? (
               <p className="muted" style={{ marginTop: 6 }}>Today&apos;s Word didn&apos;t load. <a href="#" onClick={(e) => { e.preventDefault(); load(); }}>Try again</a>.</p>
             ) : (
