@@ -438,5 +438,5 @@
 - **Change (UI):** lecturer dashboard full earnings panel (3 balances, split policy line, per-material table, history with refs, next period); admin settlements page (policy line, batches table, idempotent run/pay confirmations).
 - **Verify:** tsc clean (after Prisma regen); vitest 59/59 (6 new: staff blocked, no edit surface, batch replay, batch pay idempotency, own history + next, student blocked); live overview policy + lecturer earnings + pages 200.
 - **Files:** `schema.prisma` + migration, `settlement-policy.ts`, `routes/{settlement,purchases}.ts`, `authz.matrix.test.ts` (+6), lecturer dashboard, admin settlements, `Docs/PRD.md` (this entry).
-- **Commit:** (to be filled on push)
-- **Status:** In progress.
+- **Commit:** `2a7e916 eSpees accounting: settlement periods, idempotent pay, earnings UI, 59 tests` (push needed one retry — transient GitHub 500)
+- **Status:** Done, pushed to `main`. Local-first (no deploy per rule 023).
