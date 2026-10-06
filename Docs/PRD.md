@@ -480,5 +480,5 @@
 - **Change (UI):** urgent "Needs you now" banner renders ABOVE the Word card when urgents exist; Word card shows provenance (source vs fallback vs platform-published); reflection stays a separate card; new admin Word manager (publish form, pull-now, archive table with origin/rights).
 - **Verify:** tsc clean (after Prisma regen); vitest 72/72 (6 new: same-for-all, provenance shape, student-publish 403, labeled fallback, honest-empty, unreachable-source graceful, archive provenance); live today `manual`/non-fallback ✓; builds + PM2 restarted; home + devotionals pages 200.
 - **Files:** `schema.prisma` + migration, `src/word/*`, `routes/devotional.ts`, `authz.matrix.test.ts` (+6), student home (urgent banner + provenance), admin devotionals page + nav, `Docs/PRD.md` (this entry).
-- **Commit:** (to be filled on push)
-- **Status:** In progress.
+- **Commit:** `fd8047a Daily Word production-ready: canonical service, source adapter, fallback chain, admin manager`
+- **Status:** Done, pushed to `main`. Local-first (no deploy per rule 023).
