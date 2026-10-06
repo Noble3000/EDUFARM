@@ -5,6 +5,7 @@
 // over implicit TLS (port 465) with AUTH LOGIN using node:tls.
 
 import { connect } from "node:tls";
+import { fetchWithRetry } from "../lib/http.js";
 
 export type EmailProviderName = "mock" | "resend" | "sendgrid" | "smtp";
 
@@ -55,7 +56,7 @@ export class ResendEmailProvider implements EmailProvider {
   async send(msg: EmailMessage): Promise<SendResult> {
     const key = env("EMAIL_API_KEY");
     if (!key) throw new Error("EMAIL_API_KEY not configured for resend.");
-    const res = await fetch("https://api.resend.com/emails", {
+    const res = await fetchWithRetry("https://api.resend.com/emails", {
       method: "POST",
       headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -75,7 +76,7 @@ export class SendGridEmailProvider implements EmailProvider {
   async send(msg: EmailMessage): Promise<SendResult> {
     const key = env("EMAIL_API_KEY");
     if (!key) throw new Error("EMAIL_API_KEY not configured for sendgrid.");
-    const res = await fetch("https://api.sendgrid.com/v3/mail/send", {
+    const res = await fetchWithRetry("https://api.sendgrid.com/v3/mail/send", {
       method: "POST",
       headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
       body: JSON.stringify({

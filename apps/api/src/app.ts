@@ -62,7 +62,34 @@ export async function buildApp(): Promise<FastifyInstance> {
     service: "edufarm-api",
     auth: "session (better-auth tables)",
     demo: demoOpen() ? "open" : "closed",
+    uptimeSec: Math.round(process.uptime()),
+    memoryMB: Math.round(process.memoryUsage().heapUsed / 1048576),
   }));
+
+  // Readiness: alive AND database reachable AND migrations applied.
+  // PM2 / monitors poll this (not /health) before routing traffic.
+  app.get("/ready", async (_req, reply) => {
+    const started = Date.now();
+    try {
+      await prisma.$queryRaw`SELECT 1`;
+      const [{ count }] = await prisma.$queryRaw<{ count: bigint }[]>`
+        SELECT COUNT(*)::bigint AS count FROM "_prisma_migrations" WHERE finished_at IS NULL`;
+      const pending = Number(count);
+      const dbMs = Date.now() - started;
+      const { cacheStats } = await import("./lib/cache.js");
+      if (pending > 0) {
+        return reply.code(503).send({ ready: false, reason: "migrations-pending", pending, dbMs });
+      }
+      return {
+        ready: true, dbMs,
+        uptimeSec: Math.round(process.uptime()),
+        memoryMB: Math.round(process.memoryUsage().heapUsed / 1048576),
+        cache: cacheStats(),
+      };
+    } catch (e) {
+      return reply.code(503).send({ ready: false, reason: "db-unreachable", detail: (e as Error).message.slice(0, 200) });
+    }
+  });
 
   // Demo login: passwordless convenience for LOCAL demos only.
   // Closed unless ALLOW_DEMO_LOGIN=true. Issues a real revocable session

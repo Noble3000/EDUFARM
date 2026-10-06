@@ -5,6 +5,7 @@
 // conversion lives inside each provider, nowhere else.
 
 import { createHmac, randomBytes, timingSafeEqual } from "node:crypto";
+import { fetchWithRetry } from "../lib/http.js";
 
 export type ProviderName = "mock" | "paystack" | "flutterwave";
 
@@ -120,8 +121,21 @@ export class MockPaymentProvider implements PaymentProvider {
   }
 }
 
-/** Server-side record of mock user payments (test stand-in for provider ledger). */
-export const MockCompletions = new Map<string, number>();
+/** Server-side record of mock user payments (test stand-in for provider ledger).
+ * Bounded (2000 entries, oldest-first eviction) — never an unbounded leak. */
+const MOCK_COMPLETION_CAP = 2000;
+class BoundedCompletions extends Map<string, number> {
+  override set(k: string, v: number): this {
+    super.set(k, v);
+    while (this.size > MOCK_COMPLETION_CAP) {
+      const oldest = this.keys().next();
+      if (oldest.done) break;
+      this.delete(oldest.value);
+    }
+    return this;
+  }
+}
+export const MockCompletions: Map<string, number> = new BoundedCompletions();
 
 // ---------------------------------------------------------------------------
 // Paystack — https://paystack.com/docs/api
@@ -139,7 +153,7 @@ export class PaystackProvider implements PaymentProvider {
   }
 
   async initialize(order: OrderIntent): Promise<InitResult> {
-    const res = await fetch(`${this.base}/transaction/initialize`, {
+    const res = await fetchWithRetry(`${this.base}/transaction/initialize`, {
       method: "POST",
       headers: { Authorization: `Bearer ${this.key()}`, "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -165,7 +179,7 @@ export class PaystackProvider implements PaymentProvider {
   }
 
   async verify(reference: string): Promise<VerifyResult> {
-    const res = await fetch(`${this.base}/transaction/verify/${encodeURIComponent(reference)}`, {
+    const res = await fetchWithRetry(`${this.base}/transaction/verify/${encodeURIComponent(reference)}`, {
       headers: { Authorization: `Bearer ${this.key()}` },
     });
     const data = (await res.json().catch(() => ({}))) as {
@@ -231,7 +245,7 @@ export class FlutterwaveProvider implements PaymentProvider {
 
   async initialize(order: OrderIntent): Promise<InitResult> {
     const txRef = `edufarm_${order.orderId.slice(-12)}_${randomBytes(4).toString("hex")}`;
-    const res = await fetch(`${this.base}/payments`, {
+    const res = await fetchWithRetry(`${this.base}/payments`, {
       method: "POST",
       headers: { Authorization: `Bearer ${this.key()}`, "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -259,7 +273,7 @@ export class FlutterwaveProvider implements PaymentProvider {
 
   async verify(reference: string): Promise<VerifyResult> {
     // reference here is the Flutterwave transaction id (from the webhook event).
-    const res = await fetch(`${this.base}/transactions/${encodeURIComponent(reference)}/verify`, {
+    const res = await fetchWithRetry(`${this.base}/transactions/${encodeURIComponent(reference)}/verify`, {
       headers: { Authorization: `Bearer ${this.key()}` },
     });
     const data = (await res.json().catch(() => ({}))) as {

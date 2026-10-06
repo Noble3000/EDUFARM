@@ -8,17 +8,24 @@ import type { FastifyInstance } from "fastify";
 import { prisma } from "../db.js";
 import { sessionUser as currentUser, requireRole } from "../authz.js";
 import { assertCoursePlacement, audit, notifyUser } from "../hierarchy-guard.js";
+import { cached, cacheInvalidate } from "../lib/cache.js";
 
 const STAFF = ["deptAdmin", "institutionAdmin", "platformAdmin"];
 
 export async function hierarchyRoutes(app: FastifyInstance) {
-  app.get("/universities", async () => prisma.university.findMany({ orderBy: { name: "asc" } }));
+  app.get("/universities", async () =>
+    cached("hier:universities", 60_000, () =>
+      prisma.university.findMany({ orderBy: { name: "asc" } })
+    )
+  );
 
   app.post("/universities", { preHandler: requireRole(...STAFF) }, async (req, reply) => {
     const b = req.body as { name: string; slug: string };
     if (!b.name || !b.slug) return reply.code(400).send({ error: "name + slug required." });
     try {
-      return await prisma.university.create({ data: { name: b.name, slug: b.slug } });
+      const created = await prisma.university.create({ data: { name: b.name, slug: b.slug } });
+      cacheInvalidate("hier:universities");
+      return created;
     } catch {
       return reply.code(400).send({ error: "University slug already exists." });
     }

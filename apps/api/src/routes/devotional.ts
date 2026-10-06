@@ -9,6 +9,7 @@ import { sessionUser as currentUser } from "../authz.js";
 import { audit } from "../authz.js";
 import { clearWordCache, resolveToday } from "../word/service.js";
 import { feedConfigured } from "../word/source.js";
+import { cacheInvalidate } from "../lib/cache.js";
 
 export async function devotionalRoutes(app: FastifyInstance) {
   // today's Word — canonical per Lagos day, identical for every student.
@@ -95,6 +96,7 @@ export async function devotionalRoutes(app: FastifyInstance) {
     if (!uni) return reply.code(404).send({ error: "Institution not found." });
     if (uni.verified) return reply.code(400).send({ error: "Already approved." });
     const updated = await prisma.university.update({ where: { id }, data: { verified: true } });
+    cacheInvalidate("hier:universities");
     await prisma.auditLog.create({
       data: { actorId: user.id, action: "institution.onboarding.approved", targetType: "University", targetId: id },
     });
