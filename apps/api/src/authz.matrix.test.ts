@@ -683,6 +683,16 @@ describe("daily Word canonical service (production-grade)", () => {
 });
 
 describe("search authorization (no protected-title leaks)", () => {
+  beforeAll(async () => {
+    // Self-sufficient fixture: a paid published material in the workflow course.
+    const mk = await req("POST", `/api/v1/courses/${ids.courseId}/materials`, T.lect, {
+      title: `SearchProbe-${S}`, type: "lecture-notes", isFree: false, priceKobo: 100000,
+    });
+    if (mk.status === 200) {
+      await req("POST", `/api/v1/materials/${mk.body.id}/approve`, T.lect, { attest: true });
+      await req("POST", `/api/v1/materials/${mk.body.id}/review`, T.plat, { decision: "approve" });
+    }
+  });
   it("anonymous Q&A search is rejected", async () => {
     expect((await req("GET", `/api/v1/courses/${ids.courseId}/questions?q=test`)).status).toBe(401);
   });

@@ -491,5 +491,15 @@
 - **Verify:** notify E2E 19/19 (deep links, mute skips email but not in-app, read/unread counts, cross-user 404, reminders idempotent + staff-only, drain sends with messageIds, eventKey unique, failed-delivery stored, retry re-queues, outbox staff-only + filters); typecheck ×4; builds api + 3 webs green; live :4000/:3001/notifications + :3003/email 200.
 - **Collision notes:** repaired concurrent syntax breaks in `hierarchy.ts`/`materials.ts` (dropped brace/paren, behavior-neutral); regenerated client after their schema drift; left their in-flight lanes (settlement batches, devotional provenance follow-ups, stray mjs) untouched and uncommitted.
 - **Files (mine):** `prisma/{schema.prisma,migrations/20261006040000_*}`, `notify/{providers,center}.ts`, `routes/{email.ts,notifications.ts}`, guard + event wiring in 8 route files, 3 notification centers + navs, admin outbox, `Docs/{NOTIFICATIONS.md (new),PRD.md}` (this entry).
-- **Commit:** (this push)
+- **Commit:** (parallel session's push; hash in git log)
 - **Status:** Done, pushed to `main`. Local-first (no deploy per rule 023).
+
+### 045 — 2026-10-06 — Search surfaces audited + authorized (no protected-title leaks)
+- **Instruction:** "Audit all search surfaces" — Q&A, authorized materials, announcements where appropriate, admin queues, lecturer management; authorization obeyed; protected titles hidden unless entitled; filters/empty/no-results/loading states; no public/global index of private content.
+- **Findings (fixed):** `GET /courses/:id` returned ALL published material titles/prices + announcements + Q&A with ZERO auth, plus nested `user: true` includes leaking password hashes; `GET /courses/:id/questions` had no auth at all.
+- **Change (API):** course detail split into public catalog (code/title/staff names) vs entitled full payload (approved enrollment, own-course lecturer, staff); all nested user includes stripped to name/email; Q&A list/ask/answer gated by course membership; new entitled `GET /courses/:id/materials/search` (q + type; students see free + purchased only; no fileKey/checksum ever); `?q=` added to disputes, enrollments (name/email), and material review queue.
+- **Change (UI):** student course page — gated-preview banner, entitled material search with loading/no-results/clear states; lecturer enrollments search with no-match state; admin disputes search (Enter/button).
+- **Verify:** tsc clean; vitest 83/83 (11 new: anon/unenrolled catalog-only, Q&A 401/403, entitled-only titles, unpurchased hidden, no storage keys, staff-only disputes search, lecturer-scoped enrollment search, zero passwordHash in payloads); builds + dist + PM2 restarted; pages 200.
+- **Files:** `routes/{hierarchy,qa,materials,reviews,enrollments}.ts`, student course page, lecturer manage enrollments, admin disputes, `authz.matrix.test.ts` (+11 with self-sufficient paid fixture), `Docs/PRD.md` (this entry).
+- **Commit:** (to be filled on push)
+- **Status:** In progress.
