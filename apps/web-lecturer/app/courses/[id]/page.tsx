@@ -365,70 +365,119 @@ export default function ManageCourse({ params }: { params: { id: string } }) {
   );
 }
 
+type SuggRef = { type: "course" | "assessment" | "material" | "question"; id: string; label: string };
+
+function refHref(courseId: string, ref: SuggRef): string {
+  return `/courses/${courseId}`;
+}
+
 function Insights({ courseId }: { courseId: string }) {
   const [ins, setIns] = useState<{
+    windowDays: number; enrolled: number; limited: boolean; summary: string;
+    engagement: { newEnrollments: number; activeStudents: number | null; activeChangePct: number | null; dwellEvents: number; dwellChangePct: number; studyMinutes: number };
+    completion: { materialId: string; title: string; version: number; readers: number | null; readersPct: number | null; avgDwellSec: number | null; trend: string; signal: string }[];
+    topics: { term: string; mentions: number; questionIds: string[] }[];
+    unresolved: { unanswered: { id: string; title: string; ageDays: number }[]; openCount: number };
+    difficulty: { questionId: string; assessmentId: string; text: string; responses: number; correctPct: number | null }[];
     assessmentStats: { id: string; title: string; attempts: number; avgScore: number | null; maxScore: number }[];
-    unanswered: { id: string; title: string }[];
-    weakCompletion: { materialId: string; title: string; readers: number }[];
-    enrolled: number; suggestions: string[];
+    suggestions: { text: string; metric: string; ref: SuggRef }[];
   } | null>(null);
+  const [days, setDays] = useState(14);
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState("");
+  async function gen(d: number) {
+    setLoading(true);
+    setErr("");
+    try {
+      setIns(await api(`/courses/${courseId}/insights?days=${d}`));
+    } catch (e) {
+      setErr((e as Error).message);
+      setIns(null);
+    } finally {
+      setLoading(false);
+    }
+  }
   return (
     <div className="card">
       <h3>AI insights</h3>
-      <p className="muted">Enrollment, assessment performance and reading completion at a glance.</p>
-      <button className="sec" disabled={loading} onClick={async () => {
-        setLoading(true);
-        setErr("");
-        try {
-          setIns(await api(`/courses/${courseId}/insights`).catch(() => null));
-        } finally {
-          setLoading(false);
-        }
-      }}>{loading ? "Generating…" : "Generate insights"}</button>
+      <p className="muted">Aggregated class signals only — counts, rates and trends. No student names, no personal data, no CGPA or private grades.</p>
+      <div className="row">
+        {[7, 14, 30].map((d) => (
+          <button key={d} className={days === d ? "" : "sec"} aria-pressed={days === d} onClick={() => { setDays(d); gen(d); }}>{d} days</button>
+        ))}
+        <button className="sec" disabled={loading} onClick={() => gen(days)}>{loading ? "Generating…" : "Refresh"}</button>
+      </div>
       {loading && <div style={{ marginTop: 12 }}><LoadingState label="Generating insights…" lines={2} /></div>}
       {err && <div style={{ marginTop: 12 }}><Alert kind="error">{err}</Alert></div>}
       {ins && !loading && (
         <div style={{ marginTop: 12 }}>
-          <p className="muted">Enrolled: {ins.enrolled}</p>
-          {ins.assessmentStats.length > 0 ? (
-            <DataTable caption="Assessment performance" head={["Assessment", "Attempts", "Average"]}>
-              {ins.assessmentStats.map((a) => (
-                <tr key={a.id}>
-                  <td>{a.title}</td>
-                  <td>{a.attempts}</td>
-                  <td>{a.avgScore != null ? `${a.avgScore}/${a.maxScore}` : "—"}</td>
+          <SuccessNote>{ins.summary}</SuccessNote>
+          {ins.limited && <div style={{ marginTop: 8 }}><Alert kind="warn">Small cohort — rates are suppressed until at least 3 students enroll.</Alert></div>}
+          <div style={{ marginTop: 8 }}>
+            <DataTable caption={`Engagement · last ${ins.windowDays} days`} head={["Signal", "Now", "Change"]}>
+              <tr><td>Enrolled</td><td>{ins.enrolled}{ins.engagement.newEnrollments ? ` (+${ins.engagement.newEnrollments} new)` : ""}</td><td>—</td></tr>
+              <tr><td>Active students</td><td>{ins.engagement.activeStudents ?? "suppressed"}</td><td>{ins.engagement.activeChangePct == null ? "—" : `${ins.engagement.activeChangePct >= 0 ? "+" : ""}${ins.engagement.activeChangePct}%`}</td></tr>
+              <tr><td>Study events</td><td>{ins.engagement.dwellEvents}</td><td>{`${ins.engagement.dwellChangePct >= 0 ? "+" : ""}${ins.engagement.dwellChangePct}%`}</td></tr>
+              <tr><td>Study minutes</td><td>{ins.engagement.studyMinutes}</td><td>—</td></tr>
+            </DataTable>
+          </div>
+          {ins.completion.length > 0 ? (
+            <DataTable caption="Material completion (readers = sustained study)" head={["Material", "Completion", "Trend", "Signal"]}>
+              {ins.completion.map((c) => (
+                <tr key={c.materialId}>
+                  <td>{c.title} <span className="muted">v{c.version}</span></td>
+                  <td>{c.readersPct == null ? "suppressed" : `${c.readersPct}%${c.avgDwellSec != null ? ` · ~${c.avgDwellSec}s avg` : ""}`}</td>
+                  <td><Badge kind={c.trend === "up" ? "ok" : c.trend === "down" ? "bad" : "info"}>{c.trend}</Badge></td>
+                  <td><Badge kind={c.signal === "strong" ? "ok" : c.signal === "weak" ? "warn" : "info"}>{c.signal}</Badge></td>
                 </tr>
               ))}
             </DataTable>
           ) : (
-            <EmptyState
-              icon="clipboard"
-              title="No assessment data"
-              body="Publish an assessment to see performance here."
-              action={<button className="sec" onClick={() => document.getElementById("asmt-title")?.focus()}>Create assessment</button>}
-            />
+            <EmptyState icon="book" title="No materials yet" body="Publish materials to track completion signals." />
           )}
-          {!!ins.unanswered.length && (
+          {ins.topics.length > 0 && (
             <div style={{ marginTop: 12 }}>
-              <Alert kind="info" title={`Unanswered (${ins.unanswered.length})`}>
-                {ins.unanswered.map((u) => u.title).join("; ")}
-              </Alert>
+              <h4>Frequently asked topics</h4>
+              {ins.topics.map((x) => (
+                <p key={x.term}><strong>{x.term}</strong> <span className="muted">· {x.mentions} mentions</span></p>
+              ))}
             </div>
           )}
-          {!!ins.weakCompletion.length && (
+          <div style={{ marginTop: 12 }}>
+            <h4>Unresolved questions ({ins.unresolved.openCount} open)</h4>
+            {ins.unresolved.unanswered.length === 0 && <p className="muted">Nothing waiting — Q&amp;A is clear.</p>}
+            {ins.unresolved.unanswered.map((u) => (
+              <p key={u.id}><a href={`/courses/${courseId}`}><strong>{u.title}</strong></a> <span className="muted">· waiting {u.ageDays}d</span></p>
+            ))}
+          </div>
+          {ins.difficulty.length > 0 && (
             <div style={{ marginTop: 12 }}>
-              <Alert kind="warn" title="Weak completion">
-                {ins.weakCompletion.map((w) => `${w.title} (${w.readers} readers)`).join("; ")}
-              </Alert>
+              <h4>Areas of difficulty (lowest MCQ correct rates)</h4>
+              {ins.difficulty.map((d) => (
+                <p key={d.questionId}>&ldquo;{d.text}…&rdquo; <span className="muted">· {d.correctPct == null ? "suppressed" : `${d.correctPct}% correct over ${d.responses} responses`}</span></p>
+              ))}
+            </div>
+          )}
+          {ins.assessmentStats.length > 0 && (
+            <div style={{ marginTop: 12 }}>
+              <DataTable caption="Assessment performance (class averages)" head={["Assessment", "Attempts", "Average"]}>
+                {ins.assessmentStats.map((a) => (
+                  <tr key={a.id}>
+                    <td>{a.title}</td>
+                    <td>{a.attempts}</td>
+                    <td>{a.avgScore != null ? `${a.avgScore}/${a.maxScore}` : "—"}</td>
+                  </tr>
+                ))}
+              </DataTable>
             </div>
           )}
           {ins.suggestions.length > 0 && (
             <div style={{ marginTop: 12 }}>
-              <Alert kind="info" icon="bulb" title="Suggestions">
+              <Alert kind="info" icon="bulb" title="Suggested clarifications">
                 <ul style={{ margin: "6px 0 0", paddingLeft: 18 }}>
-                  {ins.suggestions.map((s, i) => <li key={i}>{s}</li>)}
+                  {ins.suggestions.map((s, i) => (
+                    <li key={i}>{s.text} <span className="muted">[{s.metric}]</span> <a href={refHref(courseId, s.ref)}>Open {s.ref.label}</a></li>
+                  ))}
                 </ul>
               </Alert>
             </div>
@@ -438,7 +487,6 @@ function Insights({ courseId }: { courseId: string }) {
     </div>
   );
 }
-
 function QuestionForm({ assessmentId, onDone, onError }: { assessmentId: string; onDone: (m: string) => void; onError: (m: string) => void }) {
   const [text, setText] = useState("");
   const [kind, setKind] = useState("mcq");

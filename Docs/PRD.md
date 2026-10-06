@@ -461,3 +461,13 @@
 - **Files:** `schema.prisma` + migration, `src/ai/*` (7 modules), `routes/ai.ts` (ask pipeline), `authz.matrix.test.ts` (+7), student AskAI labels, `Docs/PRD.md` (this entry).
 - **Commit:** `15b30d5` (AI production-grade) + `862abcc` (remove stray debug scripts)
 - **Status:** Done, pushed to `main`. Local-first (no deploy per rule 023).
+
+### 042 — 2026-10-06 — Lecturer insights from aggregated signals (private by design)
+- **Instruction:** "Complete lecturer insights using aggregated academic signals, not private student content. Show: engagement change, completion trends, frequently asked topics, unresolved questions, strong/weak completion, difficulty areas, suggested clarifications. No student CGPA/Grades. No unnecessary personal data. Plain-language summaries linked to measurable metrics."
+- **Change (API `routes/ai.ts` insights):** ownership gate (`canControlCourse` — prior version let ANY lecturer read ANY course); `?days=7|14|30` windows with current-vs-previous deltas; engagement (enrolled/new/active/dwell volume/study minutes + change %); per-material completion (readers, %, avg dwell, up/flat/down trend, strong ≥70% / weak <30% signals); topic clusters over class Q&A (stopword-filtered, ≥2 mentions, linked question ids); unresolved (unanswered with ages + open count); difficulty (MCQ correct rates ≥3 responses + sub-50% assessments); suggestions as {plain text, metric, entity ref}; one-paragraph summary. Privacy: counts/rates/titles only — no ids/names/emails/matric, no CGPA/grade tables, no per-student rows; rates suppressed under 3 enrolled (limited mode).
+- **Change (UI):** lecturer Insights card rebuilt — summary note, window selector, engagement/completion/difficulty tables, topics, unresolved with ages, suggestions each with [metric] + Open link.
+- **Verify:** insights E2E 16/17 live (enrolled +4 exact, readers +3 exact with recomputed %, topics/difficulty/unresolved deltas exact, all 4 privacy scans clean, unassigned-lecturer + student fenced 403, bad window 400; single miss: active-student absolute count on the shared demo course absorbed concurrent sessions' live traffic — direction correct, metric verified). Typecheck api+lecturer; lecturer build green (below).
+- **Collision notes:** concurrent session rewrote `routes/ai.ts` around this work (production-grade AI modules) and preserved the insights engine — verified present; they committed my tmp E2E scripts then deleted them as stray — E2E rewritten, proven, cleaned immediately.
+- **Files (mine):** `routes/ai.ts` (insights engine), lecturer manage Insights card, `Docs/PRD.md` (this entry).
+- **Commit:** (this push)
+- **Status:** Done, pushed to `main`. Local-first (no deploy per rule 023).
