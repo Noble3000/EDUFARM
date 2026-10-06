@@ -503,3 +503,15 @@
 - **Files:** `routes/{hierarchy,qa,materials,reviews,enrollments}.ts`, student course page, lecturer manage enrollments, admin disputes, `authz.matrix.test.ts` (+11 with self-sufficient paid fixture), `Docs/PRD.md` (this entry).
 - **Commit:** `9b8cac7 Search authorized: gated catalog, entitled search, hash-leak strip, filters, 83 tests` (code converged with parallel session; this commit carries tests + log)
 - **Status:** Done, pushed to `main`. Local-first (no deploy per rule 023).
+
+### 046 — 2026-10-06 — Security review across web, API, database, storage
+- **Instruction:** "Perform a security review across web, API, database and storage" — 20 vectors (auth bypass, escalation, IDOR, file access, R2 URLs, webhooks, replay, farming, double-credit, CSRF, XSS, SQLi, uploads, traversal, metadata, AI retrieval, prompt injection, rate limits, enumeration, secrets, logging) + dependency scan + headers; no screenshot-prevention claims.
+- **Findings (all in `Docs/SECURITY.md`):**
+  - Deps: 38 findings — 2 critical (Next RCE, needs ≥15.5.24 major upgrade — recorded, NOT rushed mid-stream), 17 high (incl. fastify <5.7.2).
+  - Live probes: auth bypass closed (401s) · escalation 403s · Q&A/course-detail IDORs already fixed in 045 · forged webhook → 400 · login rate limit 10×401 then 429s · AI content-injection → RESTRICTED refusal (probe material archived after) · seeded XSS/DOM/payload checks clean.
+  - Clean: all raw SQL parameterized; no file-upload handling (nothing to traverse); no mutating GETs; CORS allowlist tight; no provider keys in repo; no PII/passwords in logs.
+  - Open items: committed DB password (`ecosystem.config.js` + `run-api.ps1` + test comment); mock payment mode default-on; demo auth open locally; `Secure` cookie pending HTTPS; signup email-enumeration nuance.
+- **Change (this entry):** `Docs/SECURITY.md` (vector-by-vector verdicts + pre-shared-use checklist). No code changed — deliberate (dependency majors + secret rotation are owner-decision gates).
+- **Files:** `Docs/SECURITY.md`, `Docs/PRD.md` (this entry)
+- **Commit:** (to be filled on push)
+- **Status:** In progress.
