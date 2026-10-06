@@ -69,7 +69,7 @@ export async function purchaseRoutes(app: FastifyInstance) {
       where: { id },
       include: {
         course: { include: { department: { include: { faculty: { include: { university: true } } } } } },
-        lecturer: { include: { user: true } },
+        lecturer: { include: { user: { select: { name: true } } } },
       },
     });
     if (!mat || mat.status !== "published") return reply.code(404).send({ error: "Material unavailable." });

@@ -149,7 +149,12 @@ async function notifyContact(universityId: string, type: string, title: string, 
   const students = await prisma.studentProfile.findMany({
     where: { universityId }, select: { userId: true },
   });
+  const { notify } = await import("../notify/center.js");
   for (const s of students) {
-    await prisma.notification.create({ data: { userId: s.userId, type, title, body } });
+    await notify({
+      userId: s.userId, type, title, body,
+      dedupKey: `${type}:${universityId}:${title}`.slice(0, 120),
+      email: { kind: "institution" },
+    });
   }
 }

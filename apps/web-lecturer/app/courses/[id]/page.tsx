@@ -17,6 +17,7 @@ function statusKind(s: string): string {
 export default function ManageCourse({ params }: { params: { id: string } }) {
   const [enrs, setEnrs] = useState<Enr[]>([]);
   const [enrLoading, setEnrLoading] = useState(true);
+  const [enrq, setEnrq] = useState("");
   const [ann, setAnn] = useState({ category: "course-notice", title: "", body: "", isUrgent: false });
   const [mat, setMat] = useState({ title: "", type: "lecture-notes", isFree: true, priceKobo: 50000, accessDurationDays: 90 });
   const [ok, setOk] = useState("");
@@ -47,10 +48,11 @@ export default function ManageCourse({ params }: { params: { id: string } }) {
       setAttemptsLoading(false);
     }
   }
-  async function refresh() {
+  async function refresh(eq?: string) {
     setEnrLoading(true);
     try {
-      setEnrs(await api(`/courses/${params.id}/enrollments`).catch(() => []));
+      const qs = eq?.trim() ? `?q=${encodeURIComponent(eq.trim())}` : "";
+      setEnrs(await api(`/courses/${params.id}/enrollments${qs}`).catch(() => []));
     } finally {
       setEnrLoading(false);
     }
@@ -112,13 +114,20 @@ export default function ManageCourse({ params }: { params: { id: string } }) {
       {ok && <SuccessNote>{ok}</SuccessNote>}
       {err && <Alert kind="error">{err}</Alert>}
       <div className="card"><h3>Enrollments</h3>
+        <div className="row">
+          <input style={{ maxWidth: 220 }} placeholder="Search name or email…" value={enrq} onChange={(e) => setEnrq(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") refresh(enrq); }} aria-label="Search enrollments" />
+          <button className="sec" onClick={() => refresh(enrq)}>Search</button>
+          {enrq && <button className="sec" onClick={() => { setEnrq(""); refresh(""); }}>Clear</button>}
+        </div>
         {enrLoading && <LoadingState label="Loading enrollments…" />}
         {!enrLoading && enrs.length === 0 && (
           <EmptyState
             icon="user"
-            title="No enrollment requests"
-            body="No enrollments yet, or you are not logged in as lecturer."
-            action={<a className="btn sec" href="/">Back to dashboard</a>}
+            title={enrq ? "No matching students" : "No enrollment requests"}
+            body={enrq ? "No enrolled student matches that search. Clear it to see everyone." : "No enrollments yet, or you are not logged in as lecturer."}
+            action={enrq
+              ? <button className="sec" onClick={() => { setEnrq(""); refresh(""); }}>Clear search</button>
+              : <a className="btn sec" href="/">Back to dashboard</a>}
           />
         )}
         {!enrLoading && enrs.length > 0 && (

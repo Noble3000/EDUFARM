@@ -4,6 +4,7 @@ import { EDU_CSS, Icon, NavLinks, MobileBar, PortalLinks, type NavItem } from "@
 const LECTURER_NAV: NavItem[] = [
   { href: "/", label: "Dashboard", icon: "dashboard" },
   { href: "/login", label: "Login", icon: "user" },
+  { href: "/notifications", label: "Alerts", icon: "bell" },
   { href: "/signup", label: "Signup", icon: "plus" },
 ];
 export const metadata: Metadata = {

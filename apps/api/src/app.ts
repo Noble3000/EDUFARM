@@ -25,6 +25,7 @@ import { authLocalRoutes } from "./routes/auth-local.js";
 import { gradesRoutes } from "./routes/grades.js";
 import { storageRoutes } from "./routes/storage.js";
 import { paymentsPlugin } from "./routes/payments.js";
+import { notificationRoutes } from "./routes/notifications.js";
 
 const demoOpen = () => process.env.ALLOW_DEMO_LOGIN === "true";
 
@@ -110,6 +111,8 @@ export async function buildApp(): Promise<FastifyInstance> {
   await app.register(storageRoutes, { prefix: "/api/v1" });
   // payments: encapsulated plugin (own raw-body parsers for webhook HMACs)
   await app.register(paymentsPlugin, { prefix: "/api/v1" });
+  // notification center: preferences, read state, reminders
+  await app.register(notificationRoutes, { prefix: "/api/v1" });
 
   return app;
 }

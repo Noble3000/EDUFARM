@@ -234,7 +234,8 @@ export async function reviewRoutes(app: FastifyInstance) {
     });
     await recordAction(dispute.id, reporterId, "opened", reason);
     await notifyUser(reporterId, "dispute.received", "Report received",
-      `Your report is in the review queue (ref ${dispute.id.slice(0, 8)}). Nothing is removed automatically.`);
+      `Your report is in the review queue (ref ${dispute.id.slice(0, 8)}). Nothing is removed automatically.`,
+      { dedupKey: `dispute-received:${dispute.id}`, emailKind: "dispute" });
     await notifyStaff("dispute.opened", `New report: ${targetType}`,
       `${reason.slice(0, 140)} — ref ${dispute.id.slice(0, 8)}. SLA ${SLA_HOURS}h.`);
     return dispute;
@@ -269,13 +270,20 @@ export async function reviewRoutes(app: FastifyInstance) {
   app.get("/disputes", async (req, reply) => {
     const user = await currentUser(req);
     if (!user || !REVIEWERS.includes(user.role)) return reply.code(403).send({ error: "Reviewers only." });
-    const q = req.query as { status?: string; assignee?: string; overdue?: string; targetType?: string };
+    const q = req.query as { status?: string; assignee?: string; overdue?: string; targetType?: string; q?: string };
     const where: Record<string, unknown> = {};
     if (q.status && q.status !== "all") where.status = q.status;
     if (q.targetType) where.targetType = q.targetType;
     if (q.assignee === "me") where.assignedTo = user.id;
     else if (q.assignee === "unassigned") where.assignedTo = null;
     else if (q.assignee) where.assignedTo = q.assignee;
+    if (q.q?.trim()) {
+      where.OR = [
+        { reason: { contains: q.q.trim(), mode: "insensitive" } },
+        { targetId: { contains: q.q.trim(), mode: "insensitive" } },
+        { resolution: { contains: q.q.trim(), mode: "insensitive" } },
+      ];
+    }
     const rows = await prisma.dispute.findMany({
       where, orderBy: { createdAt: "desc" }, take: 100,
       include: { actions: { orderBy: { createdAt: "asc" } } },
@@ -367,7 +375,8 @@ export async function reviewRoutes(app: FastifyInstance) {
     });
     await recordAction(id, user.id, decision === "resolve" ? "resolved" : "dismissed", b.resolution);
     await notifyUser(d.reporterId, `dispute.${to}`, `Your report was ${to}`,
-      `${b.resolution.trim().slice(0, 300)}${to === "dismissed" ? " You can appeal within 7 days." : ""}`);
+      `${b.resolution.trim().slice(0, 300)}${to === "dismissed" ? " You can appeal within 7 days." : ""}`,
+      { dedupKey: `dispute-${to}:${id}`, emailKind: "dispute" });
     return updated;
   });
 
@@ -412,7 +421,8 @@ export async function reviewRoutes(app: FastifyInstance) {
     await recordAction(id, user.id, `appeal-${b.decision}d`, b.note);
     await notifyUser(d.reporterId, "dispute.appeal-decided",
       `Your appeal was ${b.decision === "uphold" ? "upheld — the case is closed" : "overturned — the decision was revised"}`,
-      (b.note ?? "").slice(0, 300));
+      (b.note ?? "").slice(0, 300),
+      { dedupKey: `dispute-appeal-decided:${id}`, emailKind: "dispute" });
     return updated;
   });
 }

@@ -156,3 +156,5 @@ Next.js PWA + Fastify API self-hosted on local device (no Vercel) · Paystack/Fl
 - 040 (2026-10-06): Trust + disputes complete — eligible reviews with edit/delete, lecturer replies, moderation without takedowns; report→notify→assign→review→resolve/dismiss→appeal→close with SLA, timeline, and reporter privacy. E2E 28/28.
 - 041 (2026-10-06): AI as production-grade assistant (concurrent session).
 - 042 (2026-10-06): Lecturer insights from aggregates — engagement change, completion trends, topic clusters, unresolved ages, difficulty rates, metric-linked suggestions; ownership-gated, cohort-gated, zero PII/CGPA. E2E 16/17.
+- 043 (2026-10-06): Daily Word production-ready (concurrent session).
+- 044 (2026-10-06): Notification infrastructure — in-app center (prefs, read/unread, dedup, deep links) + email adapter (mock/resend/sendgrid/smtp) with outbox, retry, failed states; all 10 events wired. E2E 19/19, zero duplicate emails.

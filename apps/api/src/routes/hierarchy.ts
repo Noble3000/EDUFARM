@@ -79,7 +79,7 @@ export async function hierarchyRoutes(app: FastifyInstance) {
     const { id } = req.params as { id: string };
     return prisma.course.findMany({
       where: { departmentId: id }, orderBy: { code: "asc" },
-      include: { level: true, lecturers: { include: { lecturer: { include: { user: true } } } } },
+      include: { level: true, lecturers: { include: { lecturer: { include: { user: { select: { name: true } } } } } } },
     });
   });
 
@@ -100,19 +100,41 @@ export async function hierarchyRoutes(app: FastifyInstance) {
 
   app.get("/courses/:id", async (req, reply) => {
     const { id } = req.params as { id: string };
+    const user = await currentUser(req);
     const course = await prisma.course.findUnique({
       where: { id },
       include: {
         department: { include: { faculty: { include: { university: true } } } },
         level: true,
-        lecturers: { include: { lecturer: { include: { user: true } } } },
+        lecturers: { include: { lecturer: { include: { user: { select: { name: true } } } } } },
         materials: { where: { status: "published" }, orderBy: { createdAt: "desc" } },
         announcements: { where: { archived: false }, orderBy: { createdAt: "desc" }, take: 20 },
         questions: { orderBy: { createdAt: "desc" }, take: 20, include: { answers: true } },
       },
     });
     if (!course) return reply.code(404).send({ error: "Course not found." });
-    return course;
+    // Catalog view (public): code/title/staff names only. Full content —
+    // materials, announcements, Q&A — requires approved enrollment (students)
+    // or course ownership / staff role. Protected titles never leak to strangers.
+    const { materials, announcements, questions, lecturers, ...catalog } = course;
+    const lecturerNames = lecturers.map((l) => l.lecturer.user.name);
+    if (!user) return { ...catalog, lecturers: lecturerNames, gated: true };
+    let entitled = false;
+    if (user.role === "student" && user.studentProfile) {
+      const e = await prisma.enrollment.findUnique({
+        where: { courseId_studentId: { courseId: id, studentId: user.studentProfile.id } },
+      });
+      entitled = e?.status === "approved";
+    } else if (user.role === "lecturer" && user.lecturerProfile) {
+      const link = await prisma.courseLecturer.findUnique({
+        where: { courseId_lecturerId: { courseId: id, lecturerId: user.lecturerProfile.id } },
+      });
+      entitled = !!link || course.departmentId === user.lecturerProfile.departmentId;
+    } else if (["deptAdmin", "institutionAdmin", "platformAdmin"].includes(user.role)) {
+      entitled = true;
+    }
+    if (!entitled) return { ...catalog, lecturers: lecturerNames, gated: true };
+    return { ...course, lecturers: lecturerNames, gated: false };
   });
 
   // --- lecturer assignment: who controls this course (staff only) ---
@@ -121,7 +143,7 @@ export async function hierarchyRoutes(app: FastifyInstance) {
     if (!user) return reply.code(401).send({ error: "Sign-in required." });
     const { id } = req.params as { id: string };
     return prisma.courseLecturer.findMany({
-      where: { courseId: id }, include: { lecturer: { include: { user: true, department: true } } },
+      where: { courseId: id }, include: { lecturer: { include: { user: { select: { name: true } }, department: true } } },
     });
   });
 
@@ -133,7 +155,7 @@ export async function hierarchyRoutes(app: FastifyInstance) {
     const course = await prisma.course.findUnique({ where: { id } });
     if (!course) return reply.code(404).send({ error: "Course not found." });
     const lect = await prisma.lecturerProfile.findUnique({
-      where: { id: b.lecturerProfileId }, include: { user: true },
+      where: { id: b.lecturerProfileId }, include: { user: { select: { name: true, email: true } } },
     });
     if (!lect) return reply.code(404).send({ error: "Lecturer profile not found." });
     if (lect.verificationStatus !== "verified")

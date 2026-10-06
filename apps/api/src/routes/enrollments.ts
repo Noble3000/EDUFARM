@@ -40,7 +40,8 @@ export async function enrollmentRoutes(app: FastifyInstance) {
       await notifyUser(
         o.lecturer.userId, "enrollment.requested",
         `New enrollment request — ${course.code}`,
-        `${user.name ?? "A student"} (${st.matricNo}) requested access to ${course.code} — ${course.title}.`
+        `${user.name ?? "A student"} (${st.matricNo}) requested access to ${course.code} — ${course.title}.`,
+        { link: `/courses/${id}`, dedupKey: `enrollment-requested:${enr.id}` }
       );
     }
     return enr;
@@ -53,10 +54,16 @@ export async function enrollmentRoutes(app: FastifyInstance) {
     const { id } = req.params as { id: string };
     if (!(await canControlCourse(user.id, user.role, id)))
       return reply.code(403).send({ error: "Only the course lecturer (or staff) may view enrollments." });
-    const q = req.query as { status?: string };
+    const q = req.query as { status?: string; q?: string };
     return prisma.enrollment.findMany({
-      where: q.status ? { courseId: id, status: q.status as never } : { courseId: id },
-      include: { student: { include: { user: true } } },
+      where: {
+        courseId: id,
+        ...(q.status ? { status: q.status as never } : {}),
+        ...(q.q?.trim()
+          ? { student: { user: { OR: [{ name: { contains: q.q.trim(), mode: "insensitive" } }, { email: { contains: q.q.trim(), mode: "insensitive" } }] } } }
+          : {}),
+      },
+      include: { student: { include: { user: { select: { name: true, email: true } } } } },
       orderBy: { createdAt: "desc" },
     });
   });
@@ -96,7 +103,9 @@ export async function enrollmentRoutes(app: FastifyInstance) {
       remove: `Your access to ${enr.course.code} was removed by the course lecturer.`,
       suspend: `Your access to ${enr.course.code} is suspended. Contact the course lecturer.`,
     };
-    await notifyUser(enr.student.userId, `enrollment.${b.decision}`, `Enrollment ${b.decision}d — ${enr.course.code}`, copy[b.decision]);
+    await notifyUser(enr.student.userId, `enrollment.${b.decision}`, `Enrollment ${b.decision}d — ${enr.course.code}`, copy[b.decision], {
+      link: `/courses/${enr.courseId}`, dedupKey: `enrollment-${b.decision}:${id}`, emailKind: "enrollment",
+    });
     return updated;
   });
 

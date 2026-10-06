@@ -6,6 +6,7 @@ const STUDENT_NAV: NavItem[] = [
   { href: "/courses", label: "Courses", icon: "book" },
   { href: "/library", label: "Library", icon: "library" },
   { href: "/grades", label: "CGPA", icon: "chart" },
+  { href: "/notifications", label: "Alerts", icon: "bell" },
   { href: "/verify", label: "Verify", icon: "verify" },
   { href: "/login", label: "Login", icon: "user" },
 ];

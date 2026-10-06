@@ -33,12 +33,57 @@ export async function materialRoutes(app: FastifyInstance) {
   app.get("/lecturer/materials", async (req, reply) => {
     const user = await currentUser(req);
     if (!user) return reply.code(401).send({ error: "auth-required" });
-    const lect = await lecturerOf(user.id);
-    if (!lect) return reply.code(403).send({ error: "forbidden:lecturer-profile-required" });
+    const lecturer = await lecturerOf(user.id);
+    if (!lecturer) return reply.code(403).send({ error: "forbidden:lecturer-profile-required" });
     return prisma.material.findMany({
-      where: { lecturerId: lect.id },
+      where: { lecturerId: lecturer.id },
       include: { course: { select: { code: true } } },
       orderBy: { createdAt: "desc" },
+    });
+  });
+
+  // entitled material search: titles/descriptions/type ONLY for materials the
+  // caller may access (enrolled students: free + purchased; lecturers: own
+  // course incl. drafts; staff: all). fileKey/checksum never leave the server.
+  app.get("/courses/:id/materials/search", async (req, reply) => {
+    const user = await currentUser(req);
+    if (!user) return reply.code(401).send({ error: "auth-required" });
+    const { id } = req.params as { id: string };
+    const q = req.query as { q?: string; type?: string };
+    const course = await prisma.course.findUnique({ where: { id } });
+    if (!course) return reply.code(404).send({ error: "not-found:course" });
+    const text = (q.q ?? "").trim();
+    const match = text
+      ? { OR: [{ title: { contains: text, mode: "insensitive" as const } }, { description: { contains: text, mode: "insensitive" as const } }] }
+      : {};
+    const typeFilter = q.type ? { type: q.type } : {};
+    const select = { id: true, title: true, type: true, version: true, priceKobo: true, isFree: true, status: true, accessDurationDays: true };
+    if (user.role === "student") {
+      if (!user.studentProfile) return reply.code(403).send({ error: "forbidden:role:student" });
+      const enrollment = await prisma.enrollment.findUnique({
+        where: { courseId_studentId: { courseId: id, studentId: user.studentProfile.id } },
+      });
+      if (!enrollment || enrollment.status !== "approved")
+        return reply.code(403).send({ error: "forbidden:course-access" });
+      const owned = await prisma.purchase.findMany({
+        where: { studentId: user.studentProfile.id, materialId: { not: null }, status: "completed" },
+        select: { materialId: true },
+      });
+      const ownedIds = new Set(owned.map((p) => p.materialId as string));
+      const mats = await prisma.material.findMany({
+        where: { courseId: id, status: "published", ...match, ...typeFilter },
+        select,
+        orderBy: { createdAt: "desc" },
+        take: 50,
+      });
+      return mats.filter((m) => m.isFree || ownedIds.has(m.id));
+    }
+    if (!(await ownsCourse(user, course))) return reply.code(403).send({ error: "forbidden:course-ownership" });
+    return prisma.material.findMany({
+      where: { courseId: id, ...match, ...typeFilter },
+      select,
+      orderBy: { createdAt: "desc" },
+      take: 50,
     });
   });
 
@@ -146,8 +191,12 @@ export async function materialRoutes(app: FastifyInstance) {
     const user = await currentUser(req);
     if (!user || !["platformAdmin", "institutionAdmin"].includes(user.role))
       return reply.code(403).send({ error: "forbidden:role:reviewer" });
+    const q = req.query as { q?: string };
     return prisma.material.findMany({
-      where: { status: "pendingReview" },
+      where: {
+        status: "pendingReview",
+        ...(q.q?.trim() ? { title: { contains: q.q.trim(), mode: "insensitive" } } : {}),
+      },
       include: { course: true },
       orderBy: { createdAt: "asc" },
     });
@@ -174,16 +223,23 @@ export async function materialRoutes(app: FastifyInstance) {
       await audit(user.id, "material.review.approved", "Material", id, `v${staged}-live`);
       const { indexMaterial } = await import("./ai.js");
       await indexMaterial(id);
+      const { notify } = await import("../notify/center.js");
+      const isRevision = staged > 1;
       const enrollments = await prisma.enrollment.findMany({
         where: { courseId: updated.courseId, status: "approved" },
         select: { student: { select: { userId: true } } },
       });
-      if (enrollments.length) {
-        await prisma.notification.createMany({
-          data: enrollments.map((e) => ({
-            userId: e.student.userId, type: "new-material",
-            title: `New material: ${updated.title}`, body: `Official v${updated.version} now available.`,
-          })),
+      for (const e of enrollments) {
+        await notify({
+          userId: e.student.userId,
+          type: isRevision ? "material-revision" : "new-material",
+          title: isRevision ? `Updated edition: ${updated.title}` : `New material: ${updated.title}`,
+          body: isRevision
+            ? `Edition v${staged} is live — your access continues on the latest edition.`
+            : `Official v${staged} now available.`,
+          link: `/materials/${id}`,
+          dedupKey: `publish:${id}:v${staged}`,
+          email: { kind: isRevision ? "material-revision" : "material" },
         });
       }
       return updated;

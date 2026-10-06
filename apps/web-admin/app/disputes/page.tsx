@@ -25,6 +25,7 @@ export default function Disputes() {
   const [rows, setRows] = useState<Row[]>([]);
   const [status, setStatus] = useState<(typeof STATUSES)[number]>("open");
   const [overdueOnly, setOverdueOnly] = useState(false);
+  const [query, setQuery] = useState("");
   const [loading, setLoading] = useState(true);
   const [failed, setFailed] = useState("");
   const [page, setPage] = useState(1);
@@ -37,8 +38,12 @@ export default function Disputes() {
     setLoading(true);
     setFailed("");
     try {
-      const q = status === "all" ? "" : `?status=${status}${overdueOnly ? "&overdue=true" : ""}`;
-      setRows(await api(`/disputes${q}`));
+      const params = new URLSearchParams();
+      if (status !== "all") params.set("status", status);
+      if (overdueOnly) params.set("overdue", "true");
+      if (query.trim()) params.set("q", query.trim());
+      const qs = params.toString();
+      setRows(await api(`/disputes${qs ? `?${qs}` : ""}`));
     } catch (e) {
       setRows([]);
       setFailed((e as Error).message ?? "Could not load disputes.");
@@ -66,6 +71,8 @@ export default function Disputes() {
           <button key={s} className={status === s ? "" : "sec"} aria-pressed={status === s} onClick={() => setStatus(s)}>{s}</button>
         ))}
         <button className={overdueOnly ? "" : "sec"} aria-pressed={overdueOnly} onClick={() => setOverdueOnly(!overdueOnly)}>Overdue SLA</button>
+        <input style={{ maxWidth: 220 }} placeholder="Search reason, target, resolution…" value={query} onChange={(e) => setQuery(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") { setPage(1); load(); } }} aria-label="Search disputes" />
+        <button className="sec" onClick={() => { setPage(1); load(); }}>Search</button>
       </div>
       {loading ? (
         <LoadingState label="Loading disputes…" />

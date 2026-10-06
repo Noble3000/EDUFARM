@@ -280,7 +280,8 @@ export async function settleOrder(orderId: string): Promise<{ paid: boolean; rep
     if (sp) {
       await logEmail(
         sp.userId, `Receipt: ${mat.title}`,
-        `You paid ₦${(order.amountKobo / 100).toFixed(2)}${order.pointsUsed ? ` (${order.pointsUsed} points redeemed)` : ""} via ${order.provider}. Ref: ${order.providerRef ?? order.id.slice(0, 8)}. Access: ${mat.accessDurationDays ?? "ongoing"}.`
+        `You paid ₦${(order.amountKobo / 100).toFixed(2)}${order.pointsUsed ? ` (${order.pointsUsed} points redeemed)` : ""} via ${order.provider}. Ref: ${order.providerRef ?? order.id.slice(0, 8)}. Access: ${mat.accessDurationDays ?? "ongoing"}.`,
+        { kind: "purchase", eventKey: `receipt:${out.id}` }
       );
     }
     return { paid: true, replay: false, purchaseId: out.id };

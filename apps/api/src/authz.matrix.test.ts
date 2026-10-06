@@ -681,3 +681,74 @@ describe("daily Word canonical service (production-grade)", () => {
     expect(typeof r.body[0].origin).toBe("string");
   });
 });
+
+describe("search authorization (no protected-title leaks)", () => {
+  it("anonymous Q&A search is rejected", async () => {
+    expect((await req("GET", `/api/v1/courses/${ids.courseId}/questions?q=test`)).status).toBe(401);
+  });
+  it("anonymous course detail is catalog-only (no materials/announcements/Q&A)", async () => {
+    const r = await req("GET", `/api/v1/courses/${ids.courseId}`);
+    expect(r.status).toBe(200);
+    expect(r.body.gated).toBe(true);
+    expect(r.body.materials).toBeUndefined();
+    expect(r.body.announcements).toBeUndefined();
+    expect(r.body.questions).toBeUndefined();
+    expect(Array.isArray(r.body.lecturers)).toBe(true);
+  });
+  it("unenrolled verified student gets catalog only", async () => {
+    const r = await req("GET", `/api/v1/courses/${ids.courseId}`, T.stu2);
+    expect(r.status).toBe(200);
+    expect(r.body.gated).toBe(true);
+    expect(r.body.materials).toBeUndefined();
+  });
+  it("unenrolled student cannot search Q&A", async () => {
+    expect((await req("GET", `/api/v1/courses/${ids.courseId}/questions?q=a`, T.stu2)).status).toBe(403);
+  });
+  it("enrolled student gets full detail + searchable Q&A", async () => {
+    const r = await req("GET", `/api/v1/courses/${ids.courseId}`, T.stu);
+    expect(r.body.gated).toBe(false);
+    expect(Array.isArray(r.body.materials)).toBe(true);
+    const q = await req("GET", `/api/v1/courses/${ids.courseId}/questions?q=crossing`, T.stu);
+    expect(q.status).toBe(200);
+  });
+  it("material search hides unpurchased paid titles from students", async () => {
+    const all = await req("GET", `/api/v1/courses/${ids.courseId}/materials/search`, T.lect);
+    expect(all.status).toBe(200);
+    const paid = all.body.filter((m) => !m.isFree);
+    expect(paid.length).toBeGreaterThan(0);
+    const mine = await req("GET", `/api/v1/courses/${ids.courseId}/materials/search`, T.stu);
+    const mineIds = new Set(mine.body.map((m) => m.id));
+    for (const p of paid) {
+      const bought = await req("GET", `/api/v1/library/me`, T.stu);
+      const owned = bought.body.purchases.some((x) => x.materialId === p.id);
+      if (!owned) expect(mineIds.has(p.id)).toBe(false);
+    }
+  });
+  it("unenrolled student material search is rejected", async () => {
+    expect((await req("GET", `/api/v1/courses/${ids.courseId}/materials/search?q=a`, T.stu2)).status).toBe(403);
+  });
+  it("lecturer material search never exposes storage keys", async () => {
+    const r = await req("GET", `/api/v1/courses/${ids.courseId}/materials/search`, T.lect);
+    for (const m of r.body) {
+      expect(m.fileKey).toBeUndefined();
+      expect(m.checksum).toBeUndefined();
+    }
+  });
+  it("disputes search is staff-only and filters", async () => {
+    expect((await req("GET", "/api/v1/disputes?q=test", T.stu)).status).toBe(403);
+    const r = await req("GET", "/api/v1/disputes?q=zzz-no-such-reason", T.plat);
+    expect(r.status).toBe(200);
+    expect(r.body).toEqual([]);
+  });
+  it("enrollment search is lecturer-scoped", async () => {
+    expect((await req("GET", `/api/v1/courses/${ids.courseId}/enrollments?q=ada`, T.lect)).status).toBe(200);
+    expect((await req("GET", `/api/v1/courses/${ids.courseId}/enrollments?q=ada`, T.stu)).status).toBe(403);
+  });
+  it("no nested user records leak password hashes", async () => {
+    const r = await req("GET", `/api/v1/courses/${ids.courseId}/enrollments`, T.lect);
+    const s = JSON.stringify(r.body);
+    expect(s).not.toContain("passwordHash");
+    const d = await req("GET", `/api/v1/courses/${ids.courseId}`, T.stu);
+    expect(JSON.stringify(d.body)).not.toContain("passwordHash");
+  });
+});

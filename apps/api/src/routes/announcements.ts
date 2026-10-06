@@ -37,13 +37,15 @@ export async function announcementRoutes(app: FastifyInstance) {
     const enrollments = await prisma.enrollment.findMany({
       where: { courseId: id, status: "approved" }, select: { student: { select: { userId: true } } },
     });
-    if (enrollments.length) {
-      await prisma.notification.createMany({
-        data: enrollments.map((e) => ({
-          userId: e.student.userId, type: "announcement",
-          title: b.isUrgent ? `URGENT: ${b.title}` : b.title,
-          body: `New announcement in ${id}`,
-        })),
+    const { notify } = await import("../notify/center.js");
+    for (const e of enrollments) {
+      await notify({
+        userId: e.student.userId, type: "announcement",
+        title: b.isUrgent ? `URGENT: ${b.title}` : b.title,
+        body: `${course.code} — ${b.title}`,
+        link: `/courses/${id}`,
+        dedupKey: `announcement:${created.id}`,
+        email: { kind: "announcement" },
       });
     }
     return created;

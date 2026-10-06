@@ -524,10 +524,21 @@ model ReviewReply {
 model EmailLog {
   id        String   @id @default(cuid())
   toUserId  String
+  toEmail   String?
   subject   String
   body      String
-  status    String   @default("logged") // logged | sent | failed
+  kind      String   @default("general") // event family: purchase, announcement, deadline, ...
+  eventKey  String?  @unique // idempotency: retried jobs never duplicate email
+  provider  String   @default("mock")
+  status    String   @default("queued") // queued | sending | sent | failed
+  attempts  Int      @default(0)
+  nextRetryAt DateTime?
+  lastError String?
+  messageId String?
+  sentAt    DateTime?
   createdAt DateTime @default(now())
+
+  @@index([status, nextRetryAt])
 }
 
 model Dispute {
@@ -573,8 +584,24 @@ model Notification {
   type      String
   title     String
   body      String
+  link      String?
+  dedupKey  String?
   readAt    DateTime?
   createdAt DateTime  @default(now())
+
+  @@unique([userId, dedupKey])
+  @@index([userId, readAt])
+}
+
+// Per-user notification preferences. In-app is always on (primary channel);
+// email is secondary and can be muted per event family or entirely.
+model NotificationPref {
+  id           String   @id @default(cuid())
+  userId       String   @unique
+  emailEnabled Boolean  @default(true)
+  mutedTypes   String[] @default([])
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 }
 
 model Devotional {

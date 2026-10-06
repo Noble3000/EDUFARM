@@ -194,12 +194,15 @@ export async function assessmentRoutes(app: FastifyInstance) {
           where: { courseId: updated.courseId, status: "approved" },
           select: { student: { select: { userId: true } } },
         });
-        if (enrollments.length) {
-          await prisma.notification.createMany({
-            data: enrollments.map((e) => ({
-              userId: e.student.userId, type: "assessment",
-              title: `New assessment: ${updated.title}`, body: updated.dueAt ? `Due ${updated.dueAt.toISOString()}` : "No due date",
-            })),
+        const { notify } = await import("../notify/center.js");
+        for (const e of enrollments) {
+          await notify({
+            userId: e.student.userId, type: "assessment",
+            title: `New assessment: ${updated.title}`,
+            body: updated.dueAt ? `Due ${updated.dueAt.toISOString()}` : "No due date",
+            link: `/assessments/${id}`,
+            dedupKey: `assessment-published:${id}`,
+            email: { kind: "assessment" },
           });
         }
       }
@@ -451,20 +454,25 @@ export async function assessmentRoutes(app: FastifyInstance) {
       where: { id }, include: { student: true, assessment: true },
     });
     await audit(user.id, "assessment.graded", "AssessmentAttempt", id, `score=${graded.score}/${graded.maxScore}`);
-    await prisma.notification.create({
-      data: {
+    {
+      const { notify } = await import("../notify/center.js");
+      const released = !!attemptWithStudent!.assessment.gradesReleased;
+      await notify({
         userId: attemptWithStudent!.student.userId, type: "grade",
         title: `Graded: ${attemptWithStudent!.assessment.title}`,
-        body: attemptWithStudent!.assessment.gradesReleased
+        body: released
           ? `Score ${graded.score}/${graded.maxScore}`
           : "Your work has been graded — results appear when your lecturer releases them.",
-      },
-    });
+        link: `/assessments/${attemptWithStudent!.assessmentId}`,
+        dedupKey: `graded:${id}`,
+        email: { kind: "assessment" },
+      });
+    }
     if (graded.maxScore! > 0 && graded.score! / graded.maxScore! >= 0.5) {
       await awardPassPoints(attemptWithStudent!.studentId, attemptWithStudent!.assessmentId);
     }
     const { logEmail } = await import("./email.js");
-    await logEmail(attemptWithStudent!.student.userId, `Graded: ${attemptWithStudent!.assessment.title}`, "See your results in the app once released.");
+    await logEmail(attemptWithStudent!.student.userId, `Graded: ${attemptWithStudent!.assessment.title}`, "See your results in the app once released.", { kind: "assessment", eventKey: `graded:${id}` });
     return graded;
   });
 
@@ -481,12 +489,16 @@ export async function assessmentRoutes(app: FastifyInstance) {
       where: { assessmentId: id }, select: { student: { select: { userId: true } } }, distinct: ["studentId"],
     });
     if (attempted.length) {
-      await prisma.notification.createMany({
-        data: attempted.map((t) => ({
+      const { notify } = await import("../notify/center.js");
+      for (const t of attempted) {
+        await notify({
           userId: t.student.userId, type: "grade",
           title: `Results released: ${updated.title}`, body: "Open your attempt to see your score and feedback.",
-        })),
-      });
+          link: `/assessments/${id}`,
+          dedupKey: `released:${id}:${t.student.userId}`,
+          email: { kind: "assessment" },
+        });
+      }
     }
     return updated;
   });

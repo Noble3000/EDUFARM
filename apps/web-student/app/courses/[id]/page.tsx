@@ -5,7 +5,7 @@ import { api, getUser } from "@/lib/api";
 import { Alert, EmptyState, Field, Icon, LoadingState } from "@edufarm/ui";
 
 type Course = {
-  id: string; code: string; title: string;
+  id: string; code: string; title: string; gated?: boolean;
   materials: { id: string; title: string; type: string; isFree: boolean; priceKobo: number; version: number }[];
   announcements: { id: string; title: string; body: string; isUrgent: boolean; category: string }[];
   questions: { id: string; authorId: string; title: string; body: string; status: string; answers: { body: string; isLecturer: boolean }[] }[];
@@ -15,6 +15,23 @@ export default function CourseDetail({ params }: { params: { id: string } }) {
   const [c, setC] = useState<Course | null>(null);
   const [q, setQ] = useState({ title: "", body: "" });
   const [asmts, setAsmts] = useState<{ id: string; title: string; type: string; dueAt: string | null; gradesReleased: boolean; attempts: { status: string; score: number | null; maxScore: number | null }[] }[]>([]);
+  const [mquery, setMquery] = useState("");
+  const [mtype, setMtype] = useState("");
+  const [mresults, setMresults] = useState<{ id: string; title: string; type: string; version: number; priceKobo: number; isFree: boolean }[] | null>(null);
+  const [mloading, setMloading] = useState(false);
+  async function searchMaterials() {
+    setMloading(true);
+    try {
+      const qs = new URLSearchParams();
+      if (mquery.trim()) qs.set("q", mquery.trim());
+      if (mtype) qs.set("type", mtype);
+      setMresults(await api(`/courses/${params.id}/materials/search?${qs.toString()}`));
+    } catch {
+      setMresults([]);
+    } finally {
+      setMloading(false);
+    }
+  }
   const [qq, setQq] = useState("");
   const [qstatus, setQstatus] = useState("");
   const me = typeof window !== "undefined" ? getUser() : null;
@@ -44,15 +61,40 @@ export default function CourseDetail({ params }: { params: { id: string } }) {
     <div>
       <Crumb trail={[{ href: '/', label: 'Home' }, { href: '/courses', label: 'Courses' }, { label: 'Course' }]} />
       <h2>{c.code} — {c.title}</h2>
+      {c.gated && (
+        <div className="card">
+          <Alert kind="warn">Course catalog preview — request enrollment to unlock materials, announcements, and Q&A. Protected titles stay hidden until your lecturer approves you.</Alert>
+        </div>
+      )}
       <div className="card">
         <h3>Materials</h3>
-        {c.materials.map((m) => (
+        {!c.gated && (
+          <div className="row">
+            <input style={{ maxWidth: 220 }} placeholder="Search my materials…" value={mquery} onChange={(e) => setMquery(e.target.value)} />
+            <select style={{ maxWidth: 190 }} value={mtype} onChange={(e) => setMtype(e.target.value)}>
+              <option value="">All types</option>
+              <option value="lecture-notes">Lecture notes</option>
+              <option value="course-pack">Course packs</option>
+              <option value="revision-guide">Revision guides</option>
+              <option value="practice-questions">Practice questions</option>
+              <option value="exam-prep">Exam prep</option>
+              <option value="study-guide">Study guides</option>
+            </select>
+            <button className="sec" onClick={searchMaterials}>Search</button>
+            {mresults !== null && <button className="sec" onClick={() => { setMresults(null); setMquery(""); setMtype(""); }}>Clear</button>}
+          </div>
+        )}
+        {mloading && <LoadingState label="Searching your materials…" lines={2} />}
+        {(mresults ?? c.materials).map((m) => (
           <p key={m.id}>
             <a href={`/materials/${m.id}`}>{m.title}</a> <span className="badge b-off">Official v{m.version}</span>{" "}
             {m.isFree ? <span className="badge b-ed">Free</span> : <span className="badge b-ed">₦{(m.priceKobo / 100).toFixed(2)}</span>}
           </p>
         ))}
-        {!c.materials.length && (
+        {!mloading && mresults !== null && !mresults.length && (
+          <EmptyState icon="search" title="No matches in your entitled materials" body="Try different words, or clear the search to browse everything you can access." />
+        )}
+        {!c.materials.length && mresults === null && (
           <EmptyState icon="book" title="No published materials yet" body="Your lecturer has not published official materials for this course." />
         )}
       </div>

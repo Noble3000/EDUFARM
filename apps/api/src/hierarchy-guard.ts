@@ -59,9 +59,24 @@ export async function canControlCourse(userId: string, role: string, courseId: s
   return links.some((l: { lecturerId: string }) => l.lecturerId === lect.id);
 }
 
-export async function notifyUser(userId: string, type: string, title: string, body: string) {
+export async function notifyUser(
+  userId: string,
+  type: string,
+  title: string,
+  body: string,
+  opts?: { link?: string; dedupKey?: string; emailKind?: string }
+) {
   if (!userId || userId === "public") return;
-  await prisma.notification.create({ data: { userId, type, title, body } });
+  if (!opts) {
+    await prisma.notification.create({ data: { userId, type, title, body } });
+    return;
+  }
+  const { notify } = await import("./notify/center.js");
+  await notify({
+    userId, type, title, body,
+    link: opts.link, dedupKey: opts.dedupKey,
+    email: opts.emailKind ? { kind: opts.emailKind } : undefined,
+  });
 }
 
 export async function audit(actorId: string, action: string, targetType: string, targetId: string, meta?: string) {

@@ -72,10 +72,14 @@ export async function progressRoutes(app: FastifyInstance) {
     return { materialId: last.materialId, page: last.page ?? 1, material: mat };
   });
 
-  // notifications inbox
+  // notifications inbox (in-app primary; unread filter + read state in routes/notifications.ts)
   app.get("/notifications/me", async (req, reply) => {
     const user = await currentUser(req);
     if (!user) return reply.code(401).send({ error: "Sign-in required." });
-    return prisma.notification.findMany({ where: { userId: user.id }, orderBy: { createdAt: "desc" }, take: 30 });
+    const q = req.query as { unread?: string };
+    return prisma.notification.findMany({
+      where: q.unread === "true" ? { userId: user.id, readAt: null } : { userId: user.id },
+      orderBy: { createdAt: "desc" }, take: 30,
+    });
   });
 }

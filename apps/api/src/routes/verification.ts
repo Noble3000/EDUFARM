@@ -113,14 +113,14 @@ export async function verificationRoutes(app: FastifyInstance) {
     if (q.type === "lecturer") {
       return prisma.lecturerProfile.findMany({
         where: status ? { verificationStatus: status } : {},
-        include: { user: true, department: { include: { faculty: { include: { university: true } } } } },
+        include: { user: { select: { name: true, email: true } }, department: { include: { faculty: { include: { university: true } } } } },
         orderBy: { userId: "asc" },
       });
     }
     return prisma.studentProfile.findMany({
       where: status ? { verificationStatus: status } : {},
       include: {
-        user: true, university: true,
+        user: { select: { name: true, email: true } }, university: true,
         faculty: true, department: true, level: true,
       },
       orderBy: { userId: "asc" },
@@ -182,7 +182,9 @@ export async function verificationRoutes(app: FastifyInstance) {
     });
     await audit(reviewerId, `student.verification.${decision}d`, "StudentProfile", id, note);
     const copy = DECISION_COPY[decision];
-    await notifyUser(profile.userId, `verification.${decision}`, copy.title, `${copy.body}${note ? ` Note: ${note}` : ""}`);
+    await notifyUser(profile.userId, `verification.${decision}`, copy.title, `${copy.body}${note ? ` Note: ${note}` : ""}`, {
+      link: "/verify", dedupKey: `verification-${decision}:${id}`, emailKind: "verification",
+    });
     return updated;
   }
 
@@ -231,7 +233,9 @@ export async function verificationRoutes(app: FastifyInstance) {
     });
     await audit(user!.id, `lecturer.verification.${b.decision}d`, "LecturerProfile", id, b.note);
     const copy = DECISION_COPY[b.decision];
-    await notifyUser(profile.userId, `verification.${b.decision}`, copy.title, `${copy.body}${b.note ? ` Note: ${b.note}` : ""}`);
+    await notifyUser(profile.userId, `verification.${b.decision}`, copy.title, `${copy.body}${b.note ? ` Note: ${b.note}` : ""}`, {
+      link: "/verify", dedupKey: `verification-${b.decision}:${id}`, emailKind: "verification",
+    });
     return updated;
   });
 
