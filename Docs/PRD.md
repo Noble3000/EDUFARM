@@ -459,5 +459,5 @@
 - **Change (UI):** AskAI box renders required labels, structured citations (title/edition/chunk/source), refusal codes, no-fabrication note.
 - **Verify:** tsc clean (after Prisma regen); vitest 66/66 (7 new: unentitled→UNAUTHORIZED no leak, gibberish→INSUFFICIENT, 3×RESTRICTED, citation shape, post-filter, hash-only logging, insights staff-only); live grounded citation + RESTRICTED refusal ✓; builds + PM2 restarted; course page 200. Mock is the active provider (no LLM key — owner decision pending).
 - **Files:** `schema.prisma` + migration, `src/ai/*` (7 modules), `routes/ai.ts` (ask pipeline), `authz.matrix.test.ts` (+7), student AskAI labels, `Docs/PRD.md` (this entry).
-- **Commit:** (to be filled on push)
-- **Status:** In progress.
+- **Commit:** `15b30d5` (AI production-grade) + `862abcc` (remove stray debug scripts)
+- **Status:** Done, pushed to `main`. Local-first (no deploy per rule 023).
