@@ -152,3 +152,5 @@ Next.js PWA + Fastify API self-hosted on local device (no Vercel) · Paystack/Fl
 - 035 (2026-10-06): /grades complete and hardened — student-only privacy (no lecturer/admin path), semester rename + course edit, strict validation, repeat all-in policy, degree-class server source of truth, no export. Tests: unit 10/10 + matrix privacy 6/6 (full 48/48) + live E2E 9/9.
 - 036 (2026-10-06): Assessments full workflow + 037 Points hardened (concurrent sessions).
 - 038 (2026-10-06): Payment abstraction — provider interface (mock/Paystack/Flutterwave), order state machine, idempotent signed webhooks, server-to-server verify, exactly-once grant + earnings, reconciliation, test mode, `Docs/PAYMENTS.md`. E2E 20/20 (incl. real rotation bug caught).
+- 039 (2026-10-06): eSpees accounting ledger (concurrent session).
+- 040 (2026-10-06): Trust + disputes complete — eligible reviews with edit/delete, lecturer replies, moderation without takedowns; report→notify→assign→review→resolve/dismiss→appeal→close with SLA, timeline, and reporter privacy. E2E 28/28.

@@ -500,9 +500,12 @@ model Review {
   studentId  String
   rating     Int
   body       String?
-  status     String       @default("visible")
+  status     String       @default("visible") // visible | hidden (moderated, never auto)
   createdAt  DateTime     @default(now())
+  updatedAt  DateTime     @updatedAt
   replies    ReviewReply[]
+
+  @@index([materialId, status])
 }
 
 model ReviewReply {
@@ -513,6 +516,7 @@ model ReviewReply {
   isLecturer Boolean @default(false)
   body      String
   createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 // Phase 2b — email outbox (dev: logged + console; prod: Resend/Postmark worker drains pending)
@@ -526,14 +530,40 @@ model EmailLog {
 }
 
 model Dispute {
-  id         String   @id @default(cuid())
-  reporterId String
-  targetType String
-  targetId   String
-  reason     String
-  status     String   @default("open")
-  resolution String?
-  createdAt  DateTime @default(now())
+  id           String   @id @default(cuid())
+  reporterId   String
+  targetType   String
+  targetId     String
+  reason       String
+  evidence     String?
+  status       String   @default("open") // open | under-review | resolved | dismissed | appealed | closed
+  assignedTo   String?
+  resolution   String?
+  resolvedAt   DateTime?
+  appealStatus String   @default("none") // none | pending | upheld | overturned
+  appealReason String?
+  slaDueAt     DateTime?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  actions      DisputeAction[]
+
+  @@index([status])
+  @@index([assignedTo])
+}
+
+// Actions-taken timeline: every state change, assignment, note and appeal
+// decision lands here (in addition to AuditLog) so the queue can render a
+// full history without joining the global audit table.
+model DisputeAction {
+  id        String   @id @default(cuid())
+  disputeId String
+  dispute   Dispute  @relation(fields: [disputeId], references: [id], onDelete: Cascade)
+  actorId   String
+  action    String
+  note      String?
+  createdAt DateTime @default(now())
+
+  @@index([disputeId])
 }
 
 model Notification {

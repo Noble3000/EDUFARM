@@ -2,7 +2,7 @@
 import { useEffect, useState } from "react";
 import { Crumb } from "@edufarm/ui";
 import { api, getUser } from "@/lib/api";
-import { EmptyState, ErrorState, Field, Icon, SuccessNote } from "@edufarm/ui";
+import { EmptyState, ErrorState, Field, Icon, Modal, SuccessNote } from "@edufarm/ui";
 
 // Protected reader: page navigation + watermark + dwell pings + checkout on 402.
 // Page count comes from the material's latest version row — never hard-coded.
@@ -91,16 +91,48 @@ export default function Reader({ params }: { params: { id: string } }) {
     finally { setChecking(false); }
   }
   const [pts, setPts] = useState("");
-  const [reviews, setReviews] = useState<{ id: string; rating: number; body: string | null; replies: { body: string; isLecturer: boolean }[] }[]>([]);
+  const [reviews, setReviews] = useState<{ id: string; mine: boolean; rating: number; body: string | null; replies: { body: string; isLecturer: boolean }[] }[]>([]);
   const [rev, setRev] = useState({ rating: 5, body: "" });
+  const [editing, setEditing] = useState<{ id: string; rating: number; body: string } | null>(null);
+  const [report, setReport] = useState<{ targetType: string; targetId: string; title: string } | null>(null);
+  const [repReason, setRepReason] = useState("");
+  const [repEvidence, setRepEvidence] = useState("");
+  const [repDone, setRepDone] = useState("");
   async function loadReviews() {
     setReviews(await api(`/materials/${params.id}/reviews`).catch(() => []));
   }
-  useEffect(() => { loadReviews(); }, [params.id]);
+  useEffect(() => {
+    loadReviews();
+  }, [params.id]);
   async function postReview() {
     try {
       await api(`/materials/${params.id}/reviews`, { method: "POST", body: JSON.stringify(rev) });
       setRev({ rating: 5, body: "" }); loadReviews();
+    } catch (e) { setErr((e as Error).message); }
+  }
+  async function saveEdit() {
+    if (!editing) return;
+    try {
+      await api(`/reviews/${editing.id}`, { method: "PATCH", body: JSON.stringify({ rating: editing.rating, body: editing.body }) });
+      setEditing(null); loadReviews();
+    } catch (e) { setErr((e as Error).message); }
+  }
+  async function deleteReview(id: string) {
+    try {
+      await api(`/reviews/${id}`, { method: "DELETE" });
+      loadReviews();
+    } catch (e) { setErr((e as Error).message); }
+  }
+  async function submitReport() {
+    if (!report || !repReason.trim()) { setErr("Report reason required."); return; }
+    try {
+      const path = report.targetType === "Review" ? `/reviews/${report.targetId}/report` : "/reports";
+      const body = report.targetType === "Review"
+        ? { reason: repReason, evidence: repEvidence || undefined }
+        : { targetType: report.targetType, targetId: report.targetId, reason: repReason, evidence: repEvidence || undefined };
+      const d = await api(path, { method: "POST", body: JSON.stringify(body) });
+      setRepDone(`Report received (ref ${(d.id as string).slice(0, 8)}). Nothing is removed automatically — reviewers decide.`);
+      setReport(null); setRepReason(""); setRepEvidence("");
     } catch (e) { setErr((e as Error).message); }
   }
 
@@ -169,10 +201,28 @@ export default function Reader({ params }: { params: { id: string } }) {
       </div>
       <div className="card">
         <h3>Reviews</h3>
+        <p className="muted">Only students with meaningful access can review — one review each (edit yours). <button className="sec" style={{ minHeight: 36, padding: "6px 12px", fontSize: 13 }} onClick={() => setReport({ targetType: "Material", targetId: params.id, title: meta?.title ?? "this material" })}>Report this material</button></p>
         {reviews.map((r) => (
           <div key={r.id} style={{ borderTop: "1px solid #eee", paddingTop: 8 }}>
             <p><Icon name="star" size={14} /> {r.rating}/5 — {r.body}</p>
             {r.replies.map((rp, i) => <p key={i} style={{ marginLeft: 12 }}>{rp.isLecturer && <span className="badge b-off">Lecturer</span>}{rp.body}</p>)}
+            {r.mine ? (
+              editing?.id === r.id ? (
+                <div className="row tight">
+                  <input style={{ maxWidth: 70 }} aria-label="Rating" type="number" min={1} max={5} value={editing.rating} onChange={(e) => setEditing({ ...editing, rating: Number(e.target.value) })} />
+                  <input style={{ maxWidth: 220 }} aria-label="Review text" value={editing.body} onChange={(e) => setEditing({ ...editing, body: e.target.value })} />
+                  <button className="sec" onClick={saveEdit}>Save</button>
+                  <button className="sec" onClick={() => setEditing(null)}>Cancel</button>
+                </div>
+              ) : (
+                <div className="row tight">
+                  <button className="sec" onClick={() => setEditing({ id: r.id, rating: r.rating, body: r.body ?? "" })}>Edit mine</button>
+                  <button className="sec" onClick={() => deleteReview(r.id)}>Delete mine</button>
+                </div>
+              )
+            ) : (
+              <button className="sec" style={{ minHeight: 36, padding: "6px 12px", fontSize: 13 }} onClick={() => setReport({ targetType: "Review", targetId: r.id, title: `review ${r.rating}/5` })}>Report</button>
+            )}
           </div>
         ))}
         {!reviews.length && (
@@ -186,7 +236,23 @@ export default function Reader({ params }: { params: { id: string } }) {
           <textarea value={rev.body} onChange={(e) => setRev({ ...rev, body: e.target.value })} placeholder="What did you think?" rows={3} />
         </Field>
         <button onClick={postReview}>Post review</button>
+        {repDone && <div style={{ marginTop: 8 }}><SuccessNote>{repDone}</SuccessNote></div>}
       </div>
+      {report && (
+        <Modal title={`Report ${report.title}`} onClose={() => setReport(null)}>
+          <p className="muted">Reports go to human reviewers — nothing is removed automatically.</p>
+          <Field label="Reason">
+            <textarea value={repReason} onChange={(e) => setRepReason(e.target.value)} rows={3} placeholder="What is wrong?" />
+          </Field>
+          <Field label="Evidence / reference" optional hint="Link, page, quote — anything that helps review.">
+            <input value={repEvidence} onChange={(e) => setRepEvidence(e.target.value)} placeholder="e.g. page 4, copied source" />
+          </Field>
+          <div className="row" style={{ marginTop: 8 }}>
+            <button className="sec" onClick={() => setReport(null)}>Cancel</button>
+            <button onClick={submitReport}>Submit report</button>
+          </div>
+        </Modal>
+      )}
     </div>
   );
 }
