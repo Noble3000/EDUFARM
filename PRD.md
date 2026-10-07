@@ -162,3 +162,4 @@ Next.js PWA + Fastify API self-hosted on local device (no Vercel) · Paystack/Fl
 - 047 (2026-10-06): Local production ops hardened — PM2 restarts/caps/logs/ordering, DB-gated boot, graceful shutdown, /health + /ready, provider retry/backoff, bounded cache, orphan-job recovery, ops report script, recovery runbook. Tests 100/100 + 7/7.
 - 048 (2026-10-06): PWA-first experience complete (concurrent session).
 - 049 (2026-10-07): OpenAPI reference for all 148 real endpoints (verified parity, 0 phantoms) + full accessibility pass with fixes (modal trap, focus contrast, badge contrast, headings, labels, portal).
+- 050 (2026-10-07): Role E2E suites — API regression 16/16 (HTTP+DB+permissions+notifications+audit+side effects, isolated cleanup) + UI-state 12/12; smoke stays fast, `pnpm e2e` runs regression.

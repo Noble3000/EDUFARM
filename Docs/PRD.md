@@ -551,3 +551,13 @@
 - **Commit:** (this push)
 - **Status:** Done, pushed to `main`. Local-first (no deploy per rule 023).
 
+### 050 — 2026-10-07 — Role E2E suites: regression (API) + UI-state, smoke split
+- **Instruction:** "Create browser/API E2E tests for the three primary roles. Real local stack, mock externals, isolated data with cleanup, verify HTTP/DB/permissions/UI/notifications/audit/side-effects. Regression suite + smoke suite."
+- **Change (regression/API `scripts/e2e-roles.mjs`):** 16 steps across student (signup→verify→enroll→isolate), lecturer (assign→fence→fanout→grade+release→points), purchase (terms→order→webhook→grant→ledger→receipt exactly-once), admin (queues, dispute lifecycle, idempotent settlement, reconcile, fencing), plus verified cleanup. Proves DB rows, notifications, audit logs, and side effects — not just HTTP.
+- **Change (regression/UI `scripts/e2e-ui.mjs`):** 12 SSR-markup assertions (landmarks, headings, labels, named controls, live links, table/pagination semantics, PWA shell) for portal + all roles, authed via session cookies on isolated users. Fixed real finds en route: release-gated grading (score masked until release), portal dead `href="#"` navs → spans, SSR loading-shell aware assertions.
+- **Split:** `smoke.mjs` stays fast/seed-based; `pnpm e2e:api`, `e2e:ui`, `e2e` run the write-with-cleanup regression suites.
+- **Verify:** regression API 16/16, UI-state 12/12, typechecks ×4 green, all apps rebuilt + live.
+- **Files (mine):** `scripts/{e2e-roles,e2e-ui}.mjs (new)`, `package.json` (e2e tasks), `Docs/PRD.md` (this entry), `PRD.md`.
+- **Commit:** (this push)
+- **Status:** Done, pushed to `main`. Local-first (no deploy per rule 023).
+
