@@ -108,9 +108,13 @@ export function Tabs({ tabs, initial = 0, onChange }: { tabs: { id: string; labe
     onChange?.(tabs[i].id);
   }
   function onKey(e: React.KeyboardEvent, i: number) {
-    if (e.key !== "ArrowRight" && e.key !== "ArrowLeft") return;
+    if (!["ArrowRight", "ArrowLeft", "Home", "End"].includes(e.key)) return;
     e.preventDefault();
-    const n = (i + (e.key === "ArrowRight" ? 1 : -1) + tabs.length) % tabs.length;
+    let n = i;
+    if (e.key === "ArrowRight") n = (i + 1) % tabs.length;
+    else if (e.key === "ArrowLeft") n = (i - 1 + tabs.length) % tabs.length;
+    else if (e.key === "Home") n = 0;
+    else n = tabs.length - 1;
     pick(n);
     refs.current[n]?.focus();
   }
@@ -134,19 +138,54 @@ export function Tabs({ tabs, initial = 0, onChange }: { tabs: { id: string; labe
   );
 }
 
-/* ---------- Modal + Drawer: Escape + overlay close, labelled ---------- */
+/* ---------- Modal + Drawer: focus trap, Escape, overlay close, labelled ---------- */
 export function Modal({ title, onClose, children, wide }: { title: string; onClose: () => void; children: React.ReactNode; wide?: boolean }) {
   const titleId = useId();
+  const boxRef = useRef<HTMLDivElement>(null);
+  const openerRef = useRef<Element | null>(null);
   useEffect(() => {
+    openerRef.current = document.activeElement;
+    // Move focus inside on open (first focusable, else the dialog itself).
+    const box = boxRef.current;
+    const first = box?.querySelector<HTMLElement>(
+      'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+    );
+    (first ?? box)?.focus?.();
+    if (box && !box.hasAttribute("tabindex")) box.setAttribute("tabindex", "-1");
     function onKey(e: KeyboardEvent) {
-      if (e.key === "Escape") onClose();
+      if (e.key === "Escape") {
+        onClose();
+        return;
+      }
+      if (e.key !== "Tab" || !box) return;
+      // Trap Tab inside the dialog.
+      const items = [...box.querySelectorAll<HTMLElement>(
+        'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+      )].filter((el) => el.offsetParent !== null);
+      if (!items.length) {
+        e.preventDefault();
+        return;
+      }
+      const firstItem = items[0];
+      const lastItem = items[items.length - 1];
+      if (e.shiftKey && document.activeElement === firstItem) {
+        e.preventDefault();
+        lastItem.focus();
+      } else if (!e.shiftKey && document.activeElement === lastItem) {
+        e.preventDefault();
+        firstItem.focus();
+      }
     }
     window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      (openerRef.current as HTMLElement | null)?.focus?.();
+    };
   }, [onClose]);
   return (
     <div className="overlay" onClick={onClose}>
       <div
+        ref={boxRef}
         className="modal"
         role="dialog"
         aria-modal="true"
@@ -261,6 +300,162 @@ export function SuccessNote({ children }: { children: React.ReactNode }) {
     <div className="snote" role="status">
       <Icon name="checkBadge" size={16} />
       <div>{children}</div>
+    </div>
+  );
+}
+
+/* ---------- OfflineNotice: network listener banner ---------- */
+export function OfflineNotice() {
+  const [offline, setOffline] = useState(false);
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const update = () => setOffline(!navigator.onLine);
+    update();
+    window.addEventListener("online", update);
+    window.addEventListener("offline", update);
+    return () => {
+      window.removeEventListener("online", update);
+      window.removeEventListener("offline", update);
+    };
+  }, []);
+  if (!offline) return null;
+  return (
+    <div className="offline-banner" role="status" aria-live="polite">
+      <Icon name="clock" size={16} />
+      <span>
+        <strong>You are offline.</strong> Shell assets are available. Protected academic materials, live submissions, and authentication require an active network connection.
+      </span>
+    </div>
+  );
+}
+
+/* ---------- PWAInstallPrompt: beforeinstallprompt hook & banner ---------- */
+export function PWAInstallPrompt({ appName = "EDUFARM" }: { appName?: string }) {
+  const [prompt, setPrompt] = useState<any>(null);
+  const [installed, setInstalled] = useState(false);
+  const [dismissed, setDismissed] = useState(false);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (window.matchMedia && window.matchMedia("(display-mode: standalone)").matches) {
+      setInstalled(true);
+      return;
+    }
+    const handler = (e: Event) => {
+      e.preventDefault();
+      setPrompt(e);
+    };
+    window.addEventListener("beforeinstallprompt", handler);
+    window.addEventListener("appinstalled", () => setInstalled(true));
+    return () => window.removeEventListener("beforeinstallprompt", handler);
+  }, []);
+
+  if (installed || dismissed) return null;
+  if (!prompt) return null;
+
+  async function handleInstall() {
+    if (!prompt) return;
+    prompt.prompt();
+    const result = await prompt.userChoice;
+    if (result && result.outcome === "accepted") {
+      setInstalled(true);
+    }
+    setPrompt(null);
+  }
+
+  return (
+    <div className="install-banner" role="region" aria-label="Install app">
+      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+        <Icon name="grad" size={20} />
+        <div>
+          <strong>Install {appName}</strong>
+          <div className="muted" style={{ fontSize: 13 }}>Add to home screen for faster full-screen study and instant access.</div>
+        </div>
+      </div>
+      <div className="row tight">
+        <button onClick={handleInstall} style={{ padding: "8px 16px", minHeight: 44 }}>Install</button>
+        <button className="sec" onClick={() => setDismissed(true)} style={{ padding: "8px 14px", minHeight: 44 }}>Dismiss</button>
+      </div>
+    </div>
+  );
+}
+
+/* ---------- FileInput: mobile-first accessible file upload target ---------- */
+export function FileInput({
+  label = "Choose file",
+  accept = ".pdf,.doc,.docx,.txt",
+  hint = "PDF, DOCX, or text files up to 25MB",
+  onFileSelect,
+}: {
+  label?: string;
+  accept?: string;
+  hint?: string;
+  onFileSelect: (file: File | null) => void;
+}) {
+  const [file, setFile] = useState<File | null>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const inputId = `edu-file-${useId().replace(/[^a-zA-Z0-9]/g, "")}`;
+
+  function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const selected = e.target.files?.[0] || null;
+    setFile(selected);
+    onFileSelect(selected);
+  }
+
+  function handleClear(e: React.MouseEvent) {
+    e.stopPropagation();
+    setFile(null);
+    if (inputRef.current) inputRef.current.value = "";
+    onFileSelect(null);
+  }
+
+  return (
+    <div style={{ margin: "6px 0 12px" }}>
+      <input
+        ref={inputRef}
+        type="file"
+        accept={accept}
+        onChange={handleChange}
+        style={{ display: "none" }}
+        id={inputId}
+        aria-label={label}
+      />
+      <label
+        htmlFor={inputId}
+        className="file-dropzone"
+        tabIndex={0}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            inputRef.current?.click();
+          }
+        }}
+      >
+        <Icon name={file ? "file" : "upload"} size={22} />
+        {file ? (
+          <div>
+            <strong>{file.name}</strong>
+            <div className="muted" style={{ fontSize: 13 }}>
+              {(file.size / (1024 * 1024)).toFixed(2)} MB · Tap to replace
+            </div>
+            <div style={{ marginTop: 8 }}>
+              <button
+                type="button"
+                className="sec"
+                onClick={handleClear}
+                style={{ padding: "6px 14px", minHeight: 44 }}
+              >
+                Remove file
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div>
+            <strong>{label}</strong>
+            <div className="hint" style={{ margin: "2px 0 0" }}>{hint}</div>
+          </div>
+        )}
+      </label>
     </div>
   );
 }

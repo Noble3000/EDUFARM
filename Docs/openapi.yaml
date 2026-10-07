@@ -1,0 +1,2363 @@
+# EDUFARM API — OpenAPI 3.0 specification (generated from source, verified).
+# Covers every implemented endpoint. Conventions shared by all operations are
+# documented once here; per-operation x-edufarm blocks record roles, rate
+# limits, idempotency, side effects and audit behaviour. Planned-but-missing
+# endpoints are listed at the bottom under x-planned and NOT as paths.
+openapi: 3.0.3
+info:
+  title: EDUFARM API
+  version: 1.0.0
+  description: >-
+    Verified lecturer–student learning ecosystem (local-first).
+    Auth: opaque session token via `Authorization: Bearer <token>`,
+    `x-session-token` header, or `edufarm_session` cookie. Raw user ids are
+    never accepted. Error shape is ALWAYS `{ "error": "<code>: <message>" }`
+    (4xx pass through; 5xx are sanitized to `{ "error": "internal", "id" }`
+    with the trace server-side only). Global rate limit is 300 req/min;
+    stricter budgets are noted per operation.
+servers:
+  - url: http://localhost:4000
+    description: Local device (PM2 edufarm-api)
+security:
+  - bearerAuth: []
+  - sessionToken: []
+  - sessionCookie: []
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      description: Opaque session token (preferred).
+    sessionToken:
+      type: apiKey
+      in: header
+      name: x-session-token
+    sessionCookie:
+      type: apiKey
+      in: cookie
+      name: edufarm_session
+  schemas:
+    Error:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: string
+          example: "auth-invalid: email + password required."
+    Id:
+      type: string
+      description: cuid identifier
+    VerificationStatus:
+      type: string
+      enum: [unverified, pending, needsCorrection, verified, rejected, suspended]
+    EnrollmentStatus:
+      type: string
+      enum: [requested, approved, rejected, removed, suspended]
+    MaterialStatus:
+      type: string
+      enum: [draft, pendingLecturer, pendingReview, published, archived]
+    PurchaseStatus:
+      type: string
+      enum: [pending, completed, failed, refunded, revoked, suspended]
+    PaymentOrderStatus:
+      type: string
+      enum: [pending, processing, paid, failed, expired, cancelled]
+    DisputeStatus:
+      type: string
+      enum: [open, under-review, resolved, dismissed, appealed, closed]
+    PublicUser:
+      type: object
+      description: User row minus passwordHash, plus profile(s) and session token on auth responses.
+      properties:
+        id: { $ref: '#/components/schemas/Id' }
+        name: { type: string, nullable: true }
+        email: { type: string }
+        role: { type: string, enum: [student, lecturer, deptAdmin, institutionAdmin, platformAdmin] }
+        suspended: { type: boolean }
+        sessionToken: { type: string }
+        sessionExpiresAt: { type: string, format: date-time }
+    Course:
+      type: object
+      properties:
+        id: { $ref: '#/components/schemas/Id' }
+        departmentId: { type: string }
+        levelId: { type: string }
+        code: { type: string }
+        title: { type: string }
+        isOfficial: { type: boolean }
+    Material:
+      type: object
+      description: Never includes fileKey/checksum.
+      properties:
+        id: { $ref: '#/components/schemas/Id' }
+        courseId: { type: string }
+        title: { type: string }
+        type: { type: string }
+        description: { type: string, nullable: true }
+        priceKobo: { type: integer }
+        isFree: { type: boolean }
+        accessDurationDays: { type: integer, nullable: true }
+        version: { type: integer }
+        status: { $ref: '#/components/schemas/MaterialStatus' }
+    Announcement:
+      type: object
+      properties:
+        id: { $ref: '#/components/schemas/Id' }
+        courseId: { type: string }
+        lecturerId: { type: string }
+        category: { type: string }
+        title: { type: string }
+        body: { type: string }
+        isUrgent: { type: boolean }
+        archived: { type: boolean }
+        createdAt: { type: string, format: date-time }
+    Question:
+      type: object
+      properties:
+        id: { type: string }
+        courseId: { type: string }
+        title: { type: string }
+        body: { type: string }
+        status: { type: string, enum: [unanswered, answered, resolved] }
+    Notification:
+      type: object
+      properties:
+        id: { $ref: '#/components/schemas/Id' }
+        type: { type: string }
+        title: { type: string }
+        body: { type: string }
+        link: { type: string, nullable: true }
+        readAt: { type: string, format: date-time, nullable: true }
+  parameters:
+    IdParam:
+      name: id
+      in: path
+      required: true
+      schema: { $ref: '#/components/schemas/Id' }
+tags:
+  - { name: system, description: Liveness, readiness, demo gate }
+  - { name: auth, description: Signup, login, sessions, staff provisioning }
+  - { name: hierarchy, description: University → Faculty → Department → Level → Course + lecturer assignment }
+  - { name: verification, description: Student/lecturer onboarding state machine }
+  - { name: enrollments, description: Lecturer-controlled course access }
+  - { name: announcements, description: Official course announcements }
+  - { name: qa, description: Course Q&A (no 1-to-1 chat) }
+  - { name: materials, description: Lifecycle, search, reader, terms }
+  - { name: storage, description: Signed page-token resolution }
+  - { name: purchases, description: Legacy checkout shim, bundles, library, earnings }
+  - { name: payments, description: Order pipeline, webhooks, reconciliation }
+  - { name: progress, description: Dwell pings, completion, continue, inbox }
+  - { name: notifications, description: Preferences, read state, reminders }
+  - { name: email, description: Outbox, retry, drain }
+  - { name: assessments, description: Builder, attempts, grading, release }
+  - { name: points, description: Academic points economy }
+  - { name: grades, description: Private student CGPA calculator }
+  - { name: reviews, description: Eligible reviews, replies, moderation }
+  - { name: disputes, description: Reports, lifecycle, appeals }
+  - { name: ai, description: Grounded assistant, backfill, insights }
+  - { name: devotional, description: Daily Word, archive, curation }
+  - { name: onboarding, description: Institution onboarding }
+  - { name: settlement, description: eSpees accounting (not a payment rail) }
+paths:
+  /health:
+    get:
+      tags: [system]
+      security: []
+      summary: Liveness (fast, no DB touch)
+      responses:
+        '200':
+          description: Alive with uptime/heap.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok: { type: boolean }
+                  service: { type: string }
+                  uptimeSec: { type: integer }
+                  memoryMB: { type: integer }
+      x-edufarm: { roles: [public], rateLimit: global, idempotency: none, sideEffects: none, audit: none }
+  /ready:
+    get:
+      tags: [system]
+      security: []
+      summary: Readiness (DB ping + pending-migration count + cache stats)
+      responses:
+        '200':
+          description: Ready.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ready: { type: boolean }
+                  dbMs: { type: integer }
+                  uptimeSec: { type: integer }
+                  memoryMB: { type: integer }
+        '503':
+          description: Not ready (db-unreachable or migrations-pending).
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ready: { type: boolean }
+                  reason: { type: string, enum: [db-unreachable, migrations-pending] }
+      x-edufarm: { roles: [public], rateLimit: global, idempotency: none, sideEffects: none, audit: none }
+  /api/v1/demo/login:
+    post:
+      tags: [system]
+      security: []
+      summary: Passwordless demo login (LOCAL demos only; 403 unless ALLOW_DEMO_LOGIN=true)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email]
+              properties:
+                email: { type: string }
+      responses:
+        '200':
+          description: PublicUser + sessionToken + cookie set.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PublicUser' }
+        '400': { description: 'Missing email.', content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+        '403': { description: 'Demo gate closed.', content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+        '404': { description: 'Unknown email (or suspended).', content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+      x-edufarm: { roles: [public-gated], rateLimit: auth-strict-30/min, idempotency: new-session-per-call, sideEffects: [session-create, Set-Cookie], audit: none }
+  /api/v1/demo/users:
+    get:
+      tags: [system]
+      security: []
+      summary: List demo users (email/name/role only; same demo gate)
+      responses:
+        '200': { description: 'User list.' }
+        '403': { description: 'Demo gate closed.', content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+      x-edufarm: { roles: [public-gated], rateLimit: global, idempotency: none, sideEffects: none, audit: none }
+  /api/v1/auth/signup:
+    post:
+      tags: [auth]
+      security: []
+      summary: Role-aware signup (student links full chain; lecturer links department)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, email, password, role]
+              properties:
+                name: { type: string }
+                email: { type: string }
+                password: { type: string, minLength: 8 }
+                role: { type: string, enum: [student, lecturer] }
+                universityId: { type: string }
+                facultyId: { type: string }
+                departmentId: { type: string }
+                levelId: { type: string }
+                matricNo: { type: string }
+                staffId: { type: string }
+                bio: { type: string }
+      responses:
+        '200': { description: 'PublicUser + sessionToken + cookie; profile created pending.' }
+        '400': { description: 'auth-invalid (fields/chain/department) or auth-taken (email/matric/staffId clash).', content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+      x-edufarm: { roles: [public], rateLimit: auth-strict-10/min, idempotency: email-unique, sideEffects: [profile-create, verification-record, session-create, Set-Cookie], audit: student.signup|lecturer.signup }
+  /api/v1/auth/login:
+    post:
+      tags: [auth]
+      security: []
+      summary: Email + password login (suspended accounts blocked)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email: { type: string }
+                password: { type: string }
+      responses:
+        '200': { description: 'PublicUser + sessionToken + cookie.' }
+        '400': { description: 'Missing fields.', content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+        '401': { description: 'Bad credentials (never reveals which field).', content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+        '403': { description: 'Account suspended.', content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+      x-edufarm: { roles: [public], rateLimit: auth-strict-10/min, idempotency: new-session-per-call, sideEffects: [session-create, Set-Cookie], audit: auth.login|auth.login.failed|auth.login.blocked-suspended }
+  /api/v1/auth/logout:
+    post:
+      tags: [auth]
+      summary: Invalidate current session, clear cookie
+      responses:
+        '200': { description: "{ ok: true } even when already logged out." }
+      x-edufarm: { roles: [signed-in-optional], rateLimit: global, idempotency: safe-retry, sideEffects: [session-revoke, cookie-clear], audit: auth.logout }
+  /api/v1/auth/session:
+    get:
+      tags: [auth]
+      summary: Current session user (refreshes sliding expiry)
+      responses:
+        '200': { description: 'PublicUser (no password hash, ever).' }
+        '401': { description: 'Missing/invalid/expired/suspended session.', content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+      x-edufarm: { roles: [any-signed-in], rateLimit: global, idempotency: read-only, sideEffects: [sliding-expiry-refresh], audit: none }
+  /api/v1/auth/password:
+    post:
+      tags: [auth]
+      summary: Change password (revokes ALL sessions, issues fresh token)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [currentPassword, newPassword]
+              properties:
+                currentPassword: { type: string }
+                newPassword: { type: string, minLength: 8 }
+      responses:
+        '200': { description: "{ ok, sessionToken, sessionExpiresAt } + cookie." }
+        '400': { description: 'Missing/short fields.', content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+        '401': { description: 'Wrong current password.', content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+      x-edufarm: { roles: [any-signed-in], rateLimit: global, idempotency: non-idempotent, sideEffects: [password-change, revoke-all-sessions, new-session, Set-Cookie], audit: auth.password.changed }
+  /api/v1/admin/users/{id}/suspend:
+    post:
+      tags: [auth]
+      summary: Suspend user (kills sessions immediately)
+      parameters:
+        - { $ref: '#/components/parameters/IdParam' }
+      responses:
+        '200': { description: "{ ok, sessionsRevoked }." }
+        '400': { description: 'Cannot suspend yourself.', content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+      x-edufarm: { roles: [platformAdmin], rateLimit: global, idempotency: state-set, sideEffects: [suspend, revoke-all-sessions], audit: admin.user.suspended }
+  /api/v1/admin/users/{id}/unsuspend:
+    post:
+      tags: [auth]
+      summary: Unsuspend user
+      parameters:
+        - { $ref: '#/components/parameters/IdParam' }
+      responses:
+        '200': { description: "{ ok: true }." }
+      x-edufarm: { roles: [platformAdmin], rateLimit: global, idempotency: state-set, sideEffects: [unsuspend], audit: admin.user.unsuspended }
+  /api/v1/access-requests:
+    post:
+      tags: [auth]
+      security: []
+      summary: Public admin-access request (lands in disputes queue as AccessRequest)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, email, reason]
+              properties:
+                name: { type: string }
+                email: { type: string }
+                role: { type: string }
+                reason: { type: string }
+      responses:
+        '200': { description: 'Dispute row + review note.' }
+        '400': { description: 'Missing fields.', content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+      x-edufarm: { roles: [public], rateLimit: global, idempotency: none-each-call-new-row, sideEffects: [dispute-create], audit: none }
+  /api/v1/admin/users:
+    post:
+      tags: [auth]
+      summary: Platform admin creates staff accounts directly
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, email, password, role]
+              properties:
+                name: { type: string }
+                email: { type: string }
+                password: { type: string, minLength: 8 }
+                role: { type: string, enum: [deptAdmin, institutionAdmin, platformAdmin, lecturer, student] }
+      responses:
+        '200': { description: 'PublicUser created.' }
+        '400': { description: 'Invalid fields or email taken.', content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+        '403': { description: 'Platform admin only.', content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+      x-edufarm: { roles: [platformAdmin], rateLimit: global, idempotency: email-unique, sideEffects: [user-create], audit: admin.user.created }
+  /api/v1/universities:
+    get:
+      tags: [hierarchy]
+      security: []
+      summary: List universities (60s cached; invalidated on write)
+      responses:
+        '200': { description: 'University array (id/name/slug/verified).' }
+      x-edufarm: { roles: [public], rateLimit: global, idempotency: read-only-cached, sideEffects: none, audit: none }
+    post:
+      tags: [hierarchy]
+      summary: Create university
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, slug]
+              properties:
+                name: { type: string }
+                slug: { type: string }
+      responses:
+        '200': { description: 'University created.' }
+        '400': { description: 'Missing fields or slug taken.', content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+        '403': { description: 'Staff only.', content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+      x-edufarm: { roles: [deptAdmin, institutionAdmin, platformAdmin], rateLimit: global, idempotency: slug-unique, sideEffects: [cache-invalidate], audit: none }
+  /api/v1/universities/{id}/faculties:
+    get:
+      tags: [hierarchy]
+      security: []
+      summary: Faculties of a university
+      parameters:
+        - { $ref: '#/components/parameters/IdParam' }
+      responses:
+        '200': { description: 'Faculty array.' }
+      x-edufarm: { roles: [public], rateLimit: global, idempotency: read-only, sideEffects: none, audit: none }
+  /api/v1/faculties:
+    post:
+      tags: [hierarchy]
+      summary: Create faculty under a university (name unique per university)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [universityId, name]
+              properties:
+                universityId: { type: string }
+                name: { type: string }
+      responses:
+        '200': { description: 'Faculty created.' }
+        '400': { description: 'Missing fields or duplicate name.', content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+        '404': { description: 'University not found.', content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+      x-edufarm: { roles: [deptAdmin, institutionAdmin, platformAdmin], rateLimit: global, idempotency: name-unique-per-parent, sideEffects: none, audit: none }
+  /api/v1/faculties/{id}/departments:
+    get:
+      tags: [hierarchy]
+      security: []
+      summary: Departments of a faculty
+      parameters:
+        - { $ref: '#/components/parameters/IdParam' }
+      responses:
+        '200': { description: 'Department array.' }
+      x-edufarm: { roles: [public], rateLimit: global, idempotency: read-only, sideEffects: none, audit: none }
+  /api/v1/departments:
+    post:
+      tags: [hierarchy]
+      summary: Create department under a faculty (name unique per faculty)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [facultyId, name]
+              properties:
+                facultyId: { type: string }
+                name: { type: string }
+      responses:
+        '200': { description: 'Department created.' }
+        '400': { description: 'Missing fields or duplicate name.', content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+        '404': { description: 'Faculty not found.', content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+      x-edufarm: { roles: [deptAdmin, institutionAdmin, platformAdmin], rateLimit: global, idempotency: name-unique-per-parent, sideEffects: none, audit: none }
+  /api/v1/departments/{id}/levels:
+    get:
+      tags: [hierarchy]
+      security: []
+      summary: Levels of a department
+      parameters:
+        - { $ref: '#/components/parameters/IdParam' }
+      responses:
+        '200': { description: 'Level array.' }
+      x-edufarm: { roles: [public], rateLimit: global, idempotency: read-only, sideEffects: none, audit: none }
+  /api/v1/levels:
+    post:
+      tags: [hierarchy]
+      summary: Create level under a department (name unique per department)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [departmentId, name]
+              properties:
+                departmentId: { type: string }
+                name: { type: string, example: "200" }
+      responses:
+        '200': { description: 'Level created.' }
+        '400': { description: 'Missing fields or duplicate name.', content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+        '404': { description: 'Department not found.', content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+      x-edufarm: { roles: [deptAdmin, institutionAdmin, platformAdmin], rateLimit: global, idempotency: name-unique-per-parent, sideEffects: none, audit: none }
+  /api/v1/departments/{id}/courses:
+    get:
+      tags: [hierarchy]
+      security: []
+      summary: Courses of a department (with level + lecturer names)
+      parameters:
+        - { $ref: '#/components/parameters/IdParam' }
+      responses:
+        '200': { description: 'Course array ordered by code.' }
+      x-edufarm: { roles: [public], rateLimit: global, idempotency: read-only, sideEffects: none, audit: none }
+  /api/v1/courses:
+    post:
+      tags: [hierarchy]
+      summary: Create course (level must belong to the department — no orphans)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [departmentId, levelId, code, title]
+              properties:
+                departmentId: { type: string }
+                levelId: { type: string }
+                code: { type: string, example: BIO 201 }
+                title: { type: string }
+                isOfficial: { type: boolean }
+      responses:
+        '200': { description: 'Course created.', content: { application/json: { schema: { $ref: '#/components/schemas/Course' } } } }
+        '400': { description: 'Missing fields, cross-department level, or duplicate code.', content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+      x-edufarm: { roles: [deptAdmin, institutionAdmin, platformAdmin], rateLimit: global, idempotency: code-unique-per-department, sideEffects: none, audit: none }
+  /api/v1/courses/{id}:
+    get:
+      tags: [hierarchy]
+      security: []
+      summary: Course detail — catalog view for strangers, full content only when entitled
+      parameters:
+        - { $ref: '#/components/parameters/IdParam' }
+      responses:
+        '200':
+          description: Catalog (code/title/lecturer names, gated:true) or full course (materials, unarchived announcements, Q&A, gated:false).
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Course'
+                  - type: object
+                    properties:
+                      gated: { type: boolean }
+        '404': { description: 'Course not found.', content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+      x-edufarm: { roles: [public-catalog, entitled-full], rateLimit: global, idempotency: read-only, sideEffects: none, audit: none }
+  /api/v1/courses/{id}/lecturers:
+    get:
+      tags: [hierarchy]
+      summary: Lecturer assignments of a course
+      parameters:
+        - { $ref: '#/components/parameters/IdParam' }
+      responses:
+        '200': { description: 'CourseLecturer rows with lecturer + department.' }
+        '401': { description: 'Sign-in required.', content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+      x-edufarm: { roles: [any-signed-in], rateLimit: global, idempotency: read-only, sideEffects: none, audit: none }
+    post:
+      tags: [hierarchy]
+      summary: Assign a verified same-department lecturer to a course
+      parameters:
+        - { $ref: '#/components/parameters/IdParam' }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [lecturerProfileId]
+              properties:
+                lecturerProfileId: { type: string }
+                role: { type: string, default: owner }
+      responses:
+        '200': { description: 'CourseLecturer link (upsert).' }
+        '400': { description: 'Lecturer unverified or wrong department.', content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+        '404': { description: 'Course or lecturer profile not found.', content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+      x-edufarm: { roles: [deptAdmin, institutionAdmin, platformAdmin], rateLimit: global, idempotency: upsert-courseId-lecturerId, sideEffects: [notification-to-lecturer], audit: course.lecturer.assigned }
+  /api/v1/courses/{id}/lecturers/{lecturerId}:
+    delete:
+      tags: [hierarchy]
+      summary: Unassign lecturer (a course must keep at least one)
+      parameters:
+        - { $ref: '#/components/parameters/IdParam' }
+        - { name: lecturerId, in: path, required: true, schema: { type: string } }
+      responses:
+        '200': { description: "{ removed: true }." }
+        '400': { description: 'Last lecturer cannot be removed.', content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+      x-edufarm: { roles: [deptAdmin, institutionAdmin, platformAdmin], rateLimit: global, idempotency: delete-many-idempotent, sideEffects: none, audit: course.lecturer.unassigned }
+  /api/v1/verifications/student:
+    post:
+      tags: [verification]
+      summary: Student verification request/resubmit (full chain enforced)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [universityId, facultyId, departmentId, levelId, matricNo]
+              properties:
+                universityId: { type: string }
+                facultyId: { type: string }
+                departmentId: { type: string }
+                levelId: { type: string }
+                matricNo: { type: string }
+      responses:
+        '200': { description: 'StudentProfile pending (+ verification record).' }
+        '400': { description: 'Missing fields, broken chain, matric clash, or bad resubmit state.', content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+        '401': { description: 'Sign-in required.', content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+      x-edufarm: { roles: [any-signed-in], rateLimit: global, idempotency: upsert-per-user, sideEffects: [verification-record], audit: student.verification.requested|resubmitted }
+  /api/v1/verifications/lecturer:
+    post:
+      tags: [verification]
+      summary: Lecturer verification request/resubmit (real department required)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [departmentId, staffId]
+              properties:
+                departmentId: { type: string }
+                staffId: { type: string }
+                bio: { type: string }
+      responses:
+        '200': { description: 'LecturerProfile pending (+ verification record).' }
+        '400': { description: 'Missing fields, unknown department, staffId clash, bad resubmit state.', content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+        '401': { description: 'Sign-in required.', content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+      x-edufarm: { roles: [any-signed-in], rateLimit: global, idempotency: upsert-per-user, sideEffects: [verification-record], audit: lecturer.verification.requested|resubmitted }
+  /api/v1/verifications/pending:
+    get:
+      tags: [verification]
+      summary: Staff queues filtered by state (default pending)
+      parameters:
+        - { name: type, in: query, schema: { type: string, enum: [student, lecturer] } }
+        - { name: status, in: query, schema: { type: string, default: pending } }
+      responses:
+        '200': { description: 'Profile array with user + hierarchy includes.' }
+      x-edufarm: { roles: [deptAdmin, institutionAdmin, platformAdmin], rateLimit: global, idempotency: read-only, sideEffects: none, audit: none }
+  /api/v1/verifications/student/{id}/history:
+    get:
+      tags: [verification]
+      summary: Decision history of a student profile (owner or staff)
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+      responses:
+        '200': { description: 'VerificationRecord array, newest first.' }
+        '403': { description: 'Not owner/staff.', content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+        '404': { description: 'Profile not found.', content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+      x-edufarm: { roles: [owner-or-staff], rateLimit: global, idempotency: read-only, sideEffects: none, audit: none }
+  /api/v1/verifications/lecturer/{id}/history:
+    get:
+      tags: [verification]
+      summary: Decision history of a lecturer profile (owner or institution/platform admin)
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+      responses:
+        '200': { description: 'VerificationRecord array, newest first.' }
+        '403': { description: 'Not allowed.', content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+        '404': { description: 'Profile not found.', content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+      x-edufarm: { roles: [owner-or-institutionAdmin-or-platformAdmin], rateLimit: global, idempotency: read-only, sideEffects: none, audit: none }
+  /api/v1/verifications/student/{id}/decide:
+    post:
+      tags: [verification]
+      summary: Decide a student request (state machine enforced, notification sent)
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [decision]
+              properties:
+                decision: { type: string, enum: [approve, reject, needsCorrection, suspend, reinstate] }
+                note: { type: string }
+      responses:
+        '200': { description: 'Updated profile.' }
+        '400': { description: 'Bad decision or illegal transition.', content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+        '404': { description: 'Profile not found.', content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+      x-edufarm: { roles: [deptAdmin, institutionAdmin, platformAdmin], rateLimit: global, idempotency: transition-guarded, sideEffects: [verification-record, notification+email], audit: student.verification.<decision>d }
+  /api/v1/verifications/lecturer/{id}/decide:
+    post:
+      tags: [verification]
+      summary: Decide a lecturer request (platform/institution admins only)
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [decision]
+              properties:
+                decision: { type: string, enum: [approve, reject, needsCorrection, suspend, reinstate] }
+                note: { type: string }
+      responses:
+        '200': { description: 'Updated profile.' }
+        '400': { description: 'Bad decision or illegal transition.', content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+        '404': { description: 'Profile not found.', content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+      x-edufarm: { roles: [platformAdmin, institutionAdmin], rateLimit: global, idempotency: transition-guarded, sideEffects: [verification-record, notification+email], audit: lecturer.verification.<decision>d }
+  /api/v1/verifications/me:
+    get:
+      tags: [verification]
+      summary: My verification state (unsigned callers get signedIn:false, still 200)
+      responses:
+        '200': { description: "{ signedIn, role, student, lecturer, studentProfile, lecturerProfile }." }
+      x-edufarm: { roles: [public-200-shape], rateLimit: global, idempotency: read-only, sideEffects: none, audit: none }
+  /api/v1/courses/{id}/enroll:
+    post:
+      tags: [enrollments]
+      summary: Verified student requests enrollment (never auto-approved)
+      parameters:
+        - { $ref: '#/components/parameters/IdParam' }
+      responses:
+        '200': { description: 'Enrollment (requested).' }
+        '401': { description: 'Student sign-in required.', content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+        '403': { description: 'Unverified/suspended student.', content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+        '404': { description: 'Course not found.', content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+      x-edufarm: { roles: [student-verified], rateLimit: global, idempotency: upsert-courseId-studentId, sideEffects: [lecturer-notifications], audit: enrollment.requested }
+  /api/v1/courses/{id}/enrollments:
+    get:
+      tags: [enrollments]
+      summary: Enrollments of a course (assigned lecturer or staff; status/search filters)
+      parameters:
+        - { $ref: '#/components/parameters/IdParam' }
+        - { name: status, in: query, schema: { type: string } }
+        - { name: q, in: query, schema: { type: string } }
+      responses:
+        '200': { description: 'Enrollment array with student user names.' }
+        '401': { description: 'Sign-in required.', content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+        '403': { description: 'Not the course lecturer/staff.', content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+      x-edufarm: { roles: [assigned-lecturer-or-staff], rateLimit: global, idempotency: read-only, sideEffects: none, audit: none }
+  /api/v1/enrollments/{id}/decide:
+    post:
+      tags: [enrollments]
+      summary: Lecturer decides enrollment (transition-guarded, student notified)
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [decision]
+              properties:
+                decision: { type: string, enum: [approve, reject, remove, suspend, reinstate] }
+      responses:
+        '200': { description: 'Updated enrollment.' }
+        '400': { description: 'Illegal transition.', content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+        '403': { description: 'Not the course lecturer/staff.', content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+        '404': { description: 'Enrollment not found.', content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+      x-edufarm: { roles: [assigned-lecturer-or-staff], rateLimit: global, idempotency: transition-guarded, sideEffects: [notification+email-to-student], audit: enrollment.<decision>d }
+  /api/v1/enrollments/me:
+    get:
+      tags: [enrollments]
+      summary: My enrollments with course rows
+      responses:
+        '200': { description: 'Enrollment array.' }
+        '401': { description: 'Student sign-in required.', content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+      x-edufarm: { roles: [student], rateLimit: global, idempotency: read-only, sideEffects: none, audit: none }
+  /api/v1/courses/{id}/announcements:
+    post:
+      tags: [announcements]
+      summary: Lecturer publishes announcement to approved enrollments
+      parameters:
+        - { $ref: '#/components/parameters/IdParam' }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [title, body]
+              properties:
+                category: { type: string, default: general }
+                title: { type: string }
+                body: { type: string }
+                isUrgent: { type: boolean }
+      responses:
+        '200': { description: 'Announcement created.', content: { application/json: { schema: { $ref: '#/components/schemas/Announcement' } } } }
+        '400': { description: 'Missing title/body.', content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+        '403': { description: 'Lecturer/staff of own course only.', content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+        '404': { description: 'Course not found.', content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+      x-edufarm: { roles: [lecturer-own-course-or-staff], rateLimit: global, idempotency: none-each-call-new-row, sideEffects: [notification+email-fanout-to-approved], audit: announcement.published }
+    get:
+      tags: [announcements]
+      security: []
+      summary: Announcements of a course (latest 50)
+      parameters:
+        - { $ref: '#/components/parameters/IdParam' }
+      responses:
+        '200': { description: 'Announcement array.' }
+      x-edufarm: { roles: [public], rateLimit: global, idempotency: read-only, sideEffects: none, audit: none }
+  /api/v1/announcements/{id}:
+    patch:
+      tags: [announcements]
+      summary: Lecturer edits own-course announcement (audited)
+      parameters:
+        - { $ref: '#/components/parameters/IdParam' }
+      responses:
+        '200': { description: 'Updated announcement.' }
+        '403': { description: 'Not own course.', content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+        '404': { description: 'Not found.', content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+      x-edufarm: { roles: [lecturer-own-course-or-staff], rateLimit: global, idempotency: state-set, sideEffects: none, audit: announcement.edited }
+  /api/v1/announcements/{id}/archive:
+    post:
+      tags: [announcements]
+      summary: Archive announcement (retained, hidden from student feed)
+      parameters:
+        - { $ref: '#/components/parameters/IdParam' }
+      responses:
+        '200': { description: 'Archived announcement.' }
+      x-edufarm: { roles: [lecturer-own-course-or-staff], rateLimit: global, idempotency: state-set, sideEffects: none, audit: announcement.archived }
+  /api/v1/courses/{id}/questions:
+    post:
+      tags: [qa]
+      summary: Ask a question (approved students, own lecturers, staff)
+      parameters:
+        - { $ref: '#/components/parameters/IdParam' }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [title]
+              properties:
+                title: { type: string }
+                body: { type: string }
+      responses:
+        '200': { description: 'Question (unanswered).', content: { application/json: { schema: { $ref: '#/components/schemas/Question' } } } }
+        '400': { description: 'Title required.', content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+        '403': { description: 'No course access.', content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+      x-edufarm: { roles: [course-member-or-staff], rateLimit: global, idempotency: none-each-call-new-row, sideEffects: none, audit: none }
+    get:
+      tags: [qa]
+      summary: Searchable course Q&A (status + title filters, answers included)
+      parameters:
+        - { $ref: '#/components/parameters/IdParam' }
+        - { name: q, in: query, schema: { type: string } }
+        - { name: status, in: query, schema: { type: string } }
+      responses:
+        '200': { description: 'Question array (max 50).' }
+        '403': { description: 'No course access.', content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+      x-edufarm: { roles: [course-member-or-staff], rateLimit: global, idempotency: read-only, sideEffects: none, audit: none }
+  /api/v1/questions/{id}/answers:
+    post:
+      tags: [qa]
+      summary: Answer for the whole class (lecturer answers flip status to answered)
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [body]
+              properties:
+                body: { type: string }
+      responses:
+        '200': { description: 'Answer (isLecturer flagged by role).' }
+        '400': { description: 'Body required.', content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+        '404': { description: 'Question not found.', content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+      x-edufarm: { roles: [course-member-or-staff], rateLimit: global, idempotency: none-each-call-new-row, sideEffects: [question-status-flip], audit: none }
+  /api/v1/questions/{id}/resolve:
+    post:
+      tags: [qa]
+      summary: Mark question resolved (author or staff)
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+      responses:
+        '200': { description: 'Resolved question.' }
+        '403': { description: 'Not author/staff.', content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+        '404': { description: 'Not found.', content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+      x-edufarm: { roles: [author-or-staff], rateLimit: global, idempotency: state-set, sideEffects: none, audit: none }
+  /api/v1/lecturer/materials:
+    get:
+      tags: [materials]
+      summary: Lecturer's own materials across courses (all statuses)
+      responses:
+        '200': { description: 'Material array with course codes.' }
+        '401': { description: 'Sign-in required.', content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+        '403': { description: 'Lecturer profile required.', content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+      x-edufarm: { roles: [lecturer], rateLimit: global, idempotency: read-only, sideEffects: none, audit: none }
+  /api/v1/courses/{id}/materials/search:
+    get:
+      tags: [materials]
+      summary: Entitled search (students see free + purchased; lecturers own course incl. drafts)
+      parameters:
+        - { $ref: '#/components/parameters/IdParam' }
+        - { name: q, in: query, schema: { type: string } }
+        - { name: type, in: query, schema: { type: string } }
+      responses:
+        '200': { description: 'Material rows without fileKey/checksum (max 50).' }
+        '403': { description: 'No course access.', content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+        '404': { description: 'Course not found.', content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+      x-edufarm: { roles: [entitled-or-own-course-or-staff], rateLimit: global, idempotency: read-only, sideEffects: none, audit: none }
+  /api/v1/courses/{id}/materials:
+    post:
+      tags: [materials]
+      summary: Lecturer uploads material (staged pendingLecturer; price bounds enforced)
+      parameters:
+        - { $ref: '#/components/parameters/IdParam' }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [title, type]
+              properties:
+                title: { type: string }
+                type: { type: string, enum: [lecture-notes, course-pack, revision-guide, practice-questions, exam-prep, study-guide] }
+                description: { type: string }
+                priceKobo: { type: integer }
+                isFree: { type: boolean }
+                accessDurationDays: { type: integer, minimum: 1, maximum: 730 }
+                fileKey: { type: string }
+                checksum: { type: string }
+      responses:
+        '200': { description: 'Material staged (version 0/1).' }
+        '400': { description: 'Title/type/price/duration violations.', content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+        '403': { description: 'Not own course / no lecturer profile.', content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+        '404': { description: 'Course not found.', content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+      x-edufarm: { roles: [lecturer-own-course], rateLimit: global, idempotency: none-each-call-new-row, sideEffects: [material-version-row], audit: material.uploaded }
+  /api/v1/materials/{id}/approve:
+    post:
+      tags: [materials]
+      summary: Lecturer ownership approval → pendingReview (also serves legacy /submit)
+      parameters:
+        - { $ref: '#/components/parameters/IdParam' }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [attest]
+              properties:
+                attest: { type: boolean, enum: [true] }
+      responses:
+        '200': { description: 'Material pendingReview.' }
+        '400': { description: 'Missing attest or wrong state.', content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+        '403': { description: 'Not own course.', content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+        '404': { description: 'Not found.', content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+      x-edufarm: { roles: [lecturer-own-course], rateLimit: global, idempotency: state-guarded, sideEffects: none, audit: material.approved|material.submitted }
+  /api/v1/materials/{id}/submit:
+    post:
+      tags: [materials]
+      summary: Alias of approve (legacy path, identical behavior)
+      parameters:
+        - { $ref: '#/components/parameters/IdParam' }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [attest]
+              properties:
+                attest: { type: boolean, enum: [true] }
+      responses:
+        '200': { description: 'Material pendingReview.' }
+      x-edufarm: { roles: [lecturer-own-course], rateLimit: global, idempotency: state-guarded, sideEffects: none, audit: material.submitted }
+  /api/v1/materials/{id}/new-version:
+    post:
+      tags: [materials]
+      summary: Stage a new edition (live edition untouched until review approves)
+      parameters:
+        - { $ref: '#/components/parameters/IdParam' }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [fileKey]
+              properties:
+                fileKey: { type: string }
+                checksum: { type: string }
+                pageCount: { type: integer }
+      responses:
+        '200': { description: 'Material with pendingVersion set.' }
+        '400': { description: 'Not published or missing fileKey.', content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+        '403': { description: 'Not own course.', content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+        '404': { description: 'Not found.', content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+      x-edufarm: { roles: [lecturer-own-course], rateLimit: global, idempotency: none-new-version-row-each-call, sideEffects: [material-version-row], audit: material.version.staged }
+  /api/v1/reviews/queue:
+    get:
+      tags: [materials]
+      summary: Platform review queue (oldest first, optional title search)
+      parameters:
+        - { name: q, in: query, schema: { type: string } }
+      responses:
+        '200': { description: 'pendingReview materials with course.' }
+        '403': { description: 'Reviewers only.', content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+      x-edufarm: { roles: [platformAdmin, institutionAdmin], rateLimit: global, idempotency: read-only, sideEffects: none, audit: none }
+  /api/v1/materials/{id}/review:
+    post:
+      tags: [materials]
+      summary: Review decision — approve flips staged edition live; reject restores prior state
+      parameters:
+        - { $ref: '#/components/parameters/IdParam' }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [decision]
+              properties:
+                decision: { type: string, enum: [approve, reject] }
+                reason: { type: string }
+      responses:
+        '200': { description: 'Updated material.' }
+        '400': { description: 'Bad decision or nothing under review.', content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+        '403': { description: 'Reviewers only.', content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+        '404': { description: 'Not found.', content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+      x-edufarm: { roles: [platformAdmin, institutionAdmin], rateLimit: global, idempotency: state-guarded, sideEffects: [AI-reindex, enrolled-notifications+email], audit: material.review.approved|rejected }
+  /api/v1/materials/{id}/archive:
+    post:
+      tags: [materials]
+      summary: Archive material (purchases retained, reading blocked)
+      parameters:
+        - { $ref: '#/components/parameters/IdParam' }
+      responses:
+        '200': { description: 'Archived material.' }
+        '400': { description: 'Already archived.', content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+        '403': { description: 'Not own course.', content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+        '404': { description: 'Not found.', content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+      x-edufarm: { roles: [lecturer-own-course], rateLimit: global, idempotency: state-set, sideEffects: none, audit: material.archived }
+  /api/v1/materials/{id}:
+    get:
+      tags: [materials]
+      summary: Material detail with trust block (fileKey never leaks)
+      parameters:
+        - { $ref: '#/components/parameters/IdParam' }
+      responses:
+        '200': { description: 'Material + versions + trust block.' }
+        '403': { description: 'Unpublished and not owner/reviewer.', content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+        '404': { description: 'Not found.', content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+      x-edufarm: { roles: [public-published, owner-or-reviewer-otherwise], rateLimit: global, idempotency: read-only, sideEffects: none, audit: none }
+  /api/v1/materials/{id}/pages/{n}/url:
+    get:
+      tags: [materials]
+      summary: Protected page token (entitlement + expiry enforced, study event logged)
+      parameters:
+        - { $ref: '#/components/parameters/IdParam' }
+        - { name: n, in: path, required: true, schema: { type: integer, minimum: 1 } }
+      responses:
+        '200': { description: "{ page, materialId, version, url: /api/v1/pages/<token>, expiresAt }." }
+        '400': { description: 'Bad page number.', content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+        '402': { description: 'Purchase required or access expired (+priceKobo).', content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+        '403': { description: 'Unpublished / no course access / not owner.', content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+      x-edufarm: { roles: [entitled-student-or-owner], rateLimit: global, idempotency: read-only-per-call-logs-event, sideEffects: [study-event-page-view], audit: none }
+  /api/v1/pages/{token}:
+    get:
+      tags: [storage]
+      security: []
+      summary: Resolve page token (302 R2 presigned when configured, else honest 410)
+      parameters:
+        - { name: token, in: path, required: true, schema: { type: string } }
+      responses:
+        '302': { description: Redirect to presigned R2 URL. }
+        '401': { description: 'Sign-in required.', content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+        '402': { description: 'Purchase required / expired.', content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+        '403': { description: 'Bad/expired token, unpublished, or no access.', content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+        '410': { description: Render worker pending (no download path by design). }
+      x-edufarm: { roles: [entitled-caller], rateLimit: global, idempotency: read-only, sideEffects: none, audit: none }
+  /api/v1/materials/{id}/terms:
+    get:
+      tags: [purchases]
+      summary: Exact pre-payment terms rendered verbatim (creates nothing)
+      parameters:
+        - { $ref: '#/components/parameters/IdParam' }
+      responses:
+        '200': { description: 'Title, edition, course, lecturer, price, points rules, duration/permanent, alreadyHeld.' }
+        '401': { description: 'Sign-in required.', content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+        '404': { description: 'Material unavailable.', content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+      x-edufarm: { roles: [any-signed-in], rateLimit: global, idempotency: read-only, sideEffects: none, audit: none }
+  /api/v1/materials/{id}/orders:
+    post:
+      tags: [payments]
+      summary: Create pending order + initialize with provider (step 2+3)
+      parameters:
+        - { $ref: '#/components/parameters/IdParam' }
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                pointsToUse: { type: integer }
+                provider: { type: string, enum: [mock, paystack, flutterwave] }
+                idempotencyKey: { type: string }
+      responses:
+        '200': { description: "{ order, authorizationUrl?, accessCode?, reference } or { order, alreadyPaid }." }
+        '400': { description: 'Validation / provider unconfigured.', content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+        '401': { description: 'Student sign-in required.', content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+        '403': { description: 'Enrollment required.', content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+        '404': { description: 'Material unavailable.', content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+      x-edufarm: { roles: [student-verified-enrolled], rateLimit: global, idempotency: idempotencyKey-unique, sideEffects: [order-create, provider-initialize-call], audit: none }
+  /api/v1/materials/{id}/checkout:
+    post:
+      tags: [purchases]
+      summary: Legacy checkout — runs the full order pipeline server-side in mock test mode; 409 with real providers
+      parameters:
+        - { $ref: '#/components/parameters/IdParam' }
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                pointsToUse: { type: integer }
+                provider: { type: string }
+                idempotencyKey: { type: string }
+      responses:
+        '200': { description: 'Completed purchase (test mode).' }
+        '402': { description: 'Mock payment did not complete.', content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+        '409': { description: 'Moved to orders (real provider).', content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+      x-edufarm: { roles: [student-verified-enrolled], rateLimit: global, idempotency: via-order-pipeline, sideEffects: [order→webhook→grant→earnings→receipt], audit: purchase.completed }
+  /api/v1/payments/mock/complete:
+    post:
+      tags: [payments]
+      security: []
+      summary: Test-mode mock user payment → feeds the real webhook pipeline (no shortcuts)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [reference]
+              properties:
+                reference: { type: string }
+      responses:
+        '200': { description: "{ ok, paid, orderId }." }
+        '400': { description: 'Order not payable.', content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+        '403': { description: 'Not in test mode.', content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+        '404': { description: 'Mock order not found.', content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+      x-edufarm: { roles: [public-test-mode-only], rateLimit: global, idempotency: webhook-pipeline-idempotent, sideEffects: [settle-on-success], audit: via-settle }
+  /api/v1/payments/mock/pay/{reference}:
+    get:
+      tags: [payments]
+      security: []
+      summary: Local test pay page (human button driving mock completion; test mode only)
+      parameters:
+        - { name: reference, in: path, required: true, schema: { type: string } }
+      responses:
+        '200': { description: 'HTML test page.' }
+        '403': { description: 'Not in test mode.' }
+        '404': { description: 'Order not found.' }
+      x-edufarm: { roles: [public-test-mode-only], rateLimit: global, idempotency: none, sideEffects: none, audit: none }
+  /api/v1/payments/webhook/{provider}:
+    post:
+      tags: [payments]
+      security: []
+      summary: Provider webhook (raw-body HMAC, server verify, idempotent settle)
+      parameters:
+        - { name: provider, in: path, required: true, schema: { type: string, enum: [mock, paystack, flutterwave] } }
+      responses:
+        '200': { description: "{ ok, paid, replay?, orderId } (replays report prior outcome)." }
+        '400': { description: 'Bad signature / malformed / no reference.', content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+        '404': { description: 'Unknown provider or order.', content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+        '502': { description: 'Provider verify failed.', content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+      x-edufarm: { roles: [provider-signed], rateLimit: global, idempotency: eventId-unique-replay-safe, sideEffects: [webhook-event-row, settle-on-success], audit: via-settle }
+  /api/v1/payments/callback:
+    get:
+      tags: [payments]
+      security: []
+      summary: Provider redirect landing (reports status only — NEVER grants)
+      parameters:
+        - { name: order, in: query, schema: { type: string } }
+        - { name: reference, in: query, schema: { type: string } }
+      responses:
+        '200': { description: "{ orderId, status, note }." }
+        '400': { description: 'Missing params.', content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+        '404': { description: 'Order not found.', content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+      x-edufarm: { roles: [public], rateLimit: global, idempotency: read-only, sideEffects: none, audit: none }
+  /api/v1/payments/orders:
+    get:
+      tags: [payments]
+      summary: My orders (latest 30)
+      responses:
+        '200': { description: 'PaymentOrder array.' }
+        '401': { description: 'Student sign-in required.', content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+      x-edufarm: { roles: [student], rateLimit: global, idempotency: read-only, sideEffects: none, audit: none }
+  /api/v1/payments/orders/{id}:
+    get:
+      tags: [payments]
+      summary: Order status + linked purchase (owner or staff)
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+      responses:
+        '200': { description: "{ order, purchaseId } (pending orders past TTL read as expired)." }
+        '403': { description: 'Not your order.', content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+        '404': { description: 'Not found.', content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+      x-edufarm: { roles: [owner-or-staff], rateLimit: global, idempotency: read-only, sideEffects: none, audit: none }
+  /api/v1/payments/reconcile:
+    get:
+      tags: [payments]
+      summary: Reconciliation (counts, paid-without-grant, bad/unprocessed events)
+      responses:
+        '200': { description: "{ byStatus, paidOrders, orderGrants, paidWithoutGrant, invalidSignatureEvents, unprocessedEvents }." }
+        '403': { description: 'Staff only.', content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+      x-edufarm: { roles: [institutionAdmin, platformAdmin], rateLimit: global, idempotency: read-only, sideEffects: none, audit: none }
+  /api/v1/purchases/{id}/revoke:
+    post:
+      tags: [purchases]
+      summary: Revoke a grant (assigned lecturer or staff; audited, student notified)
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                reason: { type: string }
+      responses:
+        '200': { description: 'Revoked purchase.' }
+        '400': { description: 'Grant not completed.', content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+        '403': { description: 'Not course lecturer/staff.', content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+        '404': { description: 'Grant not found.', content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+      x-edufarm: { roles: [assigned-lecturer-or-staff], rateLimit: global, idempotency: state-guarded, sideEffects: [notification-to-student], audit: grant.revoked }
+  /api/v1/purchases/{id}/suspend:
+    post:
+      tags: [purchases]
+      summary: Suspend a grant (same guards as revoke)
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+      responses:
+        '200': { description: 'Suspended purchase.' }
+      x-edufarm: { roles: [assigned-lecturer-or-staff], rateLimit: global, idempotency: state-guarded, sideEffects: [notification-to-student], audit: grant.suspended }
+  /api/v1/purchases/{id}/reinstate:
+    post:
+      tags: [purchases]
+      summary: Reinstate a revoked/suspended grant
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+      responses:
+        '200': { description: 'Completed purchase again.' }
+        '400': { description: 'Grant not revoked/suspended.', content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+      x-edufarm: { roles: [assigned-lecturer-or-staff], rateLimit: global, idempotency: state-guarded, sideEffects: [notification-to-student], audit: grant.reinstated }
+  /api/v1/bundles:
+    post:
+      tags: [purchases]
+      summary: Lecturer creates a bundle (cap ₦5,000)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [title, materialIds]
+              properties:
+                title: { type: string }
+                priceKobo: { type: integer }
+                materialIds: { type: array, items: { type: string } }
+      responses:
+        '200': { description: 'Bundle with items.' }
+        '400': { description: 'Missing fields or over cap.', content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+        '403': { description: 'Lecturer only.', content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+      x-edufarm: { roles: [lecturer], rateLimit: global, idempotency: none-each-call-new-row, sideEffects: none, audit: none }
+    get:
+      tags: [purchases]
+      security: []
+      summary: List bundles with items
+      responses:
+        '200': { description: 'Bundle array.' }
+      x-edufarm: { roles: [public], rateLimit: global, idempotency: read-only, sideEffects: none, audit: none }
+  /api/v1/library/me:
+    get:
+      tags: [purchases]
+      summary: Unified entitlement ledger (paid grants + derived free access with states)
+      responses:
+        '200': { description: "{ items[], summary, purchases, freeMaterials } — states active/expiring/expired/archived/revoked/suspended." }
+        '401': { description: 'Student sign-in required.', content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+      x-edufarm: { roles: [student], rateLimit: global, idempotency: read-only, sideEffects: none, audit: none }
+  /api/v1/earnings/me:
+    get:
+      tags: [purchases]
+      summary: Lecturer eSpees snapshot (pending total + entries)
+      responses:
+        '200': { description: "{ entries, pendingKobo, note }." }
+        '403': { description: 'Lecturer only.', content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+      x-edufarm: { roles: [lecturer], rateLimit: global, idempotency: read-only, sideEffects: none, audit: none }
+  /api/v1/materials/{id}/ping:
+    post:
+      tags: [progress]
+      summary: Dwell ping per page (feeds completion + continue)
+      parameters:
+        - { $ref: '#/components/parameters/IdParam' }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [page]
+              properties:
+                page: { type: integer }
+                durationSec: { type: integer }
+      responses:
+        '200': { description: "{ ok: true }." }
+        '400': { description: 'Page required.', content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+        '401': { description: 'Student sign-in required.', content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+        '404': { description: 'Material not found.', content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+      x-edufarm: { roles: [student], rateLimit: global, idempotency: append-only-events, sideEffects: [study-event], audit: none }
+  /api/v1/progress/me:
+    get:
+      tags: [progress]
+      summary: Per-course completion (dwell ≥8s counts; 10 pages/material until render spike)
+      responses:
+        '200': { description: "[{ courseId, code, title, totalPages, completedPages, percent }]." }
+        '401': { description: 'Student sign-in required.', content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+      x-edufarm: { roles: [student], rateLimit: global, idempotency: read-only, sideEffects: none, audit: none }
+  /api/v1/progress/continue:
+    get:
+      tags: [progress]
+      summary: Most recent material with activity (resume point)
+      responses:
+        '200': { description: "{ materialId|null, page, material? }." }
+        '401': { description: 'Student sign-in required.', content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+      x-edufarm: { roles: [student], rateLimit: global, idempotency: read-only, sideEffects: none, audit: none }
+  /api/v1/notifications/me:
+    get:
+      tags: [notifications]
+      summary: Inbox (latest 30, optional unread-only)
+      parameters:
+        - { name: unread, in: query, schema: { type: string, enum: ["true"] } }
+      responses:
+        '200': { description: 'Notification array (with deep links).', content: { application/json: { schema: { type: array, items: { $ref: '#/components/schemas/Notification' } } } } }
+        '401': { description: 'Sign-in required.', content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+      x-edufarm: { roles: [any-signed-in], rateLimit: global, idempotency: read-only, sideEffects: none, audit: none }
+  /api/v1/notifications/preferences:
+    get:
+      tags: [notifications]
+      summary: My email preferences (in-app always on)
+      responses:
+        '200': { description: "{ emailEnabled, mutedTypes, kinds }." }
+        '401': { description: 'Sign-in required.', content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+      x-edufarm: { roles: [any-signed-in], rateLimit: global, idempotency: read-only, sideEffects: none, audit: none }
+    patch:
+      tags: [notifications]
+      summary: Update email preferences (unknown families ignored)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                emailEnabled: { type: boolean }
+                mutedTypes: { type: array, items: { type: string } }
+      responses:
+        '200': { description: 'Updated preferences.' }
+        '400': { description: 'emailEnabled not boolean.', content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+        '401': { description: 'Sign-in required.', content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+      x-edufarm: { roles: [any-signed-in], rateLimit: global, idempotency: upsert-per-user, sideEffects: none, audit: none }
+  /api/v1/notifications/unread-count:
+    get:
+      tags: [notifications]
+      summary: Unread badge count
+      responses:
+        '200': { description: "{ unread }." }
+        '401': { description: 'Sign-in required.', content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+      x-edufarm: { roles: [any-signed-in], rateLimit: global, idempotency: read-only, sideEffects: none, audit: none }
+  /api/v1/notifications/{id}/read:
+    patch:
+      tags: [notifications]
+      summary: Mark one notification read (own only)
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+      responses:
+        '200': { description: 'Updated notification.' }
+        '404': { description: 'Not found (incl. other users’ rows).', content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+      x-edufarm: { roles: [owner], rateLimit: global, idempotency: state-set, sideEffects: none, audit: none }
+  /api/v1/notifications/read-all:
+    post:
+      tags: [notifications]
+      summary: Mark all mine read
+      responses:
+        '200': { description: "{ read: count }." }
+        '401': { description: 'Sign-in required.', content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+      x-edufarm: { roles: [any-signed-in], rateLimit: global, idempotency: state-set, sideEffects: none, audit: none }
+  /api/v1/notifications/reminders/run:
+    post:
+      tags: [notifications]
+      summary: Deadline sweep (published, due ≤48h, no submitted attempt; dedup-keyed)
+      responses:
+        '200': { description: "{ assessed, created, skipped } — reruns are no-ops." }
+        '403': { description: 'Staff only.', content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+      x-edufarm: { roles: [institutionAdmin, platformAdmin], rateLimit: global, idempotency: dedupKey-per-student-assessment, sideEffects: [notifications+email], audit: none }
+  /api/v1/email/outbox:
+    get:
+      tags: [email]
+      summary: Outbox with status/kind filters (staff)
+      parameters:
+        - { name: status, in: query, schema: { type: string } }
+        - { name: kind, in: query, schema: { type: string } }
+      responses:
+        '200': { description: 'EmailLog array (latest 100).' }
+        '403': { description: 'Platform admin only.', content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+      x-edufarm: { roles: [platformAdmin], rateLimit: global, idempotency: read-only, sideEffects: none, audit: none }
+  /api/v1/email/{id}/retry:
+    post:
+      tags: [email]
+      summary: Re-queue a failed row (eventKey still guards duplicates)
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+      responses:
+        '200': { description: 'Re-queued row.' }
+        '400': { description: 'Only failed rows retry.', content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+        '403': { description: 'Platform admin only.', content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+        '404': { description: 'Not found.', content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+      x-edufarm: { roles: [platformAdmin], rateLimit: global, idempotency: state-guarded, sideEffects: none, audit: none }
+  /api/v1/email/drain:
+    post:
+      tags: [email]
+      summary: Send due rows now via configured provider (mock records by default)
+      parameters:
+        - { name: limit, in: query, schema: { type: integer, default: 25 } }
+        - { name: force, in: query, description: Skip backoff (test mode only), schema: { type: string } }
+      responses:
+        '200': { description: "{ sent, failed, deferred }." }
+        '403': { description: 'Platform admin only.', content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+      x-edufarm: { roles: [platformAdmin], rateLimit: global, idempotency: claim-guarded-no-double-send, sideEffects: [provider-send-calls], audit: none }
+  /api/v1/courses/{id}/assessments:
+    post:
+      tags: [assessments]
+      summary: Lecturer creates assessment draft in own course
+      parameters:
+        - { $ref: '#/components/parameters/IdParam' }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [title]
+              properties:
+                title: { type: string }
+                type: { type: string, enum: [quiz, test, assignment], default: quiz }
+                instructions: { type: string }
+                timeLimitMin: { type: integer, minimum: 1, maximum: 600 }
+                maxAttempts: { type: integer, minimum: 1, maximum: 10 }
+                dueAt: { type: string, format: date-time }
+      responses:
+        '200': { description: 'Draft assessment.' }
+        '400': { description: 'Title/type/timing violations.', content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+        '401': { description: 'Sign-in required.', content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+        '403': { description: 'Not own course.', content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+      x-edufarm: { roles: [lecturer-own-course], rateLimit: global, idempotency: none-each-call-new-row, sideEffects: none, audit: assessment.created }
+    get:
+      tags: [assessments]
+      summary: Student lists published assessments (keys stripped, scores masked until release)
+      parameters:
+        - { $ref: '#/components/parameters/IdParam' }
+      responses:
+        '200': { description: 'Published assessments with my attempts.' }
+        '401': { description: 'Student sign-in required.', content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+        '403': { description: 'No approved enrollment.', content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+      x-edufarm: { roles: [student-enrolled], rateLimit: global, idempotency: read-only, sideEffects: none, audit: none }
+  /api/v1/assessments/{id}/questions:
+    post:
+      tags: [assessments]
+      summary: Add question to a draft (published items are immutable)
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [text]
+              properties:
+                text: { type: string }
+                kind: { type: string, enum: [mcq, theory], default: mcq }
+                options: { type: array, items: { type: string } }
+                correctIndex: { type: integer }
+                marks: { type: integer, minimum: 1, maximum: 100 }
+      responses:
+        '200': { description: 'Question created (ordered).' }
+        '400': { description: 'Text/kind/mcq/marks violations or locked.', content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+      x-edufarm: { roles: [lecturer-own-course], rateLimit: global, idempotency: none-each-call-new-row, sideEffects: none, audit: assessment.question.added }
+  /api/v1/assessments/{aid}/questions/{qid}:
+    patch:
+      tags: [assessments]
+      summary: Edit draft question text/marks
+      parameters:
+        - { name: aid, in: path, required: true, schema: { type: string } }
+        - { name: qid, in: path, required: true, schema: { type: string } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                text: { type: string }
+                marks: { type: integer, minimum: 1, maximum: 100 }
+      responses:
+        '200': { description: 'Updated question.' }
+        '400': { description: 'Empty text / bad marks / locked.', content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+        '404': { description: 'Not found.', content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+      x-edufarm: { roles: [lecturer-own-course], rateLimit: global, idempotency: state-set, sideEffects: none, audit: assessment.question.edited }
+    delete:
+      tags: [assessments]
+      summary: Delete draft question
+      parameters:
+        - { name: aid, in: path, required: true, schema: { type: string } }
+        - { name: qid, in: path, required: true, schema: { type: string } }
+      responses:
+        '200': { description: "{ ok: true }." }
+        '400': { description: 'Locked (published).', content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+      x-edufarm: { roles: [lecturer-own-course], rateLimit: global, idempotency: delete-idempotent, sideEffects: none, audit: assessment.question.deleted }
+  /api/v1/assessments/{id}/publish:
+    post:
+      tags: [assessments]
+      summary: Publish draft (notifies approved enrollments)
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+      responses:
+        '200': { description: 'Published assessment.' }
+        '400': { description: 'Publish from draft only.', content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+      x-edufarm: { roles: [lecturer-own-course], rateLimit: global, idempotency: state-guarded, sideEffects: [notifications+email-fanout], audit: assessment.published }
+  /api/v1/assessments/{id}/close:
+    post:
+      tags: [assessments]
+      summary: Close published assessment
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+      responses:
+        '200': { description: 'Closed assessment.' }
+        '400': { description: 'Only published close.', content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+      x-edufarm: { roles: [lecturer-own-course], rateLimit: global, idempotency: state-guarded, sideEffects: none, audit: assessment.closed }
+  /api/v1/assessments/{id}/reopen:
+    post:
+      tags: [assessments]
+      summary: Reopen closed assessment to published
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+      responses:
+        '200': { description: 'Published assessment.' }
+        '400': { description: 'Only closed reopen.', content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+      x-edufarm: { roles: [lecturer-own-course], rateLimit: global, idempotency: state-guarded, sideEffects: none, audit: assessment.reopend }
+  /api/v1/courses/{id}/assessments/lecturer:
+    get:
+      tags: [assessments]
+      summary: Lecturer lists ALL assessments incl. drafts (answer keys visible)
+      parameters:
+        - { $ref: '#/components/parameters/IdParam' }
+      responses:
+        '200': { description: 'Assessments with questions + attempt counts.' }
+        '401': { description: 'Sign-in required.', content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+      x-edufarm: { roles: [lecturer-own-course], rateLimit: global, idempotency: read-only, sideEffects: none, audit: none }
+  /api/v1/assessments/{id}/start:
+    post:
+      tags: [assessments]
+      summary: Start attempt (due + max-attempt windows; resumes live in-progress)
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+      responses:
+        '200': { description: "{ attempt, resumed, answers, assessment (keys stripped) }." }
+        '400': { description: 'Past due / max attempts reached.', content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+        '401': { description: 'Student sign-in required.', content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+        '403': { description: 'No approved enrollment.', content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+        '404': { description: 'Not published.', content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+      x-edufarm: { roles: [student-enrolled], rateLimit: global, idempotency: resume-or-attemptNo-unique, sideEffects: [attempt-create], audit: none }
+  /api/v1/attempts/{id}/submit:
+    post:
+      tags: [assessments]
+      summary: Submit answers (atomic single-flip; MCQ auto-graded, theory awaits lecturer)
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [answers]
+              properties:
+                answers: { type: array, items: { type: object, properties: { questionId: { type: string }, selectedIndex: { type: integer }, body: { type: string } } } }
+      responses:
+        '200': { description: 'Graded or submitted attempt (scores masked until release).' }
+        '400': { description: 'Already submitted / time expired.', content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+        '404': { description: 'Not own attempt.', content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+      x-edufarm: { roles: [student-own-attempt], rateLimit: global, idempotency: single-flip-transactional, sideEffects: [study-event, pass-points-≥50%], audit: none }
+  /api/v1/attempts/{id}:
+    get:
+      tags: [assessments]
+      summary: One attempt detail (own only; keys stripped; scores masked until release)
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+      responses:
+        '200': { description: 'Attempt with answers.' }
+        '404': { description: 'Not own attempt.', content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+      x-edufarm: { roles: [student-own-attempt], rateLimit: global, idempotency: read-only, sideEffects: none, audit: none }
+  /api/v1/assessments/{id}/attempts/me:
+    get:
+      tags: [assessments]
+      summary: My attempts for an assessment (masked until release)
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+      responses:
+        '200': { description: 'Attempt array, newest first.' }
+      x-edufarm: { roles: [student], rateLimit: global, idempotency: read-only, sideEffects: none, audit: none }
+  /api/v1/assessments/{id}/attempts:
+    get:
+      tags: [assessments]
+      summary: Lecturer views submissions with student names (own course)
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+      responses:
+        '200': { description: 'Attempts with answers + student names.' }
+      x-edufarm: { roles: [lecturer-own-course], rateLimit: global, idempotency: read-only, sideEffects: none, audit: none }
+  /api/v1/attempts/{id}/grade:
+    post:
+      tags: [assessments]
+      summary: Lecturer grades theory (recomputed from stored answers; never client totals)
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                marks: { type: array, items: { type: object, properties: { questionId: { type: string }, marksAwarded: { type: number } } } }
+                feedback: { type: string }
+      responses:
+        '200': { description: 'Graded attempt (grader + timestamp recorded).' }
+        '403': { description: 'Not own course.', content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+        '404': { description: 'Attempt not found.', content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+      x-edufarm: { roles: [lecturer-own-course], rateLimit: global, idempotency: recompute-idempotent, sideEffects: [notification+email, pass-points-≥50%], audit: assessment.graded }
+  /api/v1/assessments/{id}/release:
+    post:
+      tags: [assessments]
+      summary: Release grades to attempted students (notifies each once)
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+      responses:
+        '200': { description: 'Updated assessment.' }
+      x-edufarm: { roles: [lecturer-own-course], rateLimit: global, idempotency: dedupKey-per-student, sideEffects: [notifications+email-fanout], audit: assessment.grades.released }
+  /api/v1/points/me:
+    get:
+      tags: [points]
+      summary: Balance + 30-row history + tiers + rule version
+      responses:
+        '200': { description: "{ balance, tiers, history, ruleVersion }." }
+        '401': { description: 'Student sign-in required.', content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+      x-edufarm: { roles: [student], rateLimit: global, idempotency: read-only, sideEffects: none, audit: none }
+  /api/v1/points/policy:
+    get:
+      tags: [points]
+      security: []
+      summary: Public inspectable points policy (events, quotas, redemption)
+      responses:
+        '200': { description: "{ ruleVersion, events, quotas, redemption }." }
+      x-edufarm: { roles: [public], rateLimit: global, idempotency: read-only, sideEffects: none, audit: none }
+  /api/v1/points/recognize:
+    post:
+      tags: [points]
+      summary: Lecturer recognition +5 (weekly quotas; idempotent per nonce)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [studentId]
+              properties:
+                studentId: { type: string }
+                reason: { type: string }
+                idempotencyKey: { type: string }
+      responses:
+        '200': { description: "{ ok, amount, ruleVersion }." }
+        '400': { description: 'Missing studentId.', content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+        '403': { description: 'Lecturer only.', content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+        '409': { description: 'Duplicate recognition.', content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+        '429': { description: 'Weekly quota/cap reached.', content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+      x-edufarm: { roles: [lecturer], rateLimit: strict-30/min, idempotency: capKey-unique, sideEffects: [point-ledger-row], audit: points.awarded|points.duplicate-blocked }
+  /api/v1/grades/me:
+    get:
+      tags: [grades]
+      summary: My semesters with GPA + CGPA + degree class (student-only, no lecturer path exists)
+      responses:
+        '200': { description: "{ semesters[{...gpa,units}], cgpa{gpa,units,class}, scale }." }
+        '401': { description: 'Student sign-in required (lecturers/admins included).', content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+      x-edufarm: { roles: [student-only-no-staff-path], rateLimit: global, idempotency: read-only, sideEffects: none, audit: none }
+  /api/v1/grades/semesters:
+    post:
+      tags: [grades]
+      summary: Add semester (name trimmed, max 80)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              properties:
+                name: { type: string }
+      responses:
+        '200': { description: 'GradeSemester created.' }
+        '400': { description: 'Blank/too-long name.', content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+      x-edufarm: { roles: [student-own], rateLimit: global, idempotency: none-each-call-new-row, sideEffects: none, audit: none }
+  /api/v1/grades/semesters/{id}:
+    patch:
+      tags: [grades]
+      summary: Rename own semester
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              properties:
+                name: { type: string }
+      responses:
+        '200': { description: 'Renamed semester.' }
+        '400': { description: 'Blank/too-long name.', content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+        '404': { description: 'Not own semester.', content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+      x-edufarm: { roles: [student-own], rateLimit: global, idempotency: state-set, sideEffects: none, audit: none }
+    delete:
+      tags: [grades]
+      summary: Delete own semester (courses cascade)
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+      responses:
+        '200': { description: "{ ok: true }." }
+        '404': { description: 'Not own semester.', content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+      x-edufarm: { roles: [student-own], rateLimit: global, idempotency: delete-idempotent, sideEffects: none, audit: none }
+  /api/v1/grades/semesters/{id}/courses:
+    post:
+      tags: [grades]
+      summary: Add course (code unique per semester; repeats go in a new semester)
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [code, units, grade]
+              properties:
+                code: { type: string }
+                title: { type: string }
+                units: { type: integer, minimum: 1, maximum: 12 }
+                grade: { type: string, enum: [A, B, C, D, E, F] }
+      responses:
+        '200': { description: 'GradeCourse created (code uppercased, grade normalized).' }
+        '400': { description: 'Bad code/units/grade or duplicate code.', content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+        '404': { description: 'Not own semester.', content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+      x-edufarm: { roles: [student-own], rateLimit: global, idempotency: code-unique-per-semester, sideEffects: none, audit: none }
+  /api/v1/grades/courses/{id}:
+    patch:
+      tags: [grades]
+      summary: Edit own course (code/title/units/grade; code clash guarded)
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                code: { type: string }
+                title: { type: string, nullable: true }
+                units: { type: integer, minimum: 1, maximum: 12 }
+                grade: { type: string, enum: [A, B, C, D, E, F] }
+      responses:
+        '200': { description: 'Updated course.' }
+        '400': { description: 'Bad values, duplicate code, or nothing to update.', content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+        '404': { description: 'Not own course.', content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+      x-edufarm: { roles: [student-own], rateLimit: global, idempotency: state-set, sideEffects: none, audit: none }
+    delete:
+      tags: [grades]
+      summary: Delete own course
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+      responses:
+        '200': { description: "{ ok: true }." }
+        '404': { description: 'Not own course.', content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+      x-edufarm: { roles: [student-own], rateLimit: global, idempotency: delete-idempotent, sideEffects: none, audit: none }
+  /api/v1/materials/{id}/reviews:
+    post:
+      tags: [reviews]
+      summary: Review material (usable grant or ≥3 dwells; one per student per material)
+      parameters:
+        - { $ref: '#/components/parameters/IdParam' }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [rating]
+              properties:
+                rating: { type: integer, minimum: 1, maximum: 5 }
+                body: { type: string, maxLength: 2000 }
+      responses:
+        '200': { description: 'Review created.' }
+        '400': { description: 'Bad rating or duplicate review.', content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+        '401': { description: 'Student sign-in required.', content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+        '403': { description: 'No meaningful access.', content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+        '404': { description: 'Material not reviewable.', content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+      x-edufarm: { roles: [student-entitled], rateLimit: global, idempotency: one-per-student-material, sideEffects: none, audit: none }
+    get:
+      tags: [reviews]
+      security: []
+      summary: Public visible review feed (ownership server-flagged, no profile ids)
+      parameters:
+        - { $ref: '#/components/parameters/IdParam' }
+      responses:
+        '200': { description: 'Reviews with replies + mine flags.' }
+      x-edufarm: { roles: [public], rateLimit: global, idempotency: read-only, sideEffects: none, audit: none }
+  /api/v1/reviews/{id}:
+    patch:
+      tags: [reviews]
+      summary: Author edits own review
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                rating: { type: integer, minimum: 1, maximum: 5 }
+                body: { type: string, nullable: true }
+      responses:
+        '200': { description: 'Updated review.' }
+        '400': { description: 'Bad values or nothing to update.', content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+        '404': { description: 'Not own review.', content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+      x-edufarm: { roles: [author], rateLimit: global, idempotency: state-set, sideEffects: none, audit: none }
+    delete:
+      tags: [reviews]
+      summary: Delete review (author or staff; staff deletions audited)
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+      responses:
+        '200': { description: "{ deleted: true }." }
+        '404': { description: 'Not found / not yours.', content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+      x-edufarm: { roles: [author-or-staff], rateLimit: global, idempotency: delete-idempotent, sideEffects: none, audit: review.deleted-if-staff }
+  /api/v1/reviews/{id}/hide:
+    post:
+      tags: [reviews]
+      summary: Staff hide review (never auto-fires, never deletes)
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                reason: { type: string }
+      responses:
+        '200': { description: 'Hidden review.' }
+        '403': { description: 'Reviewers only.', content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+        '404': { description: 'Not found.', content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+      x-edufarm: { roles: [institutionAdmin, platformAdmin], rateLimit: global, idempotency: state-set, sideEffects: none, audit: review.hidden }
+  /api/v1/reviews/{id}/show:
+    post:
+      tags: [reviews]
+      summary: Staff re-show hidden review
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+      responses:
+        '200': { description: 'Visible review.' }
+        '403': { description: 'Reviewers only.', content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+        '404': { description: 'Not found.', content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+      x-edufarm: { roles: [institutionAdmin, platformAdmin], rateLimit: global, idempotency: state-set, sideEffects: none, audit: none }
+  /api/v1/reviews/{id}/reply:
+    post:
+      tags: [reviews]
+      summary: Reply as lecturer (assigned course) or staff; students cannot reply
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [body]
+              properties:
+                body: { type: string }
+      responses:
+        '200': { description: 'Reply (isLecturer flagged).' }
+        '400': { description: 'Body required.', content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+        '403': { description: 'Students cannot reply / not course lecturer.', content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+        '404': { description: 'Review/material gone.', content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+      x-edufarm: { roles: [assigned-lecturer-or-staff], rateLimit: global, idempotency: none-each-call-new-row, sideEffects: none, audit: none }
+  /api/v1/reviews/replies/{id}:
+    patch:
+      tags: [reviews]
+      summary: Author edits own reply
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [body]
+              properties:
+                body: { type: string }
+      responses:
+        '200': { description: 'Updated reply.' }
+        '400': { description: 'Body required.', content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+        '404': { description: 'Not own reply.', content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+      x-edufarm: { roles: [author], rateLimit: global, idempotency: state-set, sideEffects: none, audit: none }
+    delete:
+      tags: [reviews]
+      summary: Delete reply (author or staff)
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+      responses:
+        '200': { description: "{ deleted: true }." }
+        '404': { description: 'Not found / not yours.', content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+      x-edufarm: { roles: [author-or-staff], rateLimit: global, idempotency: delete-idempotent, sideEffects: none, audit: none }
+  /api/v1/reviews/{id}/report:
+    post:
+      tags: [disputes]
+      summary: Report a review (opens dispute; nothing is auto-hidden)
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [reason]
+              properties:
+                reason: { type: string }
+                evidence: { type: string }
+      responses:
+        '200': { description: 'Dispute (open, SLA set).' }
+        '400': { description: 'Reason required.', content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+        '404': { description: 'Review not found.', content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+      x-edufarm: { roles: [any-signed-in], rateLimit: global, idempotency: none-each-call-new-row, sideEffects: [dispute+timeline+reporter/staff-notifications], audit: dispute.opened }
+  /api/v1/reports:
+    post:
+      tags: [disputes]
+      summary: Generic content report (Material/Review/User/Course/Question + evidence)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [targetType, targetId, reason]
+              properties:
+                targetType: { type: string, enum: [Material, Review, User, Course, Question] }
+                targetId: { type: string }
+                reason: { type: string }
+                evidence: { type: string }
+      responses:
+        '200': { description: 'Dispute (open, SLA set).' }
+        '400': { description: 'Missing/unknown fields.', content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+        '404': { description: 'Target not found.', content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+      x-edufarm: { roles: [any-signed-in], rateLimit: global, idempotency: none-each-call-new-row, sideEffects: [dispute+timeline+reporter/staff-notifications], audit: dispute.opened }
+  /api/v1/disputes/mine:
+    get:
+      tags: [disputes]
+      summary: My reports (actor ids stripped, SLA attached)
+      responses:
+        '200': { description: 'Own disputes with action timeline.' }
+        '401': { description: 'Sign-in required.', content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+      x-edufarm: { roles: [any-signed-in], rateLimit: global, idempotency: read-only, sideEffects: none, audit: none }
+  /api/v1/disputes:
+    get:
+      tags: [disputes]
+      summary: Staff queue with filters + SLA indicators (reporter contact staff-only)
+      parameters:
+        - { name: status, in: query, schema: { type: string } }
+        - { name: assignee, in: query, description: 'user id, "me", or "unassigned"', schema: { type: string } }
+        - { name: overdue, in: query, schema: { type: string, enum: ["true"] } }
+        - { name: targetType, in: query, schema: { type: string } }
+      responses:
+        '200': { description: 'Disputes with reporter contact + sla{dueAt,overdue,hoursLeft}.' }
+        '403': { description: 'Reviewers only.', content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+      x-edufarm: { roles: [institutionAdmin, platformAdmin], rateLimit: global, idempotency: read-only, sideEffects: none, audit: none }
+  /api/v1/disputes/{id}:
+    get:
+      tags: [disputes]
+      summary: Dispute detail + timeline (staff only; reporter identity never leaves)
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+      responses:
+        '200': { description: 'Dispute + reporter + sla.' }
+        '403': { description: 'Reviewers only.', content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+        '404': { description: 'Not found.', content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+      x-edufarm: { roles: [institutionAdmin, platformAdmin], rateLimit: global, idempotency: read-only, sideEffects: none, audit: none }
+  /api/v1/disputes/{id}/assign:
+    post:
+      tags: [disputes]
+      summary: Assign reviewer (staff user; blank unassigns; assignee notified)
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                assigneeId: { type: string }
+      responses:
+        '200': { description: 'Updated dispute.' }
+        '400': { description: 'Assignee not a reviewer.', content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+        '404': { description: 'Not found.', content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+      x-edufarm: { roles: [institutionAdmin, platformAdmin], rateLimit: global, idempotency: state-set, sideEffects: [assignee-notification], audit: dispute.assigned|unassigned }
+  /api/v1/disputes/{id}/start:
+    post:
+      tags: [disputes]
+      summary: Take into review (open → under-review; self-assigns when unassigned)
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+      responses:
+        '200': { description: 'Under-review dispute.' }
+        '400': { description: 'Illegal transition.', content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+        '404': { description: 'Not found.', content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+      x-edufarm: { roles: [institutionAdmin, platformAdmin], rateLimit: global, idempotency: transition-guarded, sideEffects: none, audit: dispute.review-started }
+  /api/v1/disputes/{id}/resolve:
+    post:
+      tags: [disputes]
+      summary: Resolve/dismiss with mandatory note (may hide ONE named review; never material)
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [resolution]
+              properties:
+                decision: { type: string, enum: [resolve, dismiss], default: resolve }
+                resolution: { type: string }
+                hideReviewId: { type: string }
+      responses:
+        '200': { description: 'Resolved/dismissed dispute.' }
+        '400': { description: 'Bad decision, missing note, illegal transition, unknown review.', content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+        '404': { description: 'Not found.', content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+      x-edufarm: { roles: [institutionAdmin, platformAdmin], rateLimit: global, idempotency: transition-guarded, sideEffects: [reporter-notification+email, optional-review-hide], audit: dispute.resolved|dismissed }
+  /api/v1/disputes/{id}/appeal:
+    post:
+      tags: [disputes]
+      summary: Reporter appeals within 7 days of resolution
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [reason]
+              properties:
+                reason: { type: string }
+      responses:
+        '200': { description: 'Appealed dispute (staff notified).' }
+        '400': { description: 'Wrong state or window closed.', content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+        '404': { description: 'Not own dispute.', content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+      x-edufarm: { roles: [reporter-owner], rateLimit: global, idempotency: state-guarded, sideEffects: [staff-notification], audit: dispute.appealed }
+  /api/v1/disputes/{id}/appeal-decide:
+    post:
+      tags: [disputes]
+      summary: Appeal decision (uphold closes; overturn re-resolves)
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [decision]
+              properties:
+                decision: { type: string, enum: [uphold, overturn] }
+                note: { type: string }
+      responses:
+        '200': { description: 'Closed or re-resolved dispute.' }
+        '400': { description: 'Bad decision or not appealed.', content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+        '404': { description: 'Not found.', content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+      x-edufarm: { roles: [institutionAdmin, platformAdmin], rateLimit: global, idempotency: transition-guarded, sideEffects: [reporter-notification+email], audit: dispute.appeal-upholdd|appeal-overturnd }
+  /api/v1/ai/ask:
+    post:
+      tags: [ai]
+      summary: Grounded study help (entitlement firewall, daily budget, labeled fallback)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [courseId, question]
+              properties:
+                courseId: { type: string }
+                question: { type: string, maxLength: 2000 }
+                materialId: { type: string }
+      responses:
+        '200':
+          description: Always 200 with grounded flag (refusals are data, not errors).
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  grounded: { type: boolean }
+                  label: { type: string }
+                  refusalCode: { type: string, nullable: true }
+                  answer: { type: string }
+                  citations: { type: array, items: { type: object } }
+                  additionalContext: { type: string, nullable: true }
+        '400': { description: 'Missing/oversize question.', content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+        '401': { description: 'Student sign-in required.', content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+      x-edufarm: { roles: [student-entitled], rateLimit: strict-30/min, idempotency: query-logged-per-call, sideEffects: [ai-usage-log, study-event, provider-call-or-mock], audit: via-ai-usage-log }
+  /api/v1/ai/backfill:
+    post:
+      tags: [ai]
+      summary: Re-index published materials into chunks (all or one course)
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                courseId: { type: string }
+      responses:
+        '200': { description: "{ materials, chunks }." }
+        '403': { description: 'Lecturer/staff only.', content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+      x-edufarm: { roles: [lecturer, deptAdmin, institutionAdmin, platformAdmin], rateLimit: global, idempotency: rebuild-per-version, sideEffects: [chunk-rewrite], audit: none }
+  /api/v1/courses/{id}/insights:
+    get:
+      tags: [ai]
+      summary: Lecturer insights from aggregates (counts/rates/titles only; cohort-gated)
+      parameters:
+        - { $ref: '#/components/parameters/IdParam' }
+        - { name: days, in: query, schema: { type: integer, enum: [7, 14, 30], default: 14 } }
+      responses:
+        '200': { description: "{ windowDays, enrolled, limited, engagement, completion, topics, unresolved, difficulty, assessmentStats, suggestions, summary }." }
+        '400': { description: 'Bad window.', content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+        '403': { description: 'Not course lecturer/staff.', content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+      x-edufarm: { roles: [assigned-lecturer-or-staff], rateLimit: global, idempotency: read-only, sideEffects: none, audit: none }
+  /api/v1/devotional/today:
+    get:
+      tags: [devotional]
+      security: []
+      summary: Today's Word (Lagos day; identical for every student; honest empty)
+      responses:
+        '200': { description: 'Entry or { empty: true }.' }
+      x-edufarm: { roles: [public], rateLimit: global, idempotency: read-only-cached, sideEffects: [lazy-feed-pull-when-configured], audit: none }
+  /api/v1/devotional/archive:
+    get:
+      tags: [devotional]
+      security: []
+      summary: Archive (latest 30, provenance included)
+      responses:
+        '200': { description: 'Devotional array.' }
+      x-edufarm: { roles: [public], rateLimit: global, idempotency: read-only, sideEffects: none, audit: none }
+  /api/v1/devotional/source-status:
+    get:
+      tags: [devotional]
+      summary: Feed configuration status (admin)
+      responses:
+        '200': { description: "{ configured, note }." }
+        '403': { description: 'Platform admin only.', content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+      x-edufarm: { roles: [platformAdmin], rateLimit: global, idempotency: read-only, sideEffects: none, audit: none }
+  /api/v1/devotionals:
+    post:
+      tags: [devotional]
+      summary: Admin curates a devotional entry (audited, cache-busted)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [date, title, verse, body]
+              properties:
+                date: { type: string, format: date }
+                title: { type: string }
+                verse: { type: string }
+                body: { type: string }
+                sourceRef: { type: string }
+                rightsNote: { type: string }
+      responses:
+        '200': { description: 'Upserted entry.' }
+        '400': { description: 'Missing fields.', content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+        '403': { description: 'Platform admin only.', content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+      x-edufarm: { roles: [platformAdmin], rateLimit: global, idempotency: upsert-per-date, sideEffects: [cache-bust], audit: devotional.published }
+  /api/v1/devotional/refresh:
+    post:
+      tags: [devotional]
+      summary: Force a source pull now (no-op when unconfigured)
+      responses:
+        '200': { description: "{ refreshed, origin?, reason? }." }
+        '403': { description: 'Platform admin only.', content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+      x-edufarm: { roles: [platformAdmin], rateLimit: global, idempotency: safe-rerun, sideEffects: [possible-feed-pull], audit: devotional.refreshed }
+  /api/v1/onboarding/institution:
+    post:
+      tags: [onboarding]
+      security: []
+      summary: Public institution onboarding request (unverified university)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, slug]
+              properties:
+                name: { type: string }
+                slug: { type: string }
+                contactEmail: { type: string }
+      responses:
+        '200': { description: 'University + pending note.' }
+        '400': { description: 'Missing fields or slug taken.', content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+      x-edufarm: { roles: [public], rateLimit: global, idempotency: slug-unique, sideEffects: none, audit: institution.onboarding.requested }
+  /api/v1/onboarding/pending:
+    get:
+      tags: [onboarding]
+      summary: 'Pending institutions (status filter: pending/suspended/verified).'
+      parameters:
+        - { name: status, in: query, schema: { type: string, default: pending } }
+      responses:
+        '200': { description: 'University array.' }
+        '403': { description: 'Platform admin only.', content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+      x-edufarm: { roles: [platformAdmin], rateLimit: global, idempotency: read-only, sideEffects: none, audit: none }
+  /api/v1/onboarding/{id}/approve:
+    post:
+      tags: [onboarding]
+      summary: Approve institution (verified; contacts notified)
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+      responses:
+        '200': { description: 'Verified university.' }
+        '400': { description: 'Already approved.', content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+        '403': { description: 'Platform admin only.', content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+        '404': { description: 'Not found.', content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+      x-edufarm: { roles: [platformAdmin], rateLimit: global, idempotency: state-guarded, sideEffects: [contact-notifications+email, cache-invalidate], audit: institution.onboarding.approved }
+  /api/v1/onboarding/{id}/decide:
+    post:
+      tags: [onboarding]
+      summary: Reject (removes empty requests), suspend, or reinstate institution
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [decision]
+              properties:
+                decision: { type: string, enum: [reject, suspend, reinstate] }
+                note: { type: string }
+      responses:
+        '200': { description: 'Updated university or { rejected: true }.' }
+        '400': { description: 'Illegal transition.', content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+        '403': { description: 'Platform admin only.', content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+        '404': { description: 'Not found.', content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+      x-edufarm: { roles: [platformAdmin], rateLimit: global, idempotency: transition-guarded, sideEffects: [contact-notifications+email], audit: institution.onboarding.rejected|suspended|reinstated }
+  /api/v1/settlement/overview:
+    get:
+      tags: [settlement]
+      summary: eSpees totals by state + policy + next period + recent batches
+      responses:
+        '200': { description: "{ pendingKobo, availableKobo, settledKobo, policy, next, batches }." }
+        '403': { description: 'Admins only.', content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+      x-edufarm: { roles: [platformAdmin, institutionAdmin], rateLimit: global, idempotency: read-only, sideEffects: none, audit: none }
+  /api/v1/settlement/batches:
+    get:
+      tags: [settlement]
+      summary: Settlement batches (latest 50 with entry counts)
+      responses:
+        '200': { description: 'Batch array.' }
+        '403': { description: 'Admins only.', content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+      x-edufarm: { roles: [platformAdmin, institutionAdmin], rateLimit: global, idempotency: read-only, sideEffects: none, audit: none }
+  /api/v1/settlement/run:
+    post:
+      tags: [settlement]
+      summary: Close period — release matured pending entries to available (idempotent)
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                periodStart: { type: string, format: date-time }
+                periodEnd: { type: string, format: date-time }
+                idempotencyKey: { type: string }
+      responses:
+        '200': { description: "{ batch|null, released } (replay returns original)." }
+        '403': { description: 'Platform admin only.', content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+      x-edufarm: { roles: [platformAdmin], rateLimit: global, idempotency: idempotencyKey-unique, sideEffects: none, audit: settlement.run }
+  /api/v1/settlement/pay:
+    post:
+      tags: [settlement]
+      summary: Pay one batch (or auto-batch all available); manual payout refs
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                batchId: { type: string }
+                lecturerId: { type: string }
+                reference: { type: string }
+                idempotencyKey: { type: string }
+      responses:
+        '200': { description: "{ batch, replay } or { settled, totalKobo } when empty." }
+        '400': { description: 'Mixed-lecturer batch or below minimum payout.', content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+        '403': { description: 'Platform admin only.', content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+        '404': { description: 'Batch not found.', content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+      x-edufarm: { roles: [platformAdmin], rateLimit: global, idempotency: idempotencyKey-unique + paid-replay, sideEffects: [lecturer-notifications], audit: settlement.pay }
+  /api/v1/lecturer/settlements:
+    get:
+      tags: [settlement]
+      summary: Lecturer's own settlement batches
+      responses:
+        '200': { description: 'Batch array (empty when none).' }
+        '403': { description: 'Lecturer only.', content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+      x-edufarm: { roles: [lecturer], rateLimit: global, idempotency: read-only, sideEffects: none, audit: none }
+x-planned:
+  description: Real gaps tracked in Docs/API_GAPS.md — NOT implemented, NOT in paths above.
+  endpoints:
+    - POST /bundles/:id/checkout — buy a bundle and grant all items (P1).
+    - Provider transfer payouts — settlement pay uses manual refs; Paystack/Flutterwave Transfer API unwired.
+    - Institution/department admin invitation flow — staff accounts are platform-created or access-requested only.
+    - R2 page rendering worker — /pages/:token returns honest 410 until the render worker lands.
+    - pgvector semantic retrieval — FTS only until the extension is installed.
+

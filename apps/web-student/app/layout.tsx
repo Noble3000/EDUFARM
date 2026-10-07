@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { EDU_CSS, Icon, NavLinks, MobileBar, PortalLinks, type NavItem } from "@edufarm/ui";
+import { EDU_CSS, Icon, NavLinks, MobileBar, PortalLinks, OfflineNotice, PWAInstallPrompt, type NavItem } from "@edufarm/ui";
 
 const STUDENT_NAV: NavItem[] = [
   { href: "/", label: "Home", icon: "home" },
@@ -16,7 +16,16 @@ export const metadata: Metadata = {
   description: "Verified courses, official materials, CGPA, points and AI study help. Installable PWA.",
   manifest: "/manifest.webmanifest",
   appleWebApp: { capable: true, statusBarStyle: "default", title: "EDUFARM" },
-  icons: { icon: "/icons/icon.svg", apple: "/icons/icon.svg" },
+  icons: {
+    icon: [
+      { url: "/icons/icon-192.png", sizes: "192x192", type: "image/png" },
+      { url: "/icons/icon-512.png", sizes: "512x512", type: "image/png" },
+      { url: "/icons/icon.svg", type: "image/svg+xml" },
+    ],
+    apple: [
+      { url: "/icons/icon-192.png", sizes: "192x192", type: "image/png" },
+    ],
+  },
 };
 
 export const viewport: Viewport = {
@@ -41,11 +50,14 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="default" />
         <meta name="apple-mobile-web-app-title" content="EDUFARM" />
-        <link rel="apple-touch-icon" href="/icons/icon.svg" />
+        <link rel="apple-touch-icon" href="/icons/icon-192.png" />
       </head>
       <body className="tone-student">
         <a className="skip" href="#main">Skip to content</a>
+        <h1 className="sr-only">EDUFARM Student — verified courses, library, CGPA and study help</h1>
         <style>{CSS}</style>
+        <OfflineNotice />
+        <PWAInstallPrompt appName="EDUFARM Student" />
         <header className="top">
           <nav aria-label="Student">
             <span className="brand-chip"><span className="mark"><Icon name="grad" size={17} /></span> EDUFARM · Student</span>

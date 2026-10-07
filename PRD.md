@@ -160,3 +160,5 @@ Next.js PWA + Fastify API self-hosted on local device (no Vercel) · Paystack/Fl
 - 044 (2026-10-06): Notification infrastructure — in-app center (prefs, read/unread, dedup, deep links) + email adapter (mock/resend/sendgrid/smtp) with outbox, retry, failed states; all 10 events wired. E2E 19/19, zero duplicate emails.
 - 045/046 (2026-10-06): Search authorized + security review (concurrent sessions).
 - 047 (2026-10-06): Local production ops hardened — PM2 restarts/caps/logs/ordering, DB-gated boot, graceful shutdown, /health + /ready, provider retry/backoff, bounded cache, orphan-job recovery, ops report script, recovery runbook. Tests 100/100 + 7/7.
+- 048 (2026-10-06): PWA-first experience complete (concurrent session).
+- 049 (2026-10-07): OpenAPI reference for all 148 real endpoints (verified parity, 0 phantoms) + full accessibility pass with fixes (modal trap, focus contrast, badge contrast, headings, labels, portal).

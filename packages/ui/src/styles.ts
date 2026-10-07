@@ -14,8 +14,11 @@ p{margin:0 0 10px;text-align:left}
 a{color:var(--brand);text-underline-offset:2px}
 .skip{position:absolute;left:-9999px;top:0;background:var(--ink);color:#fff;padding:12px 18px;border-radius:0 0 12px 0;z-index:100;min-height:44px}
 .skip:focus{left:0}
-/* Focus — one gold ring everywhere, keyboard visible */
-a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible,[tabindex]:focus-visible{outline:3px solid var(--accent);outline-offset:2px;border-radius:8px}
+/* Focus — gold outline (brand + Windows High Contrast) PLUS a brand ring with a
+   light gap, so the indicator passes 3:1 against both light and dark surfaces
+   (gold alone is 2.42:1 on white). Never remove outlines without a replacement. */
+a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible,[tabindex]:focus-visible{outline:3px solid var(--accent);outline-offset:2px;border-radius:8px;box-shadow:0 0 0 2px #fff,0 0 0 5px var(--brand)}
+.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}
 /* Shell */
 header.top{padding:10px 16px;position:sticky;top:0;z-index:30;box-shadow:0 1px 0 rgba(0,0,0,.08)}
 header.top nav{display:flex;gap:6px;align-items:center;max-width:1080px;margin:0 auto;flex-wrap:wrap}
@@ -33,14 +36,14 @@ main{display:block}
 .badge{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:700;padding:4px 11px;border-radius:999px;margin:0 6px 6px 0;border:1px solid;line-height:1.4;vertical-align:middle;white-space:nowrap}
 .b-off{background:var(--greenbg);color:var(--brand);border-color:#A6D6B8}
 .b-ver{background:var(--bluebg);color:var(--blue);border-color:#B2DDFF}
-.b-urg{background:var(--redbg);color:var(--red);border-color:#FECDCA}
+.b-urg{background:var(--redbg);color:#B42318;border-color:#FECDCA}
 .b-ed{background:#F2F4F7;color:var(--muted);border-color:var(--line-strong)}
 .b-pts{background:#FEFBE8;color:#93370D;border-color:#FEDF89}
 .b-pink{background:#FDF2F8;color:#BE185D;border-color:#F9A8D4}
 .b-ok{background:var(--greenbg);color:var(--green);border-color:#A6D6B8}
 .b-info{background:var(--bluebg);color:var(--blue);border-color:#B2DDFF}
-.b-warn{background:var(--amberbg);color:var(--amber);border-color:#FEDF89}
-.b-bad{background:var(--redbg);color:var(--red);border-color:#FECDCA}
+.b-warn{background:var(--amberbg);color:#93370D;border-color:#FEDF89}
+.b-bad{background:var(--redbg);color:#B42318;border-color:#FECDCA}
 /* Buttons — 44px minimum, no exceptions */
 button,.btn{background:var(--brand);color:#fff;border:0;border-radius:12px;padding:12px 20px;font-weight:700;cursor:pointer;font-size:15px;min-height:44px;min-width:44px;display:inline-flex;align-items:center;justify-content:center;gap:8px;text-decoration:none;line-height:1.2;font-family:inherit}
 button:hover,.btn:hover{background:var(--brand-dark)}
@@ -132,11 +135,28 @@ td{padding:10px 8px;border-bottom:1px solid #F2F4F7;vertical-align:middle;text-a
 .hero-pro{background:#0A4230;color:#fff;border-radius:var(--radius-hero);padding:22px 20px}
 .hero-pro h2{color:#fff}
 .hero-pro p{color:#E6F4EC}
+.offline-banner{background:#FEF3F2;border-bottom:1px solid #FECDCA;color:#B42318;font-size:13.5px;font-weight:600;padding:10px 16px;display:flex;align-items:center;gap:10px;position:sticky;top:0;z-index:50}
+.install-banner{background:#E6F4EC;border:1px solid #A6D6B8;border-radius:var(--radius);padding:14px 16px;margin:0 0 14px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.file-dropzone{border:2px dashed var(--line-strong);border-radius:14px;padding:20px 16px;text-align:center;background:#FCFCFD;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;min-height:96px;transition:all .15s ease}
+.file-dropzone:hover,.file-dropzone:focus-within{border-color:var(--brand);background:var(--greenbg)}
+.reader-controls{display:flex;gap:10px;align-items:center;justify-content:space-between;margin:12px 0;flex-wrap:wrap}
+.reader-controls button{flex:1;min-width:110px}
+.reader-lock{user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;word-break:break-word;overflow-wrap:break-word}
+.reader-lock img{-webkit-user-drag:none;pointer-events:none;max-width:100%;height:auto}
+@media print{.reader-lock{display:none !important}}
 .bottomnav{display:none}
 @media(max-width:860px){
-.wrap{padding:14px 12px 110px}
-.bottomnav{display:flex;position:fixed;left:10px;right:10px;bottom:10px;z-index:40;background:#101828;color:#D0D5DD;border-radius:18px;padding:6px;gap:2px;box-shadow:0 8px 28px rgba(0,0,0,.3);border:1px solid #1D2939}
+header.top nav .navlinks-group{display:none}
+header.top nav .portals a span{display:none}
+.wrap{padding:14px 12px calc(96px + env(safe-area-inset-bottom, 0px))}
+.bottomnav{display:flex;position:fixed;left:10px;right:10px;bottom:calc(10px + env(safe-area-inset-bottom, 0px));z-index:40;background:#101828;color:#D0D5DD;border-radius:18px;padding:6px;gap:2px;box-shadow:0 8px 28px rgba(0,0,0,.3);border:1px solid #1D2939}
 .bottomnav a{flex:1;text-decoration:none;color:#D0D5DD;font-size:11px;font-weight:700;display:flex;flex-direction:column;align-items:center;gap:3px;padding:9px 4px;border-radius:13px;min-height:56px;justify-content:center}
 .bottomnav a[aria-current="page"]{background:#0E5A3C;color:#fff}
+.tone-lecturer .bottomnav a[aria-current="page"]{background:#0A4230;color:#fff}
+.tone-admin .bottomnav a[aria-current="page"]{background:#1D2939;color:#fff;outline:1.5px solid #344054}
+}
+@media(max-width:640px){
+.modal{padding:18px 16px;border-radius:16px}
+.install-banner{flex-direction:column;align-items:flex-start}
 }
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{scroll-behavior:auto !important;transition:none !important;animation:none !important}}`;

@@ -3,7 +3,14 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>EDUFARM Portal — Student · Lecturer · Admin</title>
+<meta name="theme-color" content="#0E5A3C">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="EDUFARM Portal">
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="icon" type="image/png" sizes="192x192" href="/icons/icon-192.png">
+<link rel="apple-touch-icon" href="/icons/icon-192.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Sora:wght@600;700;800&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
@@ -34,6 +41,7 @@ body{margin:0;font-family:Inter,system-ui,sans-serif;font-size:15px;line-height:
 .top{display:flex;align-items:center;gap:14px;margin-bottom:18px;flex-wrap:wrap}
 .search{flex:1;min-width:200px;display:flex;align-items:center;gap:8px;background:#fff;border:1px solid var(--line);border-radius:12px;padding:9px 14px}
 .search input{border:0;outline:0;font-size:14px;width:100%;font-family:inherit}
+.search:focus-within{outline:3px solid var(--accent);outline-offset:1px;box-shadow:0 0 0 2px #fff,0 0 0 5px #0E5A3C}
 .bell{position:relative;background:#fff;border:1px solid var(--line);border-radius:12px;padding:9px 12px;cursor:pointer;font-size:16px}
 .bell .dot{position:absolute;top:6px;right:8px;background:var(--red);color:#fff;font-size:10px;font-weight:700;border-radius:99px;padding:0 5px}
 .profile{display:flex;align-items:center;gap:10px;background:#fff;border:1px solid var(--line);border-radius:12px;padding:6px 12px 6px 6px}
@@ -98,6 +106,13 @@ button{font-family:inherit}
 </style>
 </head>
 <body>
+<a class="skip" href="#live" style="position:absolute;left:-9999px;top:0;background:#101828;color:#fff;padding:12px 18px;border-radius:0 0 12px 0;z-index:100;min-height:44px">Skip to live dashboard</a>
+<style>.skip:focus{left:0 !important;outline:3px solid #C9A227;outline-offset:2px}</style>
+<div id="offline-banner" style="display:none;background:#FEF3F2;border-bottom:1px solid #FECDCA;color:#B42318;font-size:13.5px;font-weight:600;padding:10px 16px;text-align:center;position:sticky;top:0;z-index:99">You are currently offline. Viewing cached portal shell. Live network required for updates.</div>
+<div id="pwa-install" style="display:none;background:#E6F4EC;border:1px solid #A6D6B8;border-radius:12px;padding:12px 16px;margin:12px 24px;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap">
+  <div><strong>Install EDUFARM Portal</strong><div style="font-size:13px;color:#344054">Add to home screen for faster full-screen study access.</div></div>
+  <div style="display:flex;gap:8px"><button id="btn-pwa-install" style="background:#0E5A3C;color:#fff;border:0;padding:8px 16px;border-radius:8px;font-weight:700;cursor:pointer;min-height:44px">Install</button><button onclick="document.getElementById('pwa-install').style.display='none'" style="background:#fff;border:1px solid #D0D5DD;padding:8px 14px;border-radius:8px;cursor:pointer;min-height:44px">Dismiss</button></div>
+</div>
 <header class="mkt">
   <div class="mkt-inner">
     <nav><span class="brand"><svg class="ic" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 9l10-5 10 5-10 5L2 9z"/><path d="M6 11.5V16c0 1.7 2.7 3 6 3s6-1.3 6-3v-4.5"/></svg> EDUFARM</span><span><a class="btn btn-ghost" style="margin:0 8px 0 0;padding:9px 16px" href="PRD.md">PRD</a><a class="btn btn-ghost" style="margin:0;padding:9px 16px" href="design.html">Design</a></span></nav>
@@ -119,10 +134,11 @@ button{font-family:inherit}
   </aside>
   <div class="main">
     <div class="top">
-      <div class="search"><svg class="ic" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg> <input id="q" placeholder="Search classes, materials, questions…" oninput="renderTables()"></div>
-      <div class="bell" title="API settings" onclick="const u=prompt('API base URL (e.g. https://xxx.trycloudflare.com/api/v1):', localStorage.getItem('edufarm_api')||''); if(u){localStorage.setItem('edufarm_api',u.replace(/\/$/,'')); location.reload();}" style="cursor:pointer"><svg class="ic" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M12 2v3m0 14v3M2 12h3m14 0h3M4.9 4.9l2.1 2.1m10 10l2.1 2.1m0-14.2l-2.1 2.1m-10 10l-2.1 2.1"/></svg></div>
-      <div class="bell" title="Notifications"><svg class="ic" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 1 0-12 0c0 7-3 8-3 8h18s-3-1-3-8"/><path d="M10.3 21a2 2 0 0 0 3.4 0"/></svg> <span class="dot" id="bellN">0</span></div>
+      <div class="search"><svg class="ic" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg> <label class="sr-only" for="q" style="position:absolute;width:1px;height:1px;margin:-1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0">Search classes, materials, questions</label><input id="q" placeholder="Search classes, materials, questions…" oninput="renderTables()" style="outline-offset:-3px"></div>
+      <button class="bell" title="API settings" aria-label="API settings" onclick="const u=prompt('API base URL (e.g. https://xxx.trycloudflare.com/api/v1):', localStorage.getItem('edufarm_api')||''); if(u){localStorage.setItem('edufarm_api',u.replace(/\/$/,'')); location.reload();}" style="cursor:pointer;font:inherit;min-height:44px;min-width:44px"><svg class="ic" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M12 2v3m0 14v3M2 12h3m14 0h3M4.9 4.9l2.1 2.1m10 10l2.1 2.1m0-14.2l-2.1 2.1m-10 10l-2.1 2.1"/></svg></button>
+      <div class="bell" title="Notifications" role="status" aria-label="Notification count"><svg class="ic" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 8a6 6 0 1 0-12 0c0 7-3 8-3 8h18s-3-1-3-8"/><path d="M10.3 21a2 2 0 0 0 3.4 0"/></svg> <span class="dot" id="bellN">0</span></div>
       <div class="profile"><span class="avatar" id="av">A</span>
+        <label class="sr-only" for="role" style="position:absolute;width:1px;height:1px;margin:-1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0">Preview as role</label>
         <select id="role" onchange="switchRole(this.value)">
           <option value="student">Ada · Student</option>
           <option value="lecturer">Bello · Lecturer</option>
@@ -132,15 +148,15 @@ button{font-family:inherit}
     </div>
     <div id="err"></div>
     <div class="greet">
-      <div class="hello"><h1 id="hello">Good day, Scholar</h1><p id="sub">Here's your learning journey for today. Keep going!</p></div>
+      <div class="hello"><h2 id="hello" style="font-family:Sora;font-size:26px;margin:0">Good day, Scholar</h2><p id="sub">Here's your learning journey for today. Keep going!</p></div>
       <div class="sched"><strong><svg class="ic" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M8 3v4m8-4v4M3 10h18"/></svg> <span id="today"></span></strong><div id="sched" style="font-size:13px;margin-top:6px"></div></div>
       <div class="quote">“<span id="word">Loading today's Word…</span>”<div style="font-size:12px;font-family:Inter;color:var(--muted)" id="verse"></div></div>
     </div>
     <div class="stats" id="stats"></div>
     <div class="grid2">
       <div>
-        <div class="card"><h3><span id="t1"><svg class="ic" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20V4H6.5A2.5 2.5 0 0 0 4 6.5v13z"/></svg> Today's Classes</span><a href="#" onclick="return false">View All</a></h3><div id="classes"></div></div>
-        <div class="card"><h3><svg class="ic" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></svg> Announcements <a href="#" onclick="return false">View All</a></h3><div id="anns"></div></div>
+        <div class="card"><h3><span id="t1"><svg class="ic" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20V4H6.5A2.5 2.5 0 0 0 4 6.5v13z"/></svg> Today's Classes</span><a href="http://localhost:3001/courses">View All</a></h3><div id="classes"></div></div>
+        <div class="card"><h3><svg class="ic" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></svg> Announcements</h3><div id="anns"></div></div>
       </div>
       <div>
         <div class="card"><h3><svg class="ic" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 20V10m6 10V4m6 16v-7"/><path d="M2 20h20"/></svg> Performance Overview</h3><div id="chart"></div><div id="grades" style="font-size:13px;margin-top:8px"></div></div>
@@ -152,13 +168,33 @@ button{font-family:inherit}
 </div>
 <script>
 const DEFAULT_API = "http://localhost:4000/api/v1";
+function hostUrl(port, path = "") {
+  const h = window.location.hostname || "localhost";
+  const p = window.location.protocol || "http:";
+  return `${p}//${h}:${port}${path}`;
+}
 function apiBase() {
   const q = new URLSearchParams(location.search).get("api");
   if (q) { try { localStorage.setItem("edufarm_api", q.replace(/\/$/, "")); } catch (e) {} }
-  try { return (localStorage.getItem("edufarm_api") || DEFAULT_API).replace(/\/$/, ""); }
-  catch (e) { return DEFAULT_API; }
+  try {
+    const stored = localStorage.getItem("edufarm_api");
+    if (stored) return stored.replace(/\/$/, "");
+    const h = window.location.hostname;
+    if (h && h !== "localhost" && h !== "127.0.0.1" && /^(\d{1,3}\.){3}\d{1,3}$/.test(h)) {
+      return `${window.location.protocol}//${h}:4000/api/v1`;
+    }
+    return DEFAULT_API;
+  } catch (e) { return DEFAULT_API; }
 }
 const API = apiBase();
+// Adapt localhost links to current hostname when accessed on LAN
+document.addEventListener("DOMContentLoaded", () => {
+  const h = window.location.hostname || "localhost";
+  const p = window.location.protocol || "http:";
+  document.querySelectorAll("a[href*='localhost:300']").forEach(a => {
+    a.href = a.href.replace(/http:\/\/localhost:300(\d)/, `${p}//${h}:300$1`);
+  });
+});
 // Inline SVG icon set (no emoji in the product). 24×24 stroke icons, currentColor.
 const P = {
   home: '<path d="M3 11l9-8 9 8"/><path d="M5 10v10h5v-6h4v6h5V10"/>',
@@ -348,7 +384,46 @@ function drawChart(vals) {
     ${vals.map((v, i) => `<circle cx="${(vals.length === 1 ? W / 2 : (i / (vals.length - 1)) * W).toFixed(0)}" cy="${(H - 12 - (v / max) * (H - 30)).toFixed(0)}" r="3.5" fill="#EC4899"/>`).join("")}
     <text x="${W - 4}" y="14" text-anchor="end" font-size="11" fill="#027A48" font-weight="700">${vals[vals.length - 1]}%</text></svg>`;
 }
+// PWA Service Worker & Offline/Install listeners
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', function() {
+    navigator.serviceWorker.register('/sw.js').catch(function() {});
+  });
+}
+function updateOnlineStatus() {
+  var b = document.getElementById('offline-banner');
+  if (b) b.style.display = navigator.onLine ? 'none' : 'block';
+}
+window.addEventListener('online', updateOnlineStatus);
+window.addEventListener('offline', updateOnlineStatus);
+updateOnlineStatus();
+
+var deferredPrompt = null;
+window.addEventListener('beforeinstallprompt', function(e) {
+  e.preventDefault();
+  deferredPrompt = e;
+  var banner = document.getElementById('pwa-install');
+  if (banner) banner.style.display = 'flex';
+});
+var btnInstall = document.getElementById('btn-pwa-install');
+if (btnInstall) {
+  btnInstall.addEventListener('click', function() {
+    if (deferredPrompt) {
+      deferredPrompt.prompt();
+      deferredPrompt = null;
+      var banner = document.getElementById('pwa-install');
+      if (banner) banner.style.display = 'none';
+    }
+  });
+}
+
 boot();
+
+// Accessibility: decorative icons are meaningless to screen readers (every
+// icon sits next to a text label), so hide them all from assistive tech.
+try {
+  document.querySelectorAll('svg.ic, .mark svg').forEach(function (s) { s.setAttribute('aria-hidden', 'true'); });
+} catch (e) {}
 </script>
 </body>
 </html>

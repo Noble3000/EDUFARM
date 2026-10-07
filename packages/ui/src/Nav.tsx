@@ -41,7 +41,7 @@ function usePath(): string {
 export function NavLinks({ items, linkClassName }: { items: NavItem[]; linkClassName?: string }) {
   const path = usePath();
   return (
-    <>
+    <span className="navlinks-group">
       {items.map((it) => (
         <a
           key={it.href}
@@ -49,10 +49,10 @@ export function NavLinks({ items, linkClassName }: { items: NavItem[]; linkClass
           className={linkClassName}
           aria-current={isActive(path, it.href) ? "page" : undefined}
         >
-          <Icon name={it.icon} size={14} /> {it.label}
+          <Icon name={it.icon} size={14} /> <span>{it.label}</span>
         </a>
       ))}
-    </>
+    </span>
   );
 }
 
@@ -71,19 +71,27 @@ export function MobileBar({ items }: { items: NavItem[] }) {
   );
 }
 
-// Jump between the portals of the ecosystem (local-first URLs).
+// Jump between the portals of the ecosystem (local-first + LAN/tunnel aware URLs).
 export function PortalLinks() {
+  const [host, setHost] = useState("localhost");
+  const [protocol, setProtocol] = useState("http:");
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      setHost(window.location.hostname || "localhost");
+      setProtocol(window.location.protocol || "http:");
+    }
+  }, []);
   const portals: { href: string; label: string; icon: IconName }[] = [
-    { href: "http://localhost:8080/", label: "Portal", icon: "dashboard" },
-    { href: "http://localhost:3001/", label: "Student", icon: "grad" },
-    { href: "http://localhost:3002/", label: "Lecturer", icon: "book" },
-    { href: "http://localhost:3003/", label: "Admin", icon: "shield" },
+    { href: `${protocol}//${host}:8080/`, label: "Portal", icon: "dashboard" },
+    { href: `${protocol}//${host}:3001/`, label: "Student", icon: "grad" },
+    { href: `${protocol}//${host}:3002/`, label: "Lecturer", icon: "book" },
+    { href: `${protocol}//${host}:3003/`, label: "Admin", icon: "shield" },
   ];
   return (
     <span className="portals">
       {portals.map((p) => (
         <a key={p.label} href={p.href} title={`Open ${p.label} portal`}>
-          <Icon name={p.icon} size={14} /> {p.label}
+          <Icon name={p.icon} size={14} /> <span>{p.label}</span>
         </a>
       ))}
     </span>
@@ -94,12 +102,15 @@ export function PortalLinks() {
 export function Crumb({ trail }: { trail: { href?: string; label: string }[] }) {
   return (
     <nav aria-label="Breadcrumb" className="muted" style={{ fontSize: 13, marginBottom: 8 }}>
-      {trail.map((t, i) => (
-        <span key={i}>
-          {i > 0 && " / "}
-          {t.href ? <a href={t.href}>{t.label}</a> : <strong>{t.label}</strong>}
-        </span>
-      ))}
+      {trail.map((t, i) => {
+        const last = i === trail.length - 1;
+        return (
+          <span key={i}>
+            {i > 0 && " / "}
+            {t.href && !last ? <a href={t.href}>{t.label}</a> : <strong aria-current={last ? "page" : undefined}>{t.label}</strong>}
+          </span>
+        );
+      })}
     </nav>
   );
 }
