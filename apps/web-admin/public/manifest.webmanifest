@@ -1,1 +1,59 @@
-{"background_color": "#F9FAFB", "description": "EDUFARM Admin — verification, reviews, settlement, disputes and onboarding.", "display": "standalone", "icons": [{"purpose": "any", "sizes": "any", "src": "/icons/icon.svg", "type": "image/svg+xml"}], "name": "EDUFARM — Admin", "orientation": "portrait", "scope": "/", "short_name": "EDUFARM Admin", "start_url": "/?source=pwa", "theme_color": "#101828"}
+{
+  "name": "EDUFARM — Admin",
+  "short_name": "EDUFARM Admin",
+  "description": "EDUFARM Admin — verification, reviews, settlement, disputes and onboarding.",
+  "id": "/?source=pwa",
+  "start_url": "/?source=pwa",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "theme_color": "#101828",
+  "background_color": "#F9FAFB",
+  "categories": ["education", "business"],
+  "icons": [
+    {
+      "src": "/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Verification Queue",
+      "short_name": "Verify",
+      "url": "/verifications",
+      "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Content Reviews",
+      "short_name": "Reviews",
+      "url": "/reviews",
+      "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Disputes",
+      "short_name": "Disputes",
+      "url": "/disputes",
+      "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }]
+    }
+  ]
+}

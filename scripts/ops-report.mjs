@@ -105,7 +105,7 @@ async function timed(url) {
   if (!okH) fail(`api /health bad: status=${h.status} ms=${h.ms}`);
   const r = await timed("http://localhost:4000/ready");
   const okR = r.status === 200 && r.body?.ready === true && r.ms <= LATENCY_BUDGET_MS.ready;
-  if (!okR) fail(`api /ready bad: status=${r.status} ms=${r.ms} body=${JSON.stringify(r.body).slice(0, 160)}`);
+  if (!okR) fail(`api /ready bad: status=${r.status} ms=${r.ms} body=${(JSON.stringify(r.body ?? r.error) ?? "").slice(0, 160)}`);
   report.api = {
     health: { status: h.status, ms: h.ms, ok: okH, uptimeSec: h.body?.uptimeSec ?? null, memoryMB: h.body?.memoryMB ?? null },
     ready: { status: r.status, ms: r.ms, ok: okR, dbMs: r.body?.dbMs ?? null, cache: r.body?.cache ?? null },

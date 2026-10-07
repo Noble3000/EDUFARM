@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
-import { Alert, Badge, Crumb, DataTable, EmptyState, Field, LoadingState, SuccessNote } from "@edufarm/ui";
+import { Alert, Badge, Crumb, DataTable, EmptyState, Field, FileInput, LoadingState, SuccessNote } from "@edufarm/ui";
 import { api } from "@/lib/api";
 import { AnnouncementsManager, QAConsole } from "./qa-console";
 
@@ -84,18 +84,22 @@ export default function ManageCourse({ params }: { params: { id: string } }) {
       setErr((e as Error).message);
     }
   }
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
   async function upload(submit: boolean) {
     setOk("");
     setErr("");
     try {
+      const fileKey = selectedFile ? `uploads/${encodeURIComponent(selectedFile.name)}` : "dev/mock.pdf";
+      const checksum = selectedFile ? `chk-${selectedFile.size}-${selectedFile.lastModified}` : "dev";
       const created = await api(`/courses/${params.id}/materials`, {
         method: "POST",
-        body: JSON.stringify({ ...mat, priceKobo: Number(mat.priceKobo), accessDurationDays: Number(mat.accessDurationDays), fileKey: "dev/mock.pdf", checksum: "dev" }),
+        body: JSON.stringify({ ...mat, priceKobo: Number(mat.priceKobo), accessDurationDays: Number(mat.accessDurationDays), fileKey, checksum }),
       });
       if (submit) {
         await api(`/materials/${created.id}/approve`, { method: "POST", body: JSON.stringify({ attest: attestOwn }) });
       }
       setOk(submit ? "Ownership approved — sent to platform review." : "Uploaded — approve ownership to send for review.");
+      setSelectedFile(null);
       loadMyMaterials();
     } catch (e) {
       setErr((e as Error).message);
@@ -177,6 +181,19 @@ export default function ManageCourse({ params }: { params: { id: string } }) {
       <AnnouncementsManager courseId={params.id} />
       <QAConsole courseId={params.id} />
       <div className="card"><h3>Upload material</h3>
+        <Field label="Document file" hint="Choose a syllabus, slides, or study notes PDF/DOCX from your phone or device.">
+          <FileInput
+            label="Tap to select document"
+            accept=".pdf,.doc,.docx,.txt"
+            hint="Supports PDF, DOCX, TXT files up to 25MB"
+            onFileSelect={(file) => {
+              setSelectedFile(file);
+              if (file && !mat.title) {
+                setMat({ ...mat, title: file.name.replace(/\.[^/.]+$/, "").replace(/[-_]/g, " ") });
+              }
+            }}
+          />
+        </Field>
         <Field label="Title">
           <input value={mat.title} onChange={(e) => setMat({ ...mat, title: e.target.value })} />
         </Field>

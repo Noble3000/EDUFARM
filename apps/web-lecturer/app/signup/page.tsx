@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { Alert, Field, SuccessNote } from "@edufarm/ui";
-import { API, setSession } from "@/lib/api";
+import { apiUrl, setSession } from "@/lib/api";
 
 export default function Signup() {
   const [unis, setUnis] = useState<{ id: string; name: string }[]>([]);
@@ -12,23 +12,23 @@ export default function Signup() {
   const [ok, setOk] = useState("");
   const [err, setErr] = useState("");
   useEffect(() => {
-    fetch(`${API}/universities`).then((r) => r.json()).then(setUnis).catch(() => {});
+    fetch(`${apiUrl()}/universities`).then((r) => r.json()).then(setUnis).catch(() => {});
   }, []);
   async function pickUni(id: string) {
     setF({ ...f, universityId: id, facultyId: "", departmentId: "" });
-    setFacs(await fetch(`${API}/universities/${id}/faculties`).then((r) => r.json()).catch(() => []));
+    setFacs(await fetch(`${apiUrl()}/universities/${id}/faculties`).then((r) => r.json()).catch(() => []));
     setDeps([]);
   }
   async function pickFac(id: string) {
     setF({ ...f, facultyId: id, departmentId: "" });
-    setDeps(await fetch(`${API}/faculties/${id}/departments`).then((r) => r.json()).catch(() => []));
+    setDeps(await fetch(`${apiUrl()}/faculties/${id}/departments`).then((r) => r.json()).catch(() => []));
   }
   async function signup() {
     setBusy(true);
     setOk("");
     setErr("");
     try {
-      const res = await fetch(`${API}/auth/signup`, {
+      const res = await fetch(`${apiUrl()}/auth/signup`, {
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ ...f, role: "lecturer" }),
       });

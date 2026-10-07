@@ -12,6 +12,7 @@
     "test": "turbo run test",
     "healthcheck": "node scripts/healthcheck.mjs",
     "smoke": "node scripts/smoke.mjs",
+    "pwa:check": "node scripts/pwa-check.mjs",
     "verify": "pnpm typecheck && pnpm healthcheck && pnpm smoke && pnpm test",
     "db:generate": "prisma generate --schema apps/api/prisma/schema.prisma",
     "db:migrate": "prisma migrate dev --schema apps/api/prisma/schema.prisma",

@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
-import { API, api } from "@/lib/api";
+import { api } from "@/lib/api";
 import { Alert, Badge, Field, LoadingState, SuccessNote } from "@edufarm/ui";
 
 const STATUS_COPY: Record<string, string> = {
@@ -23,22 +23,22 @@ export default function Verify() {
   const busy = msg === "…";
   const isSuccess = msg.startsWith("Request ");
   useEffect(() => {
-    fetch(`${API}/universities`).then((r) => r.json()).then(setUnis).catch(() => {});
+    api("/universities").then(setUnis).catch(() => {});
     api("/verifications/me").then(setMe).catch(() => {});
   }, []);
   async function pickUni(id: string) {
     setForm({ ...form, universityId: id, facultyId: "", departmentId: "", levelId: "" });
-    setFacs(id ? await fetch(`${API}/universities/${id}/faculties`).then((r) => r.json()).catch(() => []) : []);
+    setFacs(id ? await api(`/universities/${id}/faculties`).catch(() => []) : []);
     setDeps([]); setLevels([]);
   }
   async function pickFac(id: string) {
     setForm({ ...form, facultyId: id, departmentId: "", levelId: "" });
-    setDeps(id ? await fetch(`${API}/faculties/${id}/departments`).then((r) => r.json()).catch(() => []) : []);
+    setDeps(id ? await api(`/faculties/${id}/departments`).catch(() => []) : []);
     setLevels([]);
   }
   async function pickDept(id: string) {
     setForm({ ...form, departmentId: id, levelId: "" });
-    setLevels(id ? await fetch(`${API}/departments/${id}/levels`).then((r) => r.json()).catch(() => []) : []);
+    setLevels(id ? await api(`/departments/${id}/levels`).catch(() => []) : []);
   }
   async function submit() {
     setMsg("…");

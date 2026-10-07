@@ -73,7 +73,7 @@ export async function buildApp(): Promise<FastifyInstance> {
     try {
       await prisma.$queryRaw`SELECT 1`;
       const [{ count }] = await prisma.$queryRaw<{ count: bigint }[]>`
-        SELECT COUNT(*)::bigint AS count FROM "_prisma_migrations" WHERE finished_at IS NULL`;
+        SELECT COUNT(*)::bigint AS count FROM "_prisma_migrations" WHERE finished_at IS NULL AND rolled_back_at IS NULL`;
       const pending = Number(count);
       const dbMs = Date.now() - started;
       const { cacheStats } = await import("./lib/cache.js");

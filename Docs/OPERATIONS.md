@@ -88,5 +88,35 @@ full trace server-side only.
 ## Ports quick reference
 
 :4000 api (`/health` alive, `/ready` ready) · :3001 student · :3002 lecturer ·
-:3003 admin · :8080 portal static. Cloudflare quick tunnels expose these to a
-phone; tunnel URLs change on restart (see ecosystem header).
+:3003 admin · :8080 portal static.
+
+## Mobile & PWA Access (LAN / Tunnel)
+
+All 4 web surfaces are Progressive Web Apps configured for standalone mobile use.
+
+### Option A: Local Wi-Fi / LAN (Zero-tunnel, fastest on same router)
+1. Find PC IPv4 address: `ipconfig` (e.g. `192.168.1.150`).
+2. Open on phone browser:
+   - Portal: `http://192.168.1.150:8080`
+   - Student: `http://192.168.1.150:3001`
+   - Lecturer: `http://192.168.1.150:3002`
+   - Admin: `http://192.168.1.150:3003`
+3. The web apps automatically detect the LAN IP and direct API calls to `http://192.168.1.150:4000/api/v1`.
+4. Install to home screen: Tap the in-app "Install" banner or browser menu "Add to Home Screen".
+
+### Option B: Remote / Cellular via Cloudflare Quick Tunnel
+1. Start tunnel for API:
+   ```powershell
+   cloudflared tunnel --url http://localhost:4000
+   ```
+2. Start tunnel for Student app:
+   ```powershell
+   cloudflared tunnel --url http://localhost:3001
+   ```
+3. On phone, load the Student app tunnel URL with the API query parameter:
+   `https://<student-tunnel>.trycloudflare.com/?api=https://<api-tunnel>.trycloudflare.com/api/v1`
+4. The API URL is persisted to `localStorage['edufarm_api']` for all subsequent sessions.
+
+### Offline Protection & Policy Verification
+- Safe shell caching: The service worker caches static assets (`/manifest.webmanifest`, CSS/JS bundles, icons, shell layout).
+- Protected material rule: When a phone goes offline (Airplane mode), the UI displays the `<OfflineNotice />`. Opening course reading materials strictly enforces the network guard, showing the "Protected Material Offline Policy" alert. Course materials, streaming tiles, and assessments are NEVER stored in persistent offline caches.

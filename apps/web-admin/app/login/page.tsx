@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { apiUrl, setSession } from "@/lib/api";
 import { Alert, Field, LoadingState, SuccessNote } from "@edufarm/ui";
 
@@ -7,11 +7,25 @@ export default function Login() {
   const [email, setEmail] = useState("admin@edufarm.ng");
   const [password, setPassword] = useState("");
   const [api, setApi] = useState("");
+  const [currentApi, setCurrentApi] = useState("");
   const [busy, setBusy] = useState(false);
   const [ok, setOk] = useState("");
   const [err, setErr] = useState("");
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      setApi(localStorage.getItem("edufarm_api") || "");
+      setCurrentApi(apiUrl());
+    }
+  }, []);
+
   async function login(useDemo = false) {
-    if (api.trim()) localStorage.setItem("edufarm_api", api.trim().replace(/\/$/, ""));
+    if (api.trim()) {
+      localStorage.setItem("edufarm_api", api.trim().replace(/\/$/, ""));
+    } else {
+      localStorage.removeItem("edufarm_api");
+    }
+    setCurrentApi(apiUrl());
     setBusy(true);
     setOk("");
     setErr("");
@@ -42,7 +56,7 @@ export default function Login() {
       <Field label="Password">
         <input type="password" autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} />
       </Field>
-      <Field label="API URL" optional hint="Only needed for phone or remote testing.">
+      <Field label="API URL" optional hint={`Current: ${currentApi || apiUrl()}. Leave empty on this device.`}>
         <input inputMode="url" placeholder="https://api.example.ng/api/v1" value={api} onChange={(e) => setApi(e.target.value)} />
       </Field>
       <div className="row">

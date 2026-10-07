@@ -1,13 +1,23 @@
 // API client: session-token auth (opaque, revocable, server-validated).
 // Never sends raw user ids. Token lives in localStorage `edufarm_session`
 // (set at login/signup); profile cache in `edufarm_user` is display-only.
-const DEFAULT_API = "http://localhost:4000/api/v1";
+const DEFAULT_API = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000/api/v1";
 function baseApi(): string {
   if (typeof window === "undefined") return DEFAULT_API;
   try {
     const q = new URLSearchParams(window.location.search).get("api");
     if (q) { try { window.localStorage.setItem("edufarm_api", q.replace(/\/$/, "")); } catch { /* ignore */ } }
-    return (window.localStorage.getItem("edufarm_api") || DEFAULT_API).replace(/\/$/, "");
+    const stored = window.localStorage.getItem("edufarm_api");
+    if (stored) return stored.replace(/\/$/, "");
+
+    const host = window.location.hostname;
+    if (host && host !== "localhost" && host !== "127.0.0.1") {
+      const isLanIp = /^(\d{1,3}\.){3}\d{1,3}$/.test(host);
+      if (isLanIp) {
+        return `http://${host}:4000/api/v1`;
+      }
+    }
+    return DEFAULT_API;
   } catch { return DEFAULT_API; }
 }
 export const API = DEFAULT_API;

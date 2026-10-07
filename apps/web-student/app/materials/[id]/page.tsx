@@ -2,7 +2,7 @@
 import { useEffect, useState } from "react";
 import { Crumb } from "@edufarm/ui";
 import { api, getUser } from "@/lib/api";
-import { EmptyState, ErrorState, Field, Icon, Modal, SuccessNote } from "@edufarm/ui";
+import { Alert, EmptyState, ErrorState, Field, Icon, Modal, SuccessNote } from "@edufarm/ui";
 
 // Protected reader: page navigation + watermark + dwell pings + checkout on 402.
 // Page count comes from the material's latest version row — never hard-coded.
@@ -14,6 +14,7 @@ export default function Reader({ params }: { params: { id: string } }) {
   } | null>(null);
   const [page, setPage] = useState(1);
   const [err, setErr] = useState("");
+  const [isOffline, setIsOffline] = useState(false);
   const [price, setPrice] = useState<number | null>(null);
   const [terms, setTerms] = useState<{
     title: string; edition: number; course: { code: string; title: string }; lecturer: string;
@@ -48,6 +49,18 @@ export default function Reader({ params }: { params: { id: string } }) {
       }
     }
   }
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const update = () => setIsOffline(!navigator.onLine);
+      update();
+      window.addEventListener("online", update);
+      window.addEventListener("offline", update);
+      return () => {
+        window.removeEventListener("online", update);
+        window.removeEventListener("offline", update);
+      };
+    }
+  }, []);
   useEffect(() => {
     api(`/materials/${params.id}`).then(setMeta).catch((e) => setErr((e as Error).message));
     load(1);
@@ -186,22 +199,71 @@ export default function Reader({ params }: { params: { id: string } }) {
         </div>
       )}
       {bought && <div style={{ marginBottom: 12 }}><SuccessNote>{bought}</SuccessNote></div>}
-      <style>{`.reader-lock{user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}.reader-lock img{-webkit-user-drag:none;pointer-events:none}@media print{.reader-lock{display:none !important}}`}</style>
-      <div className="card reader-lock" style={{ background: "#1D2939", color: "#fff", position: "relative", minHeight: 300 }} onContextMenu={(e) => e.preventDefault()} onDragStart={(e) => e.preventDefault()} onCopy={(e) => e.preventDefault()}>
-        <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", opacity: 0.15, transform: "rotate(-18deg)", fontSize: 13, pointerEvents: "none", textAlign: "center" }}>
+      {isOffline && (
+        <div style={{ marginBottom: 12 }}>
+          <Alert kind="warn" title="Protected Material Offline Policy">
+            You are currently offline. In accordance with EDUFARM academic integrity and lecturer ownership rules, protected materials cannot be stored or viewed offline. Reconnect to resume in-ecosystem reading.
+          </Alert>
+        </div>
+      )}
+      <div
+        className="card reader-lock"
+        style={{
+          background: "#1D2939",
+          color: "#fff",
+          position: "relative",
+          minHeight: 280,
+          padding: "20px 16px",
+          overflow: "hidden",
+        }}
+        onContextMenu={(e) => e.preventDefault()}
+        onDragStart={(e) => e.preventDefault()}
+        onCopy={(e) => e.preventDefault()}
+      >
+        <div
+          style={{
+            position: "absolute",
+            inset: 0,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            opacity: 0.15,
+            transform: "rotate(-18deg)",
+            fontSize: 13,
+            pointerEvents: "none",
+            textAlign: "center",
+            wordBreak: "break-word",
+            padding: 16,
+          }}
+        >
           {user?.name ?? "?"} · {user?.email ?? "?"} · {meta?.course?.code ?? ""} · Do not redistribute
         </div>
-        <p className="muted" style={{ color: "#D0D5DD" }}>Page {page} of {totalPages} · <Icon name="lock" size={13} /> Protected in-ecosystem reading</p>
+        <p className="muted" style={{ color: "#D0D5DD" }}>
+          Page {page} of {totalPages} · <Icon name="lock" size={13} /> Protected in-ecosystem reading
+        </p>
         <h3>{meta?.title ?? "Material"} — page {page}</h3>
-        <p style={{ color: "#D0D5DD", lineHeight: 1.7 }}>Rendered page image streams here from protected storage. Right-click is disabled and your copy carries your identity watermark. Dwell pings feed Study Journey (≥8s counts).</p>
+        {isOffline ? (
+          <p style={{ color: "#FEDF89", lineHeight: 1.7 }}>
+            <strong>Offline Guard Active:</strong> To protect verified academic material from unauthorized copying or distribution, page streams require network connectivity. No offline cached copies are created on this device.
+          </p>
+        ) : (
+          <p style={{ color: "#D0D5DD", lineHeight: 1.7 }}>
+            Rendered page streams here from protected storage. Right-click, copy, and print are disabled. Watermarking identifies your authenticated session. Dwell pings feed Study Journey (≥8s counts).
+          </p>
+        )}
       </div>
-      <div className="row">
-        <button className="sec" disabled={page <= 1} onClick={() => load(page - 1)}><Icon name="chevL" size={14} /> Prev</button>
-        <button className="sec" disabled={page >= totalPages} onClick={() => load(page + 1)}>Next <Icon name="chevR" size={14} /></button>
+      <div className="reader-controls">
+        <button className="sec" disabled={page <= 1 || isOffline} onClick={() => load(page - 1)}>
+          <Icon name="chevL" size={16} /> Prev page
+        </button>
+        <span style={{ fontWeight: 700, fontSize: 14 }}>Page {page} of {totalPages}</span>
+        <button className="sec" disabled={page >= totalPages || isOffline} onClick={() => load(page + 1)}>
+          Next page <Icon name="chevR" size={16} />
+        </button>
       </div>
       <div className="card">
         <h3>Reviews</h3>
-        <p className="muted">Only students with meaningful access can review — one review each (edit yours). <button className="sec" style={{ minHeight: 36, padding: "6px 12px", fontSize: 13 }} onClick={() => setReport({ targetType: "Material", targetId: params.id, title: meta?.title ?? "this material" })}>Report this material</button></p>
+        <p className="muted">Only students with meaningful access can review — one review each (edit yours). <button className="sec" style={{ minHeight: 44, padding: "8px 14px", fontSize: 13 }} onClick={() => setReport({ targetType: "Material", targetId: params.id, title: meta?.title ?? "this material" })}>Report this material</button></p>
         {reviews.map((r) => (
           <div key={r.id} style={{ borderTop: "1px solid #eee", paddingTop: 8 }}>
             <p><Icon name="star" size={14} /> {r.rating}/5 — {r.body}</p>
@@ -221,7 +283,7 @@ export default function Reader({ params }: { params: { id: string } }) {
                 </div>
               )
             ) : (
-              <button className="sec" style={{ minHeight: 36, padding: "6px 12px", fontSize: 13 }} onClick={() => setReport({ targetType: "Review", targetId: r.id, title: `review ${r.rating}/5` })}>Report</button>
+              <button className="sec" style={{ minHeight: 44, padding: "8px 14px", fontSize: 13 }} onClick={() => setReport({ targetType: "Review", targetId: r.id, title: `review ${r.rating}/5` })}>Report</button>
             )}
           </div>
         ))}

@@ -1,14 +1,14 @@
 {
-  "name": "EDUFARM — Lecturer",
-  "short_name": "EDUFARM Teach",
-  "description": "EDUFARM Lecturer — own courses, publish official materials, run assessments, earn transparently.",
+  "name": "EDUFARM — Portal",
+  "short_name": "EDUFARM Portal",
+  "description": "EDUFARM Portal — Unified Student, Lecturer & Admin ecosystem.",
   "id": "/?source=pwa",
   "start_url": "/?source=pwa",
   "scope": "/",
   "display": "standalone",
   "orientation": "portrait",
-  "theme_color": "#0A4230",
-  "background_color": "#F9FAFB",
+  "theme_color": "#0E5A3C",
+  "background_color": "#F4F6FA",
   "categories": ["education", "productivity"],
   "icons": [
     {
@@ -34,20 +34,6 @@
       "sizes": "any",
       "type": "image/svg+xml",
       "purpose": "any"
-    }
-  ],
-  "shortcuts": [
-    {
-      "name": "Teaching Dashboard",
-      "short_name": "Dashboard",
-      "url": "/",
-      "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }]
-    },
-    {
-      "name": "Alerts & Notifications",
-      "short_name": "Alerts",
-      "url": "/notifications",
-      "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }]
     }
   ]
 }

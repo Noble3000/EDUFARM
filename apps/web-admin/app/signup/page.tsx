@@ -1,6 +1,6 @@
 "use client";
 import { useState } from "react";
-import { API } from "@/lib/api";
+import { apiUrl } from "@/lib/api";
 import { Alert, Field, LoadingState, SuccessNote } from "@edufarm/ui";
 
 // Admin accounts are never self-service (PRD §16): request access here
@@ -15,7 +15,7 @@ export default function Signup() {
     setOk("");
     setErr("");
     try {
-      const res = await fetch(`${API}/access-requests`, {
+      const res = await fetch(`${apiUrl()}/access-requests`, {
         method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(f),
       });
       const data = await res.json();
